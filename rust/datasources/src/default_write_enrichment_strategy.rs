@@ -72,9 +72,14 @@ impl<T: Entity> WriteEnrichmentStrategy<T> for DefaultWriteEnrichmentStrategy<T>
         self.use_transaction
     }
 
-    async fn resolve_lookups(&self, tree: &RepositoryTree<T>, items: &mut [T]) -> Result<()> {
+    async fn resolve_lookups(
+        &self,
+        tree: &RepositoryTree<T>,
+        items: &mut [T],
+        record: &mut Row,
+    ) -> Result<()> {
         let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
-        crate::create_enrichment_strategy::resolve_lookups(&entries, items).await
+        crate::create_enrichment_strategy::resolve_lookups(&entries, items, record).await
     }
 
     async fn persist(

@@ -26,10 +26,19 @@ async fn setup(rows: &mut [Row]) -> Arc<dyn Connection> {
 }
 
 fn mapped_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
+    mapped_crud_schema(connection, entity, Schema::default())
+}
+
+fn mapped_crud_schema(
+    connection: Arc<dyn Connection>,
+    entity: &str,
+    schema: Schema,
+) -> CRUDRepository {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
     options.property_mappings = Some(std::sync::Arc::new(columns()));
+    options.schema = schema;
     CRUDRepository::<Row>::new(connection, options).unwrap()
 }
 
@@ -347,6 +356,66 @@ async fn create_unknown_lookup_name_throws() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("TypeName"));
+}
+
+#[tokio::test]
+async fn create_missing_required_lookup_throws() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let mut parents = mapped_crud_schema(
+        connection,
+        "Parent",
+        Schema::new(std::collections::HashMap::from([
+            (
+                "Id".into(),
+                SchemaColumn {
+                    is_id: true,
+                    ..SchemaColumn::new("integer")
+                },
+            ),
+            ("TypeName".into(), SchemaColumn::new("string")),
+        ])),
+    );
+    parents.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types,
+        None,
+    );
+    let error = parents.create(Row::new()).await.unwrap_err();
+    assert!(error.to_string().contains("TypeName"));
+}
+
+#[tokio::test]
+async fn create_missing_nullable_lookup_skips() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let mut parents = mapped_crud_schema(
+        connection,
+        "Parent",
+        Schema::new(std::collections::HashMap::from([
+            (
+                "Id".into(),
+                SchemaColumn {
+                    is_id: true,
+                    ..SchemaColumn::new("integer")
+                },
+            ),
+            (
+                "TypeName".into(),
+                SchemaColumn {
+                    nullable: true,
+                    ..SchemaColumn::new("string")
+                },
+            ),
+        ])),
+    );
+    parents.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types,
+        None,
+    );
+    let created = parents.create(Row::new()).await.unwrap();
+    assert!(num(&created, "Id") > 0);
 }
 
 #[tokio::test]

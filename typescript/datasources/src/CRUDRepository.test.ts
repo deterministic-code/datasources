@@ -533,6 +533,39 @@ describe("CRUDRepository", () => {
     await expect(parentsRepo.create(Object.assign(new Parent(), { TypeName: "missing" }))).rejects.toThrow(/TypeName/);
   });
 
+  it("create-missing-required-lookup-throws", async () => {
+    const connection = await setup();
+    const typesRepo = repo(UserType, connection);
+    const parentsRepo = new CRUDRepository<Parent>(connection, {
+      type: Parent,
+      propertyMappings: columns,
+      ids: ["Id"],
+      schema: new Schema({
+        Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+        TypeName: { type: "string", nullable: false, hasDefault: false },
+      }),
+    });
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    await expect(parentsRepo.create(new Parent())).rejects.toThrow(/TypeName/);
+  });
+
+  it("create-missing-nullable-lookup-skips", async () => {
+    const connection = await setup();
+    const typesRepo = repo(UserType, connection);
+    const parentsRepo = new CRUDRepository<Parent>(connection, {
+      type: Parent,
+      propertyMappings: columns,
+      ids: ["Id"],
+      schema: new Schema({
+        Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+        TypeName: { type: "string", nullable: true, hasDefault: false },
+      }),
+    });
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    const created = await parentsRepo.create(new Parent());
+    expect(created.Id).toBeGreaterThan(0);
+  });
+
   it("nested-child-resolves-lookup-name", async () => {
     const connection = await setup();
     const parentsRepo = repo(Parent, connection);

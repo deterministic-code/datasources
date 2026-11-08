@@ -10,21 +10,12 @@ import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
 
-const lookups = new WeakMap<object, Cells>();
-
-export const mergeLookups = (item: object, record: Cells): void => {
-  const extras = lookups.get(item);
-  if (extras) Object.assign(record, extras);
-};
-
-export const lookupKeys = (item: object): Set<string> => new Set(Object.keys(lookups.get(item) ?? {}));
-
 export abstract class CreateEnrichmentStrategy<T> {
   abstract createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
   abstract createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  async resolveLookups(entries: readonly StoredEnrichment<T>[], items: T[]): Promise<void> {
+  async resolveLookups(entries: readonly StoredEnrichment<T>[], items: T[], record: Cells): Promise<void> {
     for (const item of items) {
       for (const entry of entries) {
         const { enrichment } = entry;
@@ -36,16 +27,16 @@ export abstract class CreateEnrichmentStrategy<T> {
           continue;
         }
         if ((enrichment.type ?? "object") !== "object") continue;
-        const name = this.getCell(item, enrichment.destinationProperty);
+        const name = record[enrichment.destinationProperty];
         if (!this.presentCell(name)) continue;
-        if (this.presentCell(this.keyOf(this.getCell(item, enrichment.sourceProperty), enrichment.relatedKey))) continue;
+        if (this.presentCell(record[enrichment.sourceProperty])) continue;
         const found = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedProperty, name)));
         if (!found)
           throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
         const id = this.getCell(found, enrichment.relatedKey);
         if (!this.presentCell(id))
           throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
-        this.stamp(item as T & object, enrichment.sourceProperty, id);
+        this.stamp(record, enrichment.sourceProperty, id);
       }
     }
   }
@@ -110,13 +101,7 @@ export abstract class CreateEnrichmentStrategy<T> {
       Object.assign(target, { [name]: key });
       return;
     }
-    if (holds(related, by)) {
-      Object.assign(related, { [by]: key });
-      return;
-    }
-    const extras = lookups.get(related) ?? {};
-    extras[by] = key as Exclude<Scalar, object>;
-    lookups.set(related, extras);
+    if (holds(related, by)) Object.assign(related, { [by]: key });
   };
 
   protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void =>

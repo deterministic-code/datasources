@@ -18,7 +18,6 @@ use crate::parameter::Parameter;
 use crate::statement::Statement;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
-use crate::create_enrichment_strategy::merge_lookups;
 use crate::repository::{map_row, to_stored, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
@@ -391,12 +390,84 @@ impl<T: Entity> CRUDRepository<T> {
 
     fn reverse_convert(&self, item: &T) -> Result<Row> {
         let row = to_stored(item)?;
-        let mut row = match &self.readonly.row_converter {
-            Some(converter) => converter.reverse_convert(&row)?,
-            None => row,
-        };
-        merge_lookups(item, &mut row);
-        Ok(row)
+        match &self.readonly.row_converter {
+            Some(converter) => converter.reverse_convert(&row),
+            None => Ok(row),
+        }
+    }
+
+    async fn lookup_row(&self, item: &mut T) -> Result<Row> {
+        let mut record = to_stored(item)?;
+        self.align_lookup_keys(&mut record, false);
+        self.write
+            .resolve_lookups(&self.tree, std::slice::from_mut(item), &mut record)
+            .await?;
+        self.align_lookup_keys(&mut record, true);
+        self.require_lookup_sources(&record)?;
+        match &self.readonly.row_converter {
+            Some(converter) => converter.reverse_convert(&record),
+            None => Ok(record),
+        }
+    }
+
+    fn align_lookup_keys(&self, record: &mut Row, from_source: bool) {
+        let entries = self.readonly.enrichments.lock().expect("enrichments");
+        for entry in entries.iter() {
+            let enrichment = &entry.enrichment;
+            if enrichment.r#type != crate::EnrichmentPropertyType::Object
+                || enrichment.association.is_some()
+            {
+                continue;
+            }
+            let source = &enrichment.source_property;
+            let column = self.readonly.column(source);
+            if from_source {
+                if let Some(value) = record.get(source).cloned().filter(|value| assigned(value)) {
+                    record.insert(column, value);
+                }
+                continue;
+            }
+            if record.get(source).is_some_and(assigned) {
+                continue;
+            }
+            if let Some(value) = record.get(&column).cloned().filter(|value| assigned(value)) {
+                record.insert(source.clone(), value);
+            }
+        }
+    }
+
+    fn require_lookup_sources(&self, record: &Row) -> Result<()> {
+        let entries = self.readonly.enrichments.lock().expect("enrichments");
+        for entry in entries.iter() {
+            let enrichment = &entry.enrichment;
+            if enrichment.r#type != crate::EnrichmentPropertyType::Object
+                || enrichment.association.is_some()
+            {
+                continue;
+            }
+            if record
+                .get(&enrichment.source_property)
+                .is_some_and(assigned)
+            {
+                continue;
+            }
+            let Some(column) = self
+                .readonly
+                .schema()
+                .columns
+                .get(&enrichment.destination_property)
+            else {
+                continue;
+            };
+            if column.nullable {
+                continue;
+            }
+            return Err(DatasourceError::message(format!(
+                "Unknown {}",
+                enrichment.destination_property
+            )));
+        }
+        Ok(())
     }
 
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
@@ -666,10 +737,7 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
             Arc::clone(&self.readonly.connection),
             || async {
                 let mut item = Box::new(item);
-                self.write
-                    .resolve_lookups(&self.tree, std::slice::from_mut(&mut *item))
-                    .await?;
-                let mut row = self.reverse_convert(&*item)?;
+                let mut row = self.lookup_row(&mut *item).await?;
                 let created = self.insert_parent(&mut row).await?;
                 copy_cells(&created, &mut *item, &self.ids)?;
                 if !self.enriched() {
@@ -696,10 +764,7 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
             Arc::clone(&self.readonly.connection),
             || async {
                 let mut item = Box::new(item);
-                self.write
-                    .resolve_lookups(&self.tree, std::slice::from_mut(&mut *item))
-                    .await?;
-                let row = self.reverse_convert(&*item)?;
+                let row = self.lookup_row(&mut *item).await?;
                 let response = self.save(&row, by_where).await?;
                 if self.enriched() {
                     self.write
