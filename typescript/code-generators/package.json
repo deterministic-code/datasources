@@ -11,7 +11,6 @@
     "./common/sql-dialect": "./src/sql/common/sql-dialect.ts",
     "./sql/common/write-inclusion": "./src/sql/common/write-inclusion.ts",
     "./sql/common/default-casing": "./src/sql/common/default-casing.ts",
-    "./sql/common/infer-reference-types": "./src/sql/common/infer-reference-types.ts",
     "./sql/common/join-batches": "./src/sql/common/join-batches.ts"
   },
   "scripts": {

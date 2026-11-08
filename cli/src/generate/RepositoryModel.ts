@@ -1,5 +1,12 @@
 import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
-import type { SchemaColumn } from "./schemaFields.ts";
+
+export type SchemaColumn = {
+  from: string;
+  type: string;
+  nullable: boolean;
+  hasDefault: boolean;
+  isId: boolean;
+};
 
 export type Pair = { from: string; to: string };
 
