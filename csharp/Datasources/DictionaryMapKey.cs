@@ -2,25 +2,18 @@ namespace Datasources;
 
 internal static class DictionaryMapKey
 {
-    public static string Of<TChild>(Enrichment enrichment, Type? valueType = null)
+    public static string Of(Schema schema, Enrichment enrichment, IEnumerable<string>? extraSkip = null)
     {
         var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Id", enrichment.RelatedKey };
         if (enrichment.RelatedProperty is { } related)
             skip.Add(related);
-        if (valueType is { } dest && dest != typeof(string) && dest != typeof(object) && !dest.IsPrimitive && dest != typeof(Value))
-            foreach (var prop in dest.GetProperties())
-                skip.Add(prop.Name);
-        return typeof(TChild).GetProperties()
-            .Select(prop => prop.Name)
-            .Where(name => !skip.Contains(name))
-            .Single();
-    }
-
-    public static Type? ValueType(Type parent, string destination)
-    {
-        var dest = parent.GetProperty(destination)?.PropertyType;
-        return dest is { IsGenericType: true } && dest.GetGenericArguments().Length == 2
-            ? dest.GetGenericArguments()[1]
-            : null;
+        if (extraSkip is not null)
+            foreach (var name in extraSkip)
+                skip.Add(name);
+        return schema.Columns
+            .Where(pair => !skip.Contains(pair.Key) && !pair.Value.HasDefault)
+            .Select(pair => pair.Key)
+            .FirstOrDefault()
+            ?? throw new DatasourceException("dictionary map key is missing on the related object");
     }
 }

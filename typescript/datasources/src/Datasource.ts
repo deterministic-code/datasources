@@ -13,7 +13,6 @@ import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryFactory } from "./RepositoryFactory.ts";
 import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
-import { Schema } from "./Schema.ts";
 import { bindDatasource } from "./DatasourceFactory.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 import { createReadonlyRepositoryMappingOptions } from "./createReadonlyRepositoryMappingOptions.ts";
@@ -70,7 +69,7 @@ export class Datasource implements IDatasource {
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,
-      schema: options?.schema ?? new Schema({}),
+      schema: options?.schema ?? built.schema,
       type,
     };
   };
@@ -83,7 +82,7 @@ export class Datasource implements IDatasource {
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,
-      schema: options?.schema ?? new Schema({}),
+      schema: options?.schema ?? built.schema,
       type,
     };
   };

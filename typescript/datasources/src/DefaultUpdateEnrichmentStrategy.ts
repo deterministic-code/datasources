@@ -1,6 +1,6 @@
 import { DatasourceError } from "./DatasourceError.ts";
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
-import { dictionaryMapKey, relatedObjectNames, valueObjectNames, type Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, valueObjectNames, type Enrichment } from "./Enrichment.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
@@ -33,7 +33,7 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
   ): Promise<void> => {
     const keyName = dictionaryMapKey(
       enrichment,
-      relatedObjectNames(writer),
+      writer.schema,
       valueObjectNames((parent as { [name: string]: object })[enrichment.destinationProperty] ?? {}),
     );
     const ids = this.namesOf(writer, rows[0] ?? existing[0] ?? {} as TChild);

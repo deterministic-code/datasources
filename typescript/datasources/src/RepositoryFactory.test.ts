@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
+import { Schema } from "./Schema.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockRepository } from "./mocks/mock-repository.ts";
 import { RepositoryFactory } from "./RepositoryFactory.ts";
@@ -9,6 +10,7 @@ class Item {}
 
 const emptyReadonly = (): IReadonlyRepository<Item> => ({
   type: Item,
+  schema: new Schema({}),
   isSchemaRequired: false,
   readSingle: async () => undefined,
   async *read() {},

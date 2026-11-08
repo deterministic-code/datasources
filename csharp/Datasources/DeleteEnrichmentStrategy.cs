@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Datasources;
 
 public abstract class DeleteEnrichmentStrategy<T>
@@ -54,9 +52,8 @@ public abstract class DeleteEnrichmentStrategy<T>
             new Operator.Equals(association.Parent, parentKey),
             new Operator.Equals(association.Related, relatedKey)));
 
-    protected static object? Get<TItem>(TItem obj, string name) => Prop(obj, name).GetValue(obj);
-
-    static PropertyInfo Prop<TItem>(TItem obj, string name) =>
-        obj!.GetType().GetProperty(name)
-        ?? throw new DatasourceException($"Unknown property \"{name}\"");
+    protected static object? Get<TItem>(TItem obj, string name) =>
+        obj is System.Collections.IDictionary || MetaDataRowTypeConverter.Has(obj, name)
+            ? MetaDataRowTypeConverter.Get(obj, name)
+            : throw new DatasourceException($"Unknown property \"{name}\"");
 }

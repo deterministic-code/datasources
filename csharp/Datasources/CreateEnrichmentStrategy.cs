@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Datasources;
@@ -108,27 +107,38 @@ public abstract class CreateEnrichmentStrategy<T>
         TParent parent)
         where TChild : new() =>
         enrichment.Type is EnrichmentPropertyType.Dictionary
-            ? DictionaryChildren<TParent, TChild>(enrichment, parent)
+            ? DictionaryChildren(writer, enrichment, parent)
             : Payload<TParent, TChild>(parent, enrichment.DestinationProperty);
 
-    static List<TChild> DictionaryChildren<TParent, TChild>(Enrichment enrichment, TParent parent)
+    static List<TChild> DictionaryChildren<TParent, TChild>(
+        ICRUDRepository<TChild> writer,
+        Enrichment enrichment,
+        TParent parent)
         where TChild : new()
     {
         if (Get(parent, enrichment.DestinationProperty) is not IDictionary map) return [];
+        var keyName = DictionaryMapKey.Of(writer.Schema, enrichment, NamesOf(map));
         var rows = new List<TChild>();
         foreach (DictionaryEntry entry in map)
         {
             if (entry.Key is null) continue;
             var row = new TChild();
-            Set(row, DictionaryMapKey.Of<TChild>(enrichment, DictionaryMapKey.ValueType(typeof(TParent), enrichment.DestinationProperty)), entry.Key);
+            Set(row, keyName, entry.Key);
             if (enrichment.RelatedProperty is { } select)
                 Set(row, select, entry.Value);
             else if (entry.Value is not null)
-                foreach (var prop in entry.Value.GetType().GetProperties())
-                    Set(row, prop.Name, prop.GetValue(entry.Value));
+                MetaDataRowTypeConverter.Copy(entry.Value, row);
             rows.Add(row);
         }
-        return [.. rows.OrderBy(row => Get(row, DictionaryMapKey.Of<TChild>(enrichment, DictionaryMapKey.ValueType(typeof(TParent), enrichment.DestinationProperty)))?.ToString() ?? "", StringComparer.Ordinal)];
+        return [.. rows.OrderBy(row => Get(row, keyName)?.ToString() ?? "", StringComparer.Ordinal)];
+    }
+
+    static IEnumerable<string> NamesOf(IDictionary map)
+    {
+        foreach (DictionaryEntry entry in map)
+            if (entry.Value is not null and not string)
+                foreach (var name in MetaDataRowTypeConverter.Names(entry.Value))
+                    yield return name;
     }
 
     protected static void Stamp<TItem>(TItem related, string by, object? key)
@@ -138,59 +148,17 @@ public abstract class CreateEnrichmentStrategy<T>
     }
 
     protected static object? Get<TItem>(TItem obj, string name) =>
-        TryGet(obj, name) ?? (obj is IDictionary ? null : Prop(obj, name).GetValue(obj));
+        obj is IDictionary || MetaDataRowTypeConverter.Has(obj, name)
+            ? MetaDataRowTypeConverter.Get(obj, name)
+            : throw new DatasourceException($"Unknown property \"{name}\"");
 
-    static object? TryGet<TItem>(TItem obj, string name) =>
-        obj is IDictionary dict
-            ? dict.Contains(name) ? dict[name] : null
-            : obj!.GetType().GetProperty(name)?.GetValue(obj);
+    static object? TryGet<TItem>(TItem obj, string name) => MetaDataRowTypeConverter.Get(obj, name);
 
-    protected static object? Key(object? value, string name)
-    {
-        if (value is null or string || value is Value || value.GetType().IsPrimitive)
-            return value;
-        return value.GetType().GetProperty(name)?.GetValue(value) ?? value;
-    }
+    protected static object? Key(object? value, string name) => MetaDataRowTypeConverter.Key(value, name);
 
     protected static void Set<TItem>(TItem obj, string name, object? value, string? id = null)
     {
-        if (obj is IDictionary dict)
-        {
-            dict[name] = value;
-            return;
-        }
-        if (obj!.GetType().GetProperty(name) is null)
-        {
-            Lookups.GetOrCreateValue(obj)[name] = Value.From(value);
-            return;
-        }
-        var prop = Prop(obj, name);
-        var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-        if (value is not null && IsReference(target) && !target.IsInstanceOfType(value))
-        {
-            var current = prop.GetValue(obj) ?? Activator.CreateInstance(target)
-                ?? throw new DatasourceException($"Cannot create \"{name}\"");
-            var key = IdentityProperty(target, id)
-                ?? throw new DatasourceException($"\"{name}\" requires is_id");
-            var idType = Nullable.GetUnderlyingType(key.PropertyType) ?? key.PropertyType;
-            key.SetValue(current, idType.IsInstanceOfType(value) ? value : Convert.ChangeType(value, idType));
-            prop.SetValue(obj, current);
-            return;
-        }
-        prop.SetValue(obj, value is null || target.IsInstanceOfType(value)
-            ? value
-            : Convert.ChangeType(value, target));
+        if (MetaDataRowTypeConverter.TrySet(obj!, name, value, id)) return;
+        Lookups.GetOrCreateValue(obj!)[name] = Value.From(value);
     }
-
-    static PropertyInfo? IdentityProperty(Type target, string? id) =>
-        !string.IsNullOrEmpty(id) && target.GetProperty(id) is { } named
-            ? named
-            : target.GetProperty("id") ?? target.GetProperty("Id");
-
-    static bool IsReference(Type type) =>
-        type.IsClass && type != typeof(string) && !typeof(IEnumerable).IsAssignableFrom(type);
-
-    static PropertyInfo Prop<TItem>(TItem obj, string name) =>
-        obj!.GetType().GetProperty(name)
-        ?? throw new DatasourceException($"Unknown property \"{name}\"");
 }

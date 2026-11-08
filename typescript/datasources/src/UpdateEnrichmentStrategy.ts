@@ -1,4 +1,4 @@
-import { dictionaryMapKey, relatedObjectNames, valueObjectNames, type Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, valueObjectNames, type Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { defaultId } from "./createCRUDRepositoryOptions.ts";
@@ -82,12 +82,12 @@ export abstract class UpdateEnrichmentStrategy<T> {
 const mapPayload = (
   value: Scalar | object | undefined,
   enrichment?: Enrichment,
-  writer?: { schema?: { columns: Record<string, unknown> }; type?: new () => object },
+  writer?: ICRUDRepository,
 ): object[] => {
   if (value === undefined || value === null || typeof value === "string") return [];
   if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
-  if (!enrichment || enrichment.type !== "dictionary" || typeof value !== "object") return [];
-  const keyName = dictionaryMapKey(enrichment, relatedObjectNames(writer), valueObjectNames(value));
+  if (!enrichment || enrichment.type !== "dictionary" || typeof value !== "object" || writer === undefined) return [];
+  const keyName = dictionaryMapKey(enrichment, writer.schema, valueObjectNames(value));
   const valueName = enrichment.relatedProperty ?? (keyName === "Key" ? "Value" : "value");
   return Object.entries(value as Record<string, Scalar | object>)
     .sort(([left], [right]) => left.localeCompare(right))

@@ -159,10 +159,11 @@ impl<T: Entity> ReadonlyRepository<T> {
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let via = via.read_via();
+        let schema = via.schema();
         self.enrichments
             .lock()
             .expect("enrichments")
-            .push(StoredEnrichment::direct(enrichment, via, None, strategy));
+            .push(StoredEnrichment::direct(enrichment, via, None, strategy, schema));
         self
     }
 
@@ -501,6 +502,7 @@ impl<T: Entity> ReadonlyRepository<T> {
                     ),
                     &mut rows,
                     Some(&sources),
+                    &Schema::default(),
                 )
                 .await?;
             return rows.into_iter().map(crate::repository::map_row).collect();
@@ -634,6 +636,10 @@ impl<T: Entity> ReadonlyRepository<T> {
 
 #[async_trait]
 impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
+    fn schema(&self) -> Schema {
+        self.schema.clone()
+    }
+
     async fn read_single(
         &self,
         query: Option<&dyn Statement>,

@@ -3,6 +3,7 @@ use crate::entity::{assign_one, assign_related, Entity};
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
@@ -18,13 +19,14 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
         enrichment: &Enrichment,
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
+        schema: &Schema,
     ) -> Result<()> {
         match enrichment.r#type {
             crate::EnrichmentPropertyType::List => {
                 self.apply_list(via, enrichment, parents, sources).await
             }
             crate::EnrichmentPropertyType::Dictionary => {
-                apply_dictionary(via, enrichment, parents, sources).await
+                apply_dictionary(via, enrichment, parents, sources, schema).await
             }
             crate::EnrichmentPropertyType::Object => {
                 self.apply_object(via, enrichment, parents, sources).await
@@ -113,6 +115,7 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
     enrichment: &Enrichment,
     parents: &mut Vec<T>,
     sources: Option<&[Option<Row>]>,
+    schema: &Schema,
 ) -> Result<()> {
     for (index, parent) in parents.iter_mut().enumerate() {
         let Some(key) = source_key_of(
@@ -131,17 +134,11 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
             .await?;
         match enrichment.related_property.as_deref() {
             Some(select) => {
-                let key_name = crate::create_enrichment_strategy::map_key::<TRelated>(
-                    enrichment,
-                    related.first(),
-                );
+                let key_name = crate::create_enrichment_strategy::map_key(schema, enrichment, &[])?;
                 let rows = related
                     .into_iter()
                     .filter_map(|item| {
-                        let key = item
-                            .cell(&key_name)
-                            .or_else(|| item.cell("key"))
-                            .or_else(|| item.cell("Key"))?;
+                        let key = item.cell(&key_name)?;
                         let value = item.cell(select)?;
                         let mut row = Row::new();
                         row.insert(key_name.clone(), key);

@@ -2,13 +2,14 @@ import type { IConnection } from "./IConnection.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
-import { fieldNamesOf } from "./createReadonlyRepositoryMappingOptions.ts";
+import { fieldNamesOf, schemaOf } from "./createReadonlyRepositoryMappingOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { DatasourceFactory } from "./DatasourceFactory.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
+import { Schema } from "./Schema.ts";
 
 export class ReadonlyRepositoryBuilder<T = object> {
   protected entityMapper: IMapper<string, string> = new IdentityMapper();
@@ -32,7 +33,8 @@ export class ReadonlyRepositoryBuilder<T = object> {
       const instance = new options.type() as Record<string, string | number | boolean | bigint | null | object>;
       objectConverter.references.clear();
       objectConverter.referenceColumns = propertyMappings;
-      objectConverter.ids = options.schema?.ids().length ? options.schema.ids() : this.ids(options);
+      const schemaIds = options.schema?.ids() ?? [];
+      objectConverter.ids = schemaIds.length > 0 ? schemaIds : this.ids(options);
       for (const name of names) {
         const value = instance[name];
         if (
@@ -56,6 +58,7 @@ export class ReadonlyRepositoryBuilder<T = object> {
       statements: this.statements(entity, columns),
       ids: this.ids(options),
       type: options.type ?? (Object as never as Constructable<T>),
+      schema: options.schema ?? (options.type ? schemaOf(options.type) : new Schema({})),
     };
   };
 

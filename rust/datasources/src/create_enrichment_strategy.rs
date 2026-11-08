@@ -4,6 +4,7 @@ use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::value::Value;
 use async_trait::async_trait;
@@ -54,51 +55,36 @@ pub(crate) fn key(value: Option<Value>) -> Option<Value> {
     }
 }
 
-pub(crate) fn map_key<TChild: Entity>(enrichment: &Enrichment, sample: Option<&TChild>) -> String {
-    leftover_key(&related_names(sample), enrichment, &[], None)
-}
-
-fn related_names<TChild: Entity>(sample: Option<&TChild>) -> Vec<String> {
-    sample
-        .and_then(|item| TChild::object_converter().reverse_convert(item).ok())
-        .or_else(|| TChild::object_converter().reverse_convert(&TChild::default()).ok())
-        .map(|row| row.keys().cloned().collect())
-        .unwrap_or_default()
-}
-
-fn leftover_key(
-    names: &[String],
-    enrichment: &Enrichment,
-    extra_skip: &[String],
-    present: Option<&Row>,
-) -> String {
+pub(crate) fn map_key(schema: &Schema, enrichment: &Enrichment, extra_skip: &[String]) -> Result<String> {
     let skip: HashSet<String> = ["id".into(), enrichment.related_key.to_ascii_lowercase()]
         .into_iter()
-        .chain(enrichment.related_property.iter().map(|name| name.to_ascii_lowercase()))
+        .chain(
+            enrichment
+                .related_property
+                .iter()
+                .map(|name| name.to_ascii_lowercase()),
+        )
         .chain(extra_skip.iter().map(|name| name.to_ascii_lowercase()))
         .collect();
-    let leftover: Vec<String> = names
+    let leftover: Vec<String> = schema
+        .columns
         .iter()
-        .filter(|name| !skip.contains(&name.to_ascii_lowercase()))
-        .cloned()
+        .filter(|(name, column)| !skip.contains(&name.to_ascii_lowercase()) && !column.has_default)
+        .map(|(name, _)| name.clone())
         .collect();
-    if let Some(row) = present {
-        if let Some(name) = leftover.iter().find(|name| {
-            row.keys()
-                .any(|key| key.eq_ignore_ascii_case(name))
-        }) {
-            return name.clone();
-        }
-    }
-    leftover.first().cloned().unwrap_or_else(|| "key".into())
+    leftover
+        .into_iter()
+        .next()
+        .ok_or_else(|| DatasourceError::message("dictionary map key is missing on the related object"))
 }
 
 pub(crate) fn children<T: Entity, TChild: Entity>(
     enrichment: &Enrichment,
     parent: &T,
+    schema: &Schema,
 ) -> Result<Vec<TChild>> {
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
-        dictionary_children(enrichment, parent)
+        dictionary_children(enrichment, parent, schema)
     } else {
         Ok(parent.related(&enrichment.destination_property))
     }
@@ -107,6 +93,7 @@ pub(crate) fn children<T: Entity, TChild: Entity>(
 fn dictionary_children<T: Entity, TChild: Entity>(
     enrichment: &Enrichment,
     parent: &T,
+    schema: &Schema,
 ) -> Result<Vec<TChild>> {
     let extra: Vec<String> = parent
         .payload(&enrichment.destination_property)
@@ -119,19 +106,7 @@ fn dictionary_children<T: Entity, TChild: Entity>(
                 .collect()
         })
         .unwrap_or_default();
-    let names = related_names::<TChild>(None);
-    let names = if names.is_empty() {
-        parent
-            .payload(&enrichment.destination_property)
-            .into_iter()
-            .next()
-            .map(|row| row.keys().cloned().collect())
-            .unwrap_or_default()
-    } else {
-        names
-    };
-    let present = parent.payload(&enrichment.destination_property).into_iter().next();
-    let key_name = leftover_key(&names, enrichment, &extra, present.as_ref());
+    let key_name = map_key(schema, enrichment, &extra)?;
     parent
         .payload(&enrichment.destination_property)
         .into_iter()
@@ -163,6 +138,13 @@ fn dictionary_children<T: Entity, TChild: Entity>(
             Ok(child)
         })
         .collect()
+}
+
+pub(crate) fn dict_sort_key<TChild: Entity>(child: &TChild, key_name: &str) -> String {
+    child
+        .cell(key_name)
+        .map(|value| value.wire_text())
+        .unwrap_or_default()
 }
 
 pub(crate) fn set<T: Entity>(item: &mut T, name: &str, value: Value) -> Result<()> {

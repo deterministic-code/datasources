@@ -46,7 +46,6 @@ pub struct CRUDRepository<T: Entity = Row> {
     ids: Vec<String>,
     create_properties: Option<Vec<String>>,
     update_properties: Option<Vec<String>>,
-    create_zeros: Row,
     crud_statements: CRUDRepositoryStatements,
     tree: RepositoryTree<T>,
     write: Arc<dyn WriteEnrichmentStrategy<T>>,
@@ -109,7 +108,6 @@ impl<T: Entity> CRUDRepository<T> {
             ids: id,
             create_properties,
             update_properties,
-            create_zeros: Row::new(),
             tree,
             write: Arc::new(DefaultWriteEnrichmentStrategy::<T>::default()),
             entity: PhantomData,
@@ -135,7 +133,6 @@ impl<T: Entity> CRUDRepository<T> {
             ids,
             create_properties: None,
             update_properties: None,
-            create_zeros: Row::new(),
             tree,
             write: write
                 .unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::<T>::default())),
@@ -148,21 +145,9 @@ impl<T: Entity> CRUDRepository<T> {
         self
     }
 
-    pub fn with_create_zeros(mut self, zeros: Row) -> Self {
-        self.create_zeros = zeros;
-        self
-    }
-
     pub fn fill_create_zeros(&self, record: &Row) -> Row {
         let mut filled = record.clone();
-        if self.create_zeros.is_empty() {
-            self.apply_empty_defaults(&mut filled, &self.create_properties, true);
-        } else {
-            for (key, value) in &self.create_zeros {
-                filled.entry(key.clone()).or_insert_with(|| value.clone());
-            }
-            self.apply_empty_defaults(&mut filled, &self.create_properties, false);
-        }
+        self.apply_empty_defaults(&mut filled, &self.create_properties, true);
         filled
     }
 
@@ -201,11 +186,12 @@ impl<T: Entity> CRUDRepository<T> {
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let (via, persist) = via.into_repos();
+        let schema = via.schema();
         self.readonly
             .enrichments
             .lock()
             .expect("enrichments")
-            .push(StoredEnrichment::direct(enrichment, via, persist, strategy));
+            .push(StoredEnrichment::direct(enrichment, via, persist, strategy, schema));
         self
     }
 
@@ -636,6 +622,10 @@ impl<T: Entity> IRepository for CRUDRepository<T> {
 impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<T>>> {
         Some(self)
+    }
+
+    fn schema(&self) -> crate::schema::Schema {
+        self.readonly.schema.clone()
     }
 
     async fn read_single(

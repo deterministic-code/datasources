@@ -8,6 +8,7 @@ use crate::readonly_enrichment_strategy::{apply_linked, ReadonlyEnrichmentStrate
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::value::Value;
 use crate::write_mode::WriteMode;
 use crate::{Operator, Where};
@@ -30,6 +31,7 @@ pub(crate) trait AppliedRead<T: Entity>: Send + Sync {
 struct AppliedReadImpl<T, TRelated> {
     via: Arc<dyn IReadonlyRepository<TRelated>>,
     strategy: Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>,
+    schema: Schema,
 }
 
 #[async_trait]
@@ -41,7 +43,7 @@ impl<T: Entity, TRelated: Entity> AppliedRead<T> for AppliedReadImpl<T, TRelated
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         self.strategy
-            .apply(self.via.clone(), enrichment, parents, sources)
+            .apply(self.via.clone(), enrichment, parents, sources, &self.schema)
             .await
     }
 
@@ -114,6 +116,7 @@ pub(crate) trait AppliedPersist<T: Entity>: Send + Sync {
 struct AppliedPersistImpl<T, TChild> {
     repository: Arc<dyn ICRUDRepository<TChild>>,
     persist_bulk: Option<Arc<BulkCRUDRepository>>,
+    schema: Schema,
     entity: std::marker::PhantomData<T>,
 }
 
@@ -122,10 +125,10 @@ impl<T: Entity, TChild: Entity> AppliedPersist<T> for AppliedPersistImpl<T, TChi
     async fn write(&self, enrichment: &Enrichment, parent: &mut T, mode: WriteMode) -> Result<()> {
         match mode {
             WriteMode::Create => {
-                create_children(self.repository.as_ref(), enrichment, parent).await
+                create_children(self.repository.as_ref(), enrichment, parent, &self.schema).await
             }
             WriteMode::Update => {
-                update_children(self.repository.as_ref(), enrichment, parent).await
+                update_children(self.repository.as_ref(), enrichment, parent, &self.schema).await
             }
             WriteMode::Delete => {
                 delete_children(self.repository.as_ref(), enrichment, parent, &NoNested).await
@@ -222,8 +225,9 @@ impl<T: Entity> StoredEnrichment<T> {
         via: Arc<dyn IReadonlyRepository<TRelated>>,
         persist: Option<Arc<dyn ICRUDRepository<TRelated>>>,
         strategy: Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>,
+        schema: Schema,
     ) -> Self {
-        Self::direct_bulk(enrichment, via, persist, None, strategy)
+        Self::direct_bulk(enrichment, via, persist, None, strategy, schema)
     }
 
     pub(crate) fn direct_bulk<TRelated: Entity>(
@@ -232,17 +236,23 @@ impl<T: Entity> StoredEnrichment<T> {
         persist: Option<Arc<dyn ICRUDRepository<TRelated>>>,
         persist_bulk: Option<Arc<BulkCRUDRepository>>,
         strategy: Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>,
+        schema: Schema,
     ) -> Self {
         let persist = persist.map(|repository| {
             Arc::new(AppliedPersistImpl {
                 repository,
                 persist_bulk: persist_bulk.clone(),
+                schema: schema.clone(),
                 entity: std::marker::PhantomData,
             }) as Arc<dyn AppliedPersist<T>>
         });
         Self {
             enrichment,
-            read: Arc::new(AppliedReadImpl { via, strategy }),
+            read: Arc::new(AppliedReadImpl {
+                via,
+                strategy,
+                schema,
+            }),
             persist,
             link: None,
             linked: false,

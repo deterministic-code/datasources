@@ -104,6 +104,7 @@ impl BulkCRUDRepository {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let persist_bulk = via.bulk_repo();
         let (via, persist) = via.into_repos();
+        let schema = via.schema();
         self.crud
             .enrichments
             .lock()
@@ -114,6 +115,7 @@ impl BulkCRUDRepository {
                 persist,
                 persist_bulk,
                 strategy,
+                schema,
             ));
         self
     }
@@ -248,6 +250,10 @@ impl IRepository for BulkCRUDRepository {
 impl IReadonlyRepository for BulkCRUDRepository {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
         Some(self)
+    }
+
+    fn schema(&self) -> crate::schema::Schema {
+        IReadonlyRepository::schema(self.crud.as_ref())
     }
 
     async fn read_single(

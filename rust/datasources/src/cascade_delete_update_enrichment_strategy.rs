@@ -26,7 +26,7 @@ impl<T: Entity> UpdateEnrichmentStrategy<T> for CascadeDeleteUpdateEnrichmentStr
         for row in &existing {
             writer.delete(row.clone(), None).await?;
         }
-        create_children(writer.as_ref(), enrichment, parent).await
+        create_children(writer.as_ref(), enrichment, parent, &crate::schema::Schema::default()).await
     }
 
     async fn update_linked(

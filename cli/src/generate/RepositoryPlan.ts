@@ -70,25 +70,20 @@ export const planRepositories = (
   const models = spec.datasource.flatMap((table): RepositoryModel[] => {
     const authored = viewByTable.get(table.name) ?? types.get(table.name);
     if (skip(table, authored)) return [];
-    const shape = expanded.get(authored!.name);
-    if (shape === undefined) throw new Error(`${authored!.name}: no expanded type`);
+    const tableType = expanded.get(table.name) ?? types.get(table.name);
+    if (tableType === undefined) return [];
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
-    const enrichments = relations(authored!, casing, types, expanded, repoName, identity, typeName);
-    const skipColumns = new Set(enrichments.filter((item) => item.kind === "object").map((item) => item.destination));
-    const schema = persistedColumnFields(shape).filter((field) => field.type.length > 0);
-    const names = new Set(
-      schema.filter((field) => !skipColumns.has(property(field.name))).map((field) => property(field.name)),
+    const enrichments = relations(authored!, tableType, casing, types, expanded, repoName, identity, typeName);
+    const schema = persistedColumnFields(tableType).filter(
+      (field) =>
+        field.type.length > 0 &&
+        !enrichments.some((item) => item.kind === "object" && item.destination === property(field.name)),
     );
-    const columns = schema.filter((field) => names.has(property(field.name)));
-    const ids = identityColumns(shape, table);
-    const inherited = expanded.get(authored!.inherits ?? "") ?? types.get(authored!.inherits ?? "");
+    const columns = schema;
+    const ids = identityColumns(tableType, table);
+    const skipWrite = new Set(enrichments.filter((item) => item.kind === "object").map((item) => item.source));
     const sqlColumn = (fieldName: string): string =>
       CreateTableStatement.columnName(overlays.get(fieldName)?.mapping ?? fieldName, naming.naming);
-    const yamlFields = [
-      ...overlays.keys(),
-      ...(inherited?.fields.map((field) => field.name) ?? []),
-      ...table.fields.map((field) => field.name),
-    ];
     const mapped = new Map<string, string>();
     const mapField = (fieldName: string): void => {
       const from = property(fieldName);
@@ -97,16 +92,6 @@ export const planRepositories = (
     };
     for (const field of columns) mapField(field.name);
     const readProperties = columns.map((field) => property(field.name));
-    const readSet = new Set(readProperties);
-    for (const item of enrichments) {
-      if (item.kind !== "object") continue;
-      const fieldName = yamlFields.find((name) => property(name) === item.source);
-      if (fieldName !== undefined) mapField(fieldName);
-      if (!readSet.has(item.source)) {
-        readSet.add(item.source);
-        readProperties.push(item.source);
-      }
-    }
     return [
       {
         specName: authored!.name,
@@ -117,13 +102,13 @@ export const planRepositories = (
         ids: ids.map(property),
         readProperties,
         createProperties: columns
-          .filter((field) => writeInclusionOf(field, ids, overlays.get(field.name)).includeInCreate)
+          .filter((field) => !skipWrite.has(property(field.name)) && writeInclusionOf(field, ids, overlays.get(field.name)).includeInCreate)
           .map((field) => property(field.name)),
         updateProperties: columns
-          .filter((field) => writeInclusionOf(field, ids, overlays.get(field.name)).includeInUpdate)
+          .filter((field) => !skipWrite.has(property(field.name)) && writeInclusionOf(field, ids, overlays.get(field.name)).includeInUpdate)
           .map((field) => property(field.name)),
         schema,
-        optimisticConcurrency: concurrencyToken(table, shape, property),
+        optimisticConcurrency: concurrencyToken(table, tableType, property),
         enrichments,
       },
     ];
@@ -148,6 +133,7 @@ const concurrencyToken = (
 
 const relations = (
   authored: Type,
+  base: Type,
   casing: ICasingStrategy,
   types: Map<string, Type>,
   expanded: Map<string, Type>,
@@ -224,12 +210,11 @@ const relations = (
       });
     }
   }
-  const parent = types.get(authored.inherits ?? "") ?? expanded.get(authored.inherits ?? "");
   for (const memberName of authored.union ?? []) {
     const related = (expanded.get(memberName) ?? types.get(memberName)) as Type | undefined;
     const fk =
-      authored.fields.find((field) => referenceOf(field.references)?.type === memberName) ??
-      parent?.fields.find((field) => referenceOf(field.references)?.type === memberName);
+      base.fields.find((field) => referenceOf(field.references)?.type === memberName) ??
+      authored.fields.find((field) => referenceOf(field.references)?.type === memberName);
     if (related === undefined || fk === undefined) continue;
     const extracted = (authored.extract ?? []).flatMap((item) => {
       const dotted = item.includes(".") ? item.split(".") : undefined;

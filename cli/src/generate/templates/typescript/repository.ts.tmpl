@@ -59,7 +59,7 @@ export class {{className}} extends CRUDRepository<{{typeName}}> {
     const {{field}} = new {{className}}(connection);
 {{/children}}
 {{#enrichments}}
-    {{#linked}}repo.addLinked({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, association: { parent: "{{parentFk}}", related: "{{relatedFk}}" }, type: "{{^object}}{{^dictionary}}list{{/dictionary}}{{/object}}{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}" }, {{via}}, {{link}});{{/linked}}{{^linked}}repo.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, {{via}});{{/linked}}
+    repo.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, {{via}});
 {{/enrichments}}
     return repo;
   }

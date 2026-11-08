@@ -1,4 +1,5 @@
 import type { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
+import { Schema } from "./Schema.ts";
 
 export type Association = {
   parent: string;
@@ -14,20 +15,6 @@ export type Enrichment = {
   association?: Association;
 };
 
-export const relatedObjectNames = (
-  repo?: { schema?: { columns: Record<string, unknown> }; type?: new () => object },
-): string[] => {
-  const fromType = (() => {
-    try {
-      return repo?.type === undefined ? [] : Object.keys(new repo.type() as object);
-    } catch {
-      return [];
-    }
-  })();
-  if (fromType.length > 0) return fromType;
-  return repo?.schema === undefined ? [] : Object.keys(repo.schema.columns);
-};
-
 export const valueObjectNames = (value: object): string[] =>
   Object.values(value)
     .filter((cell): cell is object => cell !== null && typeof cell === "object" && !Array.isArray(cell))
@@ -35,7 +22,7 @@ export const valueObjectNames = (value: object): string[] =>
 
 export const dictionaryMapKey = (
   enrichment: Enrichment,
-  names: readonly string[],
+  schema: Schema,
   extraSkip: readonly string[] = [],
 ): string => {
   const skip = new Set(
@@ -43,7 +30,9 @@ export const dictionaryMapKey = (
       (name) => name.toLowerCase(),
     ),
   );
-  const leftover = names.filter((name) => !skip.has(name.toLowerCase()));
+  const leftover = Object.entries(schema.columns)
+    .filter(([name, column]) => !skip.has(name.toLowerCase()) && column.hasDefault !== true)
+    .map(([name]) => name);
   if (leftover.length === 0) throw new Error("dictionary map key is missing on the related object");
   return leftover[0]!;
 };

@@ -15,7 +15,10 @@ e2e_step() {
 
 copy_tree() {
   mkdir -p "$2"
-  (cd "$1" && tar cf - --exclude=node_modules --exclude=target --exclude=bin --exclude=obj --exclude=.env .) | tar xf - -C "$2"
+  (cd "$1" && tar cf - \
+    --exclude=node_modules --exclude=target --exclude=bin --exclude=obj \
+    --exclude=.env --exclude=generated --exclude=sql --exclude=app.sqlite \
+    --exclude=.migraters.yaml .) | tar xf - -C "$2"
 }
 
 install_cli() {

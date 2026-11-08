@@ -28,6 +28,7 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import { StoredEnrichment } from "./StoredEnrichment.ts";
+import { Schema } from "./Schema.ts";
 
 export const untyped = <T>(): Constructable<T> => Object as never as Constructable<T>;
 
@@ -63,6 +64,7 @@ export const builtOf = <T>(
 
 export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<T> {
   readonly type: Constructable<T>;
+  readonly schema: Schema;
   readonly isSchemaRequired = false;
   private connection?: IConnection;
   protected rowConverter?: TypeConverter<Cells, Cells>;
@@ -85,14 +87,17 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     storedEnrichments.set(this, []);
     if (typeOrConnectionOrBuilt === undefined) {
       this.type = untyped();
+      this.schema = new Schema({});
       return;
     }
     const built = builtOf(typeOrConnectionOrBuilt, connectionOrOptions);
     if (!built) {
       this.type = typeOrConnectionOrBuilt as Constructable<T>;
+      this.schema = new Schema({});
       return;
     }
     this.type = built.type;
+    this.schema = built.schema;
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
     this.objectConverter = built.objectConverter;
@@ -117,25 +122,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
       new StoredEnrichment<T, TRelated>(
         enrichment,
         (parents, sources) => chosen.apply(via, enrichment, parents as (T & object)[], sources),
-        undefined,
-        undefined,
-        via,
-      ) as unknown as StoredEnrichment<T>,
-    );
-    return this;
-  }
-
-  addLinked<TRelated extends object, TLink extends object>(
-    enrichment: Enrichment,
-    via: IReadonlyRepository<TRelated>,
-    link: IReadonlyRepository<TLink>,
-    strategy?: IReadonlyEnrichmentStrategy<T & object>,
-  ): this {
-    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
-    this.entries().push(
-      new StoredEnrichment<T, TRelated>(
-        enrichment,
-        (parents, sources) => chosen.applyLinked(via, link, enrichment, parents as (T & object)[], sources),
         undefined,
         undefined,
         via,

@@ -119,8 +119,6 @@ export class CRUDRepository<T = Cells>
   readonly ids: readonly string[];
   private readonly createProperties?: readonly string[];
   private readonly updateProperties?: readonly string[];
-  protected createZeros?: Cells;
-  readonly schema: Schema;
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
@@ -140,7 +138,6 @@ export class CRUDRepository<T = Cells>
     this.ids = opened.built.ids;
     this.createProperties = (options as CRUDRepositoryOptions<T>).createProperties;
     this.updateProperties = (options as CRUDRepositoryOptions<T>).updateProperties;
-    this.schema = (options as CRUDRepositoryOptions<T>).schema ?? new Schema({});
     this.crudStatements = opened.statements;
     this.tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();
@@ -165,8 +162,12 @@ export class CRUDRepository<T = Cells>
     link: ICRUDRepository<TLink>,
     strategy?: IReadonlyEnrichmentStrategy<T & object>,
   ): this {
-    super.addLinked(enrichment, via, link, strategy);
-    lastEnrichment<T, TRelated, TLink>(this).link = link;
+    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
+    super.addEnriched(enrichment, via, strategy);
+    const stored = lastEnrichment<T, TRelated, TLink>(this);
+    stored.apply = (parents, sources) =>
+      chosen.applyLinked(via, link, enrichment, parents as (T & object)[], sources);
+    stored.link = link;
     return this;
   }
 
@@ -317,10 +318,7 @@ export class CRUDRepository<T = Cells>
 
   fillCreateZeros = (record: Cells): Cells => {
     const skip = (name: string): boolean => this.enrichmentSource(name);
-    const zeros =
-      this.createZeros !== undefined && Object.keys(this.createZeros).length > 0
-        ? this.createZeros
-        : zerosFromSchema(this.schema, this.ids, this.createProperties, skip);
+    const zeros = zerosFromSchema(this.schema, this.ids, this.createProperties, skip);
     const filled = Object.keys(zeros).length === 0 ? { ...record } : { ...zeros, ...record };
     return applyEmptyDefaults(filled, this.schema, this.ids, this.createProperties, false, skip);
   };

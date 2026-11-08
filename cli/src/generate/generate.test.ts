@@ -269,8 +269,12 @@ types:
     expect(textOf(csharp, "UsersRepository.cs")).not.toContain("KeyProperty");
     expect(textOf(csharp, "ContactsRepository.cs")).not.toContain("KeyProperty");
     const readonlyLinked = gamesTs.slice(gamesTs.indexOf("static createReadonly"));
-    expect(readonlyLinked).toContain("repo.addLinked");
-    expect(readonlyLinked).toContain('association: { parent: "gameId", related: "categoryId" }');
+    expect(readonlyLinked).toContain("repo.addEnriched");
+    expect(readonlyLinked).not.toContain("repo.addLinked");
+    expect(readonlyLinked).not.toContain("association:");
+    expect(gamesTs.slice(0, gamesTs.indexOf("static createReadonly"))).toContain(
+      'association: { parent: "gameId", related: "categoryId" }',
+    );
     const entries = await deterministic.generateTypes({
       dialect: "typescript",
       reader: memoryReader(loaded.files),
@@ -632,19 +636,16 @@ types: []
     expect(textOf(csharp, "AddressesRepository.cs")).toMatch(/ReadProperties = \[[^\]]*AddressTypeId/);
     expect(textOf(csharp, "AddressesRepository.cs")).not.toMatch(/CreateProperties = \[[^\]]*AddressTypeId/);
     expect(textOf(csharp, "AddressesRepository.cs")).not.toMatch(/UpdateProperties = \[[^\]]*AddressTypeId/);
-    expect(textOf(csharp, "AddressesRepository.cs")).toContain('["AddressTypeName"] = new("string"');
     expect(textOf(csharp, "AddressesRepository.cs")).toContain('AddEnriched(new("AddressTypeName"');
     expect(textOf(typescript, "addressesRepository.ts")).not.toMatch(/readProperties: \[[^\]]*addressTypeName/);
     expect(textOf(typescript, "addressesRepository.ts")).toMatch(/readProperties: \[[^\]]*addressTypeId/);
     expect(textOf(typescript, "addressesRepository.ts")).not.toMatch(/createProperties: \[[^\]]*addressTypeId/);
     expect(textOf(typescript, "addressesRepository.ts")).not.toMatch(/updateProperties: \[[^\]]*addressTypeId/);
-    expect(textOf(typescript, "addressesRepository.ts")).toContain('addressTypeName: { type: "string"');
     expect(textOf(typescript, "addressesRepository.ts")).toContain('destinationProperty: "addressTypeName"');
     expect(textOf(rust, "addressesRepository.rs")).not.toMatch(/read_properties = vec!\[[^\]]*address_type_name/);
     expect(textOf(rust, "addressesRepository.rs")).toMatch(/read_properties = vec!\[[^\]]*address_type_id/);
     expect(textOf(rust, "addressesRepository.rs")).not.toMatch(/create_properties = Some\(vec!\[[^\]]*address_type_id/);
     expect(textOf(rust, "addressesRepository.rs")).not.toMatch(/update_properties = Some\(vec!\[[^\]]*address_type_id/);
-    expect(textOf(rust, "addressesRepository.rs")).toContain('("address_type_name".into(), SchemaColumn { type_name: "string"');
     expect(textOf(rust, "addressesRepository.rs")).toContain('Enrichment::new("address_type_name"');
     expect(textOf(rust, "phonesRepository.rs")).not.toMatch(/read_properties = vec!\[[^\]]*phone_type_name/);
     expect(textOf(rust, "phonesRepository.rs")).toMatch(/read_properties = vec!\[[^\]]*phone_type_id/);
@@ -729,7 +730,7 @@ types: []
     expect(template(csharp)?.updateProperties).not.toContain("TemplateTypeId");
     expect(template(csharp)?.createProperties).not.toContain("TemplateTypeName");
     expect(template(csharp)?.updateProperties).not.toContain("TemplateTypeName");
-    expect(template(csharp)?.enrichments.some((item) => item.destination === "TemplateTypeName")).toBe(true);
+    expect(template(csharp)?.enrichments.some((item) => item.destination === "TemplateTypeName" && item.source === "TemplateTypeId")).toBe(true);
     expect(template(typescript)?.readProperties).not.toContain("templateTypeName");
     expect(template(typescript)?.readProperties).toContain("templateTypeId");
     expect(template(typescript)?.createProperties).not.toContain("templateTypeId");
@@ -751,11 +752,11 @@ types: []
     expect(address?.readProperties).toContain("AddressTypeId");
     expect(address?.createProperties).not.toContain("AddressTypeId");
     expect(address?.updateProperties).not.toContain("AddressTypeId");
-    expect(address?.schema.some((field) => field.name === "address_type_id")).toBe(false);
+    expect(address?.schema.some((field) => field.name === "address_type_id")).toBe(true);
     expect(address?.propertyMappings).toContainEqual({ from: "AddressTypeId", to: "address_type_id" });
-    expect(address?.schema.some((field) => field.name === "address_type_name" && field.type === "string")).toBe(true);
+    expect(address?.schema.some((field) => field.name === "address_type_name")).toBe(false);
     expect(address?.schema.some((field) => field.name === "contact_id" && field.type === contactId?.type)).toBe(true);
-    expect(address?.enrichments.some((item) => item.destination === "AddressTypeName" && item.kind === "object")).toBe(true);
+    expect(address?.enrichments.some((item) => item.destination === "AddressTypeName" && item.source === "AddressTypeId" && item.kind === "object")).toBe(true);
   });
 
   it("plans union enrichments from authored keys, extract filters, and a types-only member", async () => {
@@ -826,13 +827,6 @@ types: []
       "title",
       "code",
     ]);
-    expect(() =>
-      planRepositories(
-        { ...spec, expandedTypes: spec.expandedTypes.filter((type) => type.name !== "item") },
-        "rust",
-        { "backend.datasources": "sqlite" },
-      ),
-    ).toThrow("item: no expanded type");
   });
 
   it("keeps default write lists when an engine file omits a type", async () => {
@@ -1215,9 +1209,11 @@ types:
     const types = await deterministic.generateTypes(request("typescript"));
     const text = types.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(text).toContain("export interface Contact");
-    expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => ({ ...init } as Contact);");
-    expect(text).toContain("export class AddressType");
-    expect(text).toContain("export const addressType = (init: Partial<AddressType>): AddressType => ({ ...init } as AddressType);");
+    expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => ({");
+    expect(text).toContain("...init } as Contact);");
+    expect(text).toContain("export const address = (init: Partial<Address>): Address => ({");
+    expect(text).toContain("export interface AddressType");
+    expect(text).toContain("export const addressType = (init: Partial<AddressType>): AddressType => ({");
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
     const sql = await deterministic.generateDatasource(request("typescript"));
@@ -1247,10 +1243,9 @@ types:
 
   it("points generated Rust Facet derives at the datasources re-export", async () => {
     const text = textOf(await deterministic.generateTypes(request("rust")), "contactSource.rs");
-    expect(text).toContain("#[derive(Clone, Debug, PartialEq, datasources::Facet)]");
+    expect(text).toContain("#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]");
     expect(text).toContain("#[facet(crate = ::datasources::facet)]");
     expect(text).toContain("datasources::chrono::DateTime<datasources::chrono::Utc>");
-    expect(text).toContain("datasources::uuid::Uuid::new_v4()");
     expect(text).not.toMatch(/(^|[^:\w])chrono::/);
     expect(text).not.toMatch(/(^|[^:\w])uuid::/);
   });
@@ -1329,7 +1324,6 @@ types:
       .filter((entry) => entry.kind === "content")
       .map((entry) => entry.contents)
       .join("\n");
-    expect(userRoles).toMatch(/\{ get; set; \} = /);
     expect(userRoles).toMatch(/\{ get; set; \}\n/);
     expect(userRoles).not.toContain("{ get; set; };");
   });

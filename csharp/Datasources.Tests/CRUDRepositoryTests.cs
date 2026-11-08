@@ -203,6 +203,10 @@ public class CRUDRepositoryTests
         var child = Assert.Single(await childrenRepo.Read().ToListAsync());
         Assert.Equal(created.Id, parent.Id);
         Assert.Equal(parent.Id, child.ParentId);
+        var loaded = await parentsRepo.ReadSingle();
+        Assert.NotNull(loaded);
+        var nested = Assert.Single(loaded.Children);
+        Assert.Equal(loaded.Id, nested.ParentId);
     }
 
     [Fact]
@@ -541,6 +545,32 @@ public class CRUDRepositoryTests
         await parentsRepo.Create(new Parent { Type = new UserType { Id = home.Id }, TypeName = "work" });
         Assert.Equal("home", (await parentsRepo.ReadSingle())!.TypeName);
         Assert.Equal(2, (await typesRepo.Read().ToListAsync()).Count);
+    }
+
+    [Fact]
+    public async Task CreateStampsLookupKeyOmittedFromCreateProperties()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        await typesRepo.Create(new UserType { Name = "Female" });
+        var hostsRepo = new CRUDRepository<Named>(connection, new CRUDRepositoryOptions<Named>
+        {
+            Entity = "Host",
+            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Host"] = "hosts" }),
+            PropertyMappings = new ChangeCasingMapper(Casing.Pascal, Casing.Snake),
+            Ids = ["Id"],
+            CreateProperties = [],
+            UpdateProperties = [],
+            ReadProperties = ["Id", "TypeId"],
+            Schema = new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["Id"] = new("integer", IsId: true),
+                ["TypeId"] = new("integer"),
+            }),
+        });
+        hostsRepo.AddEnriched(new("TypeName", "TypeId", "Id", "Name"), typesRepo);
+        await hostsRepo.Create(new Named { TypeName = "Female" });
+        Assert.Equal("Female", (await hostsRepo.ReadSingle())!.TypeName);
     }
 
     [Fact]

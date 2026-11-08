@@ -34,6 +34,18 @@ describe("MetaDataRowTypeConverter", () => {
     expect(converter.convert({ flag: 1 }, Item)).toBeInstanceOf(Item);
   });
 
+  it("assigns an integer foreign key onto the child", () => {
+    class Address {
+      Id = 0;
+      contactId = 0;
+      line1 = "";
+    }
+    const converter = new MetaDataRowTypeConverter<Address>();
+    const row = converter.convert({ Id: 2, contactId: 1, line1: "12 Analytical Engine" }, Address);
+    expect(row.contactId).toBe(1);
+    expect(row.Id).toBe(2);
+  });
+
   it("keeps a null in a string field", () => {
     class Item {
       name = "";

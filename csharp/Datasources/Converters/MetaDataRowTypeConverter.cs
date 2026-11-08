@@ -141,3 +141,121 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
             : [.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)];
 }
+
+public static class MetaDataRowTypeConverter
+{
+    public static bool Has(object? obj, string name) =>
+        obj switch
+        {
+            null => false,
+            IDictionary<string, Value> row => row.ContainsKey(name),
+            IDictionary dict => dict.Contains(name),
+            _ => obj.GetType().GetProperty(name) is not null
+        };
+
+    public static object? Get(object? obj, string name) =>
+        obj switch
+        {
+            null => null,
+            IDictionary<string, Value> row => row.TryGetValue(name, out var cell) && cell is not Value.Null
+                ? cell.ToObject()
+                : null,
+            IDictionary dict => dict.Contains(name) ? dict[name] : null,
+            _ => obj.GetType().GetProperty(name)?.GetValue(obj)
+        };
+
+    public static bool TrySet(object obj, string name, object? value, string? id = null)
+    {
+        if (obj is IDictionary<string, Value> row)
+        {
+            row[name] = Value.From(value);
+            return true;
+        }
+        if (obj is IDictionary dict)
+        {
+            dict[name] = value;
+            return true;
+        }
+        var prop = obj.GetType().GetProperty(name);
+        if (prop is null || !prop.CanWrite) return false;
+        var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+        if (value is IDictionary incoming && typeof(IDictionary).IsAssignableFrom(target))
+        {
+            var map = (IDictionary)(Activator.CreateInstance(target)
+                ?? throw new DatasourceException($"Cannot create \"{name}\""));
+            var valueType = target.IsGenericType && target.GetGenericArguments().Length == 2
+                ? target.GetGenericArguments()[1]
+                : typeof(object);
+            foreach (DictionaryEntry entry in incoming)
+            {
+                if (entry.Key is null) continue;
+                map[entry.Key] = Coerce(entry.Value, valueType);
+            }
+            prop.SetValue(obj, map);
+            return true;
+        }
+        if (value is not null && IsReference(target) && !target.IsInstanceOfType(value))
+        {
+            var current = prop.GetValue(obj) ?? Activator.CreateInstance(target)
+                ?? throw new DatasourceException($"Cannot create \"{name}\"");
+            var key = IdentityProperty(target, id)
+                ?? throw new DatasourceException($"\"{name}\" requires is_id");
+            var idType = Nullable.GetUnderlyingType(key.PropertyType) ?? key.PropertyType;
+            key.SetValue(current, idType.IsInstanceOfType(value) ? value : System.Convert.ChangeType(value, idType));
+            prop.SetValue(obj, current);
+            return true;
+        }
+        prop.SetValue(obj, value is null || target.IsInstanceOfType(value)
+            ? value
+            : System.Convert.ChangeType(value, target));
+        return true;
+    }
+
+    public static IEnumerable<string> Names(object? value) =>
+        value switch
+        {
+            null => [],
+            IDictionary<string, Value> row => row.Keys,
+            IDictionary dict => dict.Keys.Cast<object>().Select(key => key?.ToString() ?? ""),
+            _ => value.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
+                .Select(prop => prop.Name)
+        };
+
+    public static void Copy(object source, object dest)
+    {
+        foreach (var prop in dest.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(item => item.CanRead && item.GetIndexParameters().Length == 0))
+        {
+            if (Get(source, prop.Name) is { } value)
+                TrySet(dest, prop.Name, value);
+        }
+    }
+
+    public static object? Key(object? value, string name)
+    {
+        if (value is null or string || value is Value || value.GetType().IsPrimitive)
+            return value;
+        return Get(value, name) ?? value;
+    }
+
+    static PropertyInfo? IdentityProperty(Type target, string? id) =>
+        !string.IsNullOrEmpty(id) && target.GetProperty(id) is { } named
+            ? named
+            : target.GetProperty("id") ?? target.GetProperty("Id");
+
+    static object? Coerce(object? value, Type valueType)
+    {
+        if (value is null || valueType == typeof(object) || valueType.IsInstanceOfType(value))
+            return value;
+        if (valueType == typeof(string) || valueType.IsValueType)
+            return Get(value, "Value") ?? Get(value, "value");
+        var copy = Activator.CreateInstance(valueType);
+        if (copy is null) return value;
+        Copy(value, copy);
+        return copy;
+    }
+
+    static bool IsReference(Type type) =>
+        type.IsClass && type != typeof(string) && !typeof(IEnumerable).IsAssignableFrom(type);
+}

@@ -352,7 +352,28 @@ fn set_map_value<'a>(
 mod tests {
     use super::*;
     use crate::converters::SchemaObject;
+    use crate::schema::{Schema, SchemaColumn};
     use facet::Facet;
+    use std::collections::HashMap;
+
+    fn schema(columns: &[(&str, &str, bool, bool)]) -> Schema {
+        Schema::new(
+            columns
+                .iter()
+                .map(|(name, type_name, has_default, is_id)| {
+                    (
+                        (*name).into(),
+                        SchemaColumn {
+                            type_name: (*type_name).into(),
+                            nullable: false,
+                            has_default: *has_default,
+                            is_id: *is_id,
+                        },
+                    )
+                })
+                .collect::<HashMap<_, _>>(),
+        )
+    }
 
     #[derive(Clone, Debug, Default, PartialEq, Facet)]
     struct Kid {
@@ -423,7 +444,12 @@ mod tests {
             crate::EnrichmentPropertyType::List,
         );
         let from_children =
-            crate::create_enrichment_strategy::children::<House, Kid>(&enrichment, &house).unwrap();
+            crate::create_enrichment_strategy::children::<House, Kid>(
+                &enrichment,
+                &house,
+                &Schema::default(),
+            )
+            .unwrap();
         assert_eq!(from_children[0].extra.as_deref(), Some("Room 12"));
         dest.set_related(
             "kids",
@@ -496,6 +522,16 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("uuid", "uuid", true, false),
+                ("created", "datetime", true, false),
+                ("updated", "datetime", true, false),
+                ("version", "binary", true, false),
+                ("contact_id", "integer", false, false),
+                ("key", "string", false, false),
+                ("value", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(settings.len(), 1);
@@ -510,6 +546,11 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("key", "string", false, false),
+                ("locale", "string", false, false),
+                ("timezone", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(prefs.len(), 1);
@@ -523,6 +564,12 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("key", "string", false, false),
+                ("locale", "string", false, false),
+                ("timezone", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(prefs_rows[0].key, "home");
@@ -568,6 +615,12 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("contact_id", "integer", false, false),
+                ("name", "string", false, false),
+                ("value", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(settings[0].name, "theme");
@@ -592,6 +645,12 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("contact_id", "integer", false, false),
+                ("name", "string", false, false),
+                ("value", "string", false, false),
+            ]),
         )
         .unwrap();
         let mut pairs: Vec<_> = settings
@@ -628,6 +687,12 @@ mod tests {
         let settings = crate::create_enrichment_strategy::children::<House, AsdfSettingRow>(
             &enrichment,
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("contact_id", "integer", false, false),
+                ("asdfasdfa", "string", false, false),
+                ("value", "string", false, false),
+            ]),
         )
         .unwrap();
         let mut pairs: Vec<_> = settings
@@ -706,7 +771,7 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, Facet)]
     struct AddressStamp {
         id: i32,
-        contact_id: String,
+        contact_id: i32,
         line2: Option<String>,
         created: chrono::DateTime<chrono::Utc>,
         latitude: Option<i32>,
@@ -717,7 +782,7 @@ mod tests {
         fn default() -> Self {
             Self {
                 id: 0,
-                contact_id: String::new(),
+                contact_id: 0,
                 line2: None,
                 created: chrono::DateTime::<chrono::Utc>::default(),
                 latitude: None,
@@ -741,7 +806,7 @@ mod tests {
             ..AddressStamp::default()
         };
         set(&mut address, "contact_id", Value::Int(9)).unwrap();
-        assert_eq!(address.contact_id, "9");
+        assert_eq!(address.contact_id, 9);
         assert_eq!(address.line2.as_deref(), Some("Room 12"));
         assert_eq!(address.address_type_name, "Home");
         assert!(address.latitude.is_none());

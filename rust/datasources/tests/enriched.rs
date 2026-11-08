@@ -26,10 +26,40 @@ async fn setup(rows: &mut [Row]) -> Arc<dyn Connection> {
 }
 
 fn mapped_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
+    mapped_crud_with(connection, entity, &[])
+}
+
+fn mapped_crud_with(
+    connection: Arc<dyn Connection>,
+    entity: &str,
+    names: &[&str],
+) -> CRUDRepository {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
     options.property_mappings = Some(std::sync::Arc::new(columns()));
+    if !names.is_empty() {
+        options.schema = Schema::new(
+            names
+                .iter()
+                .map(|name| {
+                    (
+                        (*name).into(),
+                        SchemaColumn {
+                            type_name: if *name == "Id" || name.ends_with("Id") {
+                                "integer".into()
+                            } else {
+                                "string".into()
+                            },
+                            nullable: false,
+                            has_default: false,
+                            is_id: false,
+                        },
+                    )
+                })
+                .collect(),
+        );
+    }
     CRUDRepository::<Row>::new(connection, options).unwrap()
 }
 
@@ -276,6 +306,9 @@ async fn deep_create_writes_children_stamps_fk() {
     assert_eq!(stored.len(), 2);
     assert_eq!(stored[0]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(stored[1]["ParentId"], stored_parents[0]["Id"]);
+    let nested = decode_rows(stored_parents[0].get("Children"));
+    assert_eq!(nested[0]["ParentId"], stored_parents[0]["Id"]);
+    assert_eq!(nested[1]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(
         types
             .read(None, None)
@@ -515,8 +548,16 @@ async fn nested_child_resolves_lookup_name() {
 async fn round_trips_string_and_object_dictionaries() {
     let connection = setup(&mut []).await;
     let mut hosts = mapped_crud(connection.clone(), "Host");
-    let settings = Arc::new(mapped_crud(connection.clone(), "Setting"));
-    let prefs = Arc::new(mapped_crud(connection, "Pref"));
+    let settings = Arc::new(mapped_crud_with(
+        connection.clone(),
+        "Setting",
+        &["Id", "ParentId", "Key", "Value"],
+    ));
+    let prefs = Arc::new(mapped_crud_with(
+        connection,
+        "Pref",
+        &["Id", "ParentId", "Key", "Locale", "Timezone"],
+    ));
     hosts
         .add_enriched(
             Enrichment::new(

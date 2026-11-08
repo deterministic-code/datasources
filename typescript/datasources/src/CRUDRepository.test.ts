@@ -226,9 +226,6 @@ const repo = <T extends object>(
     propertyMappings: columns,
     write,
     ids: ["Id"],
-    schema: new Schema({
-      Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-    }),
   });
 
 const camel = new ChangeCasingMapper("camelCase", "snakeCase");
@@ -489,6 +486,43 @@ describe("CRUDRepository", () => {
     expect((await hostsRepo.readSingle())?.settings).toEqual({ theme: "dark" });
     await hostsRepo.update({ id: created.id, label: "ada", settings: { theme: "sepia" } } as NamedHostRow);
     expect((await hostsRepo.readSingle())?.settings).toEqual({ theme: "sepia" });
+  });
+
+  it("reads list child foreign keys as the parent id", async () => {
+    const connection = await setup();
+    const id = { type: "integer", nullable: false, hasDefault: false, isId: true };
+    const parentId = { type: "integer", nullable: false, hasDefault: false };
+    const label = { type: "string", nullable: false, hasDefault: false };
+    const parentsRepo = new CRUDRepository<ParentRow>(connection, {
+      entity: "Parent",
+      entityMapper: new DictionaryMapper([["Parent", "parents"]]),
+      propertyMappings: camel,
+      ids: ["id"],
+      createProperties: ["label"],
+      updateProperties: ["label"],
+      readProperties: ["id", "label"],
+      schema: new Schema({ id, label }),
+    });
+    const childrenRepo = new CRUDRepository<ChildRow>(connection, {
+      entity: "Child",
+      entityMapper: new DictionaryMapper([["Child", "childs"]]),
+      propertyMappings: camel,
+      ids: ["id"],
+      createProperties: ["parentId", "label"],
+      updateProperties: ["parentId", "label"],
+      readProperties: ["id", "parentId", "label"],
+      schema: new Schema({ id, parentId, label }),
+    });
+    parentsRepo.addEnriched(
+      { destinationProperty: "children", sourceProperty: "id", relatedKey: "parentId", type: "list" },
+      childrenRepo,
+    );
+    const child = (init: Partial<ChildRow>): ChildRow => ({ ...init } as ChildRow);
+    await parentsRepo.create({ label: "p", children: [child({ label: "a" })] } as ParentRow);
+    const loaded = await parentsRepo.readSingle();
+    const actual = loaded?.children[0]?.parentId;
+    if (actual !== loaded?.id)
+      throw new Error(`child parentId ${String(actual)} !== parent id ${String(loaded?.id)}`);
   });
 
   it("keeps list children when the read payload is written back", async () => {
@@ -796,6 +830,32 @@ describe("CRUDRepository", () => {
     expect(created.Id).toBeGreaterThan(0);
     expect(created.TypeName).toBe("work");
     expect((await parentsRepo.readSingle())?.TypeName).toBe("work");
+  });
+
+  it("create stamps a lookup key omitted from createProperties", async () => {
+    const connection = await setup();
+    const typesRepo = generatedRepo<TypeRow>(connection, "Type", ["id", "name"]);
+    await typesRepo.create({ name: "Female" } as TypeRow);
+    const hostsRepo = new CRUDRepository<{ id: number; label: string; typeName?: string }>(connection, {
+      entity: "Host",
+      entityMapper: new DictionaryMapper([["Host", "hosts"]]),
+      propertyMappings: camel,
+      ids: ["id"],
+      createProperties: ["label"],
+      updateProperties: ["label"],
+      readProperties: ["id", "label", "typeId"],
+      schema: new Schema({
+        id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+        label: { type: "string", nullable: false, hasDefault: false },
+        typeId: { type: "integer", nullable: false, hasDefault: false },
+      }),
+    });
+    hostsRepo.addEnriched(
+      { destinationProperty: "typeName", sourceProperty: "typeId", relatedKey: "id", relatedProperty: "name", type: "object" },
+      typesRepo,
+    );
+    await hostsRepo.create({ label: "Ada", typeName: "Female" });
+    expect((await hostsRepo.readSingle())?.typeName).toBe("Female");
   });
 
   it("create-unknown-lookup-name-throws", async () => {

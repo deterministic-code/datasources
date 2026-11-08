@@ -1,6 +1,6 @@
 import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { dictionaryMapKey, relatedObjectNames, valueObjectNames, type Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, valueObjectNames, type Enrichment } from "./Enrichment.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -104,7 +104,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   ): Promise<void> {
     const mapKey = dictionaryMapKey(
       enrichment,
-      relatedObjectNames(via),
+      via.schema,
       valueObjectNames(((parents[0] ?? {}) as Props)[enrichment.destinationProperty] as object ?? {}),
     );
     for (const [index, parent] of parents.entries()) {
@@ -171,9 +171,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
       ? Object.values(dest).find((value) => value !== null && typeof value === "object" && !Array.isArray(value))
       : undefined;
     if (!sample || typeof sample !== "object") return new Set();
-    const ctor = sample.constructor;
-    const blank = typeof ctor === "function" && ctor !== Object ? new (ctor as new () => object)() : sample;
-    return new Set(Object.keys(this.props(blank)));
+    return new Set(Object.keys(this.props(sample)));
   };
 
   protected scalar = (value: Scalar | object): Scalar => {

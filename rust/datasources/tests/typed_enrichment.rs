@@ -211,7 +211,7 @@ fn person_options() -> CRUDRepositoryOptions {
     options.entity = "Person".into();
     options.ids = vec!["id".into()];
     options.read_properties = vec!["id".into(), "gender_type_id".into()];
-    options.create_properties = Some(vec!["gender_type_id".into()]);
+    options.create_properties = Some(vec![]);
     options.schema = Schema::new(std::collections::HashMap::from([
         (
             "id".into(),

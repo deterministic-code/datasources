@@ -7,6 +7,7 @@ import { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
 import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
+import { createReadonlyRepositoryMappingOptions } from "./createReadonlyRepositoryMappingOptions.ts";
 
 describe("CRUDRepositoryOptions", () => {
   it("defaults are identity", () => {
@@ -47,6 +48,15 @@ describe("CRUDRepositoryOptions", () => {
     expect(
       new CRUDRepositoryBuilder().build(new MockConnection(), { ids: ["id"], entity: "users" }),
     ).toBeInstanceOf(CRUDRepository);
+    class Item {
+      Id = 0;
+      Name = "";
+    }
+    const fromTypeSchema = createReadonlyRepositoryMappingOptions(Item);
+    expect(fromTypeSchema.schema?.ids()).toEqual([]);
+    expect(fromTypeSchema.schema?.columns.Id).toEqual({ type: "integer", nullable: false, hasDefault: false });
+    expect(fromTypeSchema.schema?.columns.Name).toEqual({ type: "string", nullable: false, hasDefault: false });
+    expect(Object.keys(fromTypeSchema.schema?.columns ?? {})).toEqual(["Id", "Name"]);
   });
 
   it("uses the mapped table and columns", () => {
