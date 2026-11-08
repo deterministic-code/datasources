@@ -3,7 +3,6 @@
 mod by_fields;
 mod by_groups;
 mod casing;
-mod compile_filter;
 mod custom_migrations;
 mod generate_entry;
 mod generate_procedures;
@@ -20,7 +19,6 @@ mod sql_dialect;
 mod table_statements;
 mod version_migrations;
 mod write_inclusion;
-mod yaml_cursor;
 
 pub use generate_entry::GenerateEntry;
 pub use generate_sql::generate_sql;

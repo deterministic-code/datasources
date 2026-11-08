@@ -34,45 +34,6 @@ const rewriteTs = {
   },
 };
 
-const inferredHelper = `const inferredSpec = (spec: IDeterministic): IDeterministic => ({
-  ...spec,
-  types: inferReferenceFieldTypes(spec.types),
-  expandedTypes: inferReferenceFieldTypes(spec.expandedTypes),
-});
-`;
-
-const inferImport =
-  'import { inferReferenceFieldTypes } from "@deterministic-code/datasources-code-generators/sql/common/infer-reference-types";\n';
-
-const typeEmitters = [
-  ["csharp-generators", "src/generate-datasource-types.ts"],
-  ["csharp-generators", "src/generate-view-types.ts"],
-  ["typescript-generators", "src/emit-shaped-types.ts"],
-  ["rust-generators", "src/generate-datasource-types.ts"],
-  ["rust-generators", "src/generate-view-types.ts"],
-];
-
-const ensureInferredSpec = async () => {
-  for (const [name, file] of typeEmitters) {
-    const path = join(packages, name, file);
-    let text = await readFile(path, "utf8");
-    if (text.includes("inferredSpec(") || text.includes("inferReferenceFieldTypes")) continue;
-    if (!text.includes("IDeterministic")) throw new Error(`${file} does not import IDeterministic`);
-    const marker = text.includes("export const generateShapedTypes")
-      ? "export const generateShapedTypes"
-      : "export const generate = async";
-    const at = text.indexOf(marker);
-    if (at < 0) throw new Error(`${file} has no generate export`);
-    text = inferImport + text.slice(0, at) + inferredHelper + "\n" + text.slice(at);
-    const next = text.replace(
-      /await DeterministicParser\(ctx\.reader\)\.parse\(\s*ctx\.settings,?\s*\)/g,
-      "inferredSpec(await DeterministicParser(ctx.reader).parse(ctx.settings))",
-    );
-    if (next === text) throw new Error(`${file} did not parse a spec`);
-    await writeFile(path, next);
-  }
-};
-
 const walk = async (dir, skip) => {
   const files = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -131,8 +92,6 @@ await build({
   outfile: join(includesRoot, "dist/index.js"),
   logLevel: "warning",
 });
-
-await ensureInferredSpec();
 
 for (const name of ["generators-common", "typescript-generators", "csharp-generators", "rust-generators"]) {
   await transpile(name);

@@ -4,7 +4,7 @@ import type { GenerateEntry } from "@deterministic-code/generators-common/genera
 import { Paths, type TypeKind } from "@deterministic-code/generators-common/paths";
 import { caseDirectories } from "./casing.ts";
 import type { IRepositoryGenerator } from "./IRepositoryGenerator.ts";
-import type { SchemaColumn } from "./schemaFields.ts";
+import type { SchemaColumn } from "./RepositoryModel.ts";
 import {
   childField,
   children as childModels,

@@ -1,8 +1,6 @@
-import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
-import { DeterministicParser, type Type } from "@deterministic-code/deterministic-generators-common/parser";
+import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import { describe, expect, it } from "vitest";
-import { inferredSpec, schemaFields } from "./schemaFields.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
 
 const files = {
@@ -47,28 +45,16 @@ types: []
 };
 
 describe("schemaFields", () => {
-  it("uses the expanded view: inferred remaining keys, no remove_fields", async () => {
-    const spec = inferredSpec(await DeterministicParser(memoryReader(files)).parse({}));
-    const expanded = spec.expandedTypes.find((type) => type.name === "contact");
-    const property = (name: string) => createCasingStrategy("rust", {}).convertFields(name);
-    const pairs = schemaFields(expanded, property);
-    expect(pairs).toContainEqual({ from: "id", type: "integer", nullable: false, hasDefault: false, isId: true });
-    expect(pairs).toContainEqual({ from: "name", type: "string", nullable: false, hasDefault: false, isId: false });
-    expect(pairs.some((column) => column.from === "gender_type_id")).toBe(false);
-    expect(schemaFields(undefined, property)).toEqual([]);
-  });
-
-  it("omits fields with an empty type", () => {
-    const type = {
-      name: "blank",
-      fields: [{ name: "ghost", type: "", kind: "primitive" as const, base: "", isArray: false, isNullable: false }],
-      tags: [],
-    };
-    expect(schemaFields(type as Type, (name) => name)).toEqual([]);
+  it("uses the expanded view: remaining keys, no remove_fields", async () => {
+    const spec = await DeterministicParser(memoryReader(files)).parse({});
+    const contact = planRepositories(spec, "rust", {}).find((model) => model.specName === "contact");
+    expect(contact?.schema).toContainEqual({ from: "id", type: "integer", nullable: false, hasDefault: false, isId: true });
+    expect(contact?.schema).toContainEqual({ from: "name", type: "string", nullable: false, hasDefault: false, isId: false });
+    expect(contact?.schema.some((column) => column.from === "gender_type_id")).toBe(false);
   });
 
   it("copies the parent id type onto an untyped reference", async () => {
-    const spec = inferredSpec(await DeterministicParser(memoryReader(files)).parse({}));
+    const spec = await DeterministicParser(memoryReader(files)).parse({});
     const genderId = spec.expandedTypes.find((type) => type.name === "gender")?.fields.find((item) => item.name === "id");
     const fk = spec.expandedTypes
       .find((type) => type.name === "contact_base")
@@ -76,6 +62,23 @@ describe("schemaFields", () => {
     expect(fk?.type).toBe(genderId?.type);
     expect(fk?.kind).toBe(genderId?.kind);
     expect(fk?.base).toBe(genderId?.base);
+  });
+
+  it("omits empty-type columns and ignores a dotted empty reference", async () => {
+    const spec = await DeterministicParser(memoryReader(files)).parse({});
+    const ghost = {
+      name: "ghost",
+      type: "",
+      kind: "primitive" as const,
+      base: "",
+      isArray: false,
+      isNullable: false,
+      references: ".",
+    };
+    spec.types.find((type) => type.name === "gender")?.fields.push(ghost);
+    spec.expandedTypes.find((type) => type.name === "gender")?.fields.push(ghost);
+    const model = planRepositories(spec, "rust", {}).find((item) => item.specName === "gender");
+    expect(model?.schema.some((column) => column.from === "ghost")).toBe(false);
   });
 
   it("plans the view schema from the same expanded object", async () => {
