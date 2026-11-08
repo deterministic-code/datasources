@@ -661,25 +661,25 @@ async fn stubs_throw() {
     let ds: &dyn Datasource = &*ds;
     let repo = ds.create_repository::<Row>(None, None);
     let empty = Row::new();
-    assert!(repo.read_single(&(), None).await.is_err());
-    assert!(repo.read(&(), None).try_collect::<Vec<_>>().await.is_err());
+    assert!(repo.read_single(None, None).await.is_err());
+    assert!(repo.read(None, None).try_collect::<Vec<_>>().await.is_err());
     assert!(repo
-        .read_single(&WhereText::new("1=1"), None)
+        .read_single_where(&WhereText::new("1=1"), None)
         .await
         .is_err());
-    assert!(repo.read(&WhereText::new("1=1"), None).try_collect::<Vec<_>>().await.is_err());
+    assert!(repo.read_where(&WhereText::new("1=1"), None).try_collect::<Vec<_>>().await.is_err());
     assert!(repo.create(empty.clone()).await.is_err());
     assert!(repo.update(empty.clone(), None).await.is_err());
     assert!(repo.delete(empty, None).await.is_err());
     let readonly = ds.create_readonly_repository::<Row>(None, None);
-    assert!(readonly.read_single(&(), None).await.is_err());
-    assert!(readonly.read(&(), None).try_collect::<Vec<_>>().await.is_err());
+    assert!(readonly.read_single(None, None).await.is_err());
+    assert!(readonly.read(None, None).try_collect::<Vec<_>>().await.is_err());
     assert!(readonly
-        .read_single(&WhereText::new("1=1"), None)
+        .read_single_where(&WhereText::new("1=1"), None)
         .await
         .is_err());
     assert!(readonly
-        .read(&WhereText::new("1=1"), None)
+        .read_where(&WhereText::new("1=1"), None)
         .try_collect::<Vec<_>>().await
         .is_err());
     let conn = StubConnection::new("text");
@@ -758,30 +758,30 @@ async fn published_mocks() {
     assert!(reader.next().await.is_err());
 
     let repo = MockRepository::new();
-    assert!(repo.read_single(&(), None).await.unwrap().is_none());
+    assert!(repo.read_single(None, None).await.unwrap().is_none());
     repo.items
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1))]));
     assert!(repo
-        .read_single(&WhereText::new("id=1"), None)
+        .read_single_where(&WhereText::new("id=1"), None)
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(&MockSelectStatement::new("all"), None)
+        repo.read(Some(&MockSelectStatement::new("all")), None)
             .try_collect::<Vec<_>>().await
             .unwrap()
             .len(),
         1
     );
     assert!(repo
-        .read_single(&MockWhere::new("id=1"), None)
+        .read_single_where(&MockWhere::new("id=1"), None)
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(&MockWhere::new("all"), None)
+        repo.read_where(&MockWhere::new("all"), None)
             .try_collect::<Vec<_>>().await
             .unwrap()
             .len(),
@@ -804,9 +804,9 @@ async fn published_mocks() {
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
     repo.set_read_single_error("gs");
-    assert!(repo.read_single(&(), None).await.is_err());
+    assert!(repo.read_single(None, None).await.is_err());
     repo.set_read_error("g");
-    assert!(repo.read(&(), None).try_collect::<Vec<_>>().await.is_err());
+    assert!(repo.read(None, None).try_collect::<Vec<_>>().await.is_err());
     repo.set_add_error("ad");
     assert!(repo.create(Row::new()).await.is_err());
     repo.set_update_error("up");
@@ -1691,7 +1691,7 @@ async fn read_calls_stored_procedure() {
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let parameters = [Parameter::new("id", 9_i64)];
     let call = ExecuteStoredProcedureStatement::new("get_user", &parameters);
-    let rows = repo.read(&call, None).try_collect::<Vec<_>>().await.unwrap();
+    let rows = repo.read(Some(&call), None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["id"], Value::Int(1));
     assert_eq!(rows[0]["name"], Value::from("a"));
@@ -1705,7 +1705,7 @@ async fn read_calls_stored_procedure() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     assert_eq!(
-        repo.read_single(&call, None)
+        repo.read_single(Some(&call), None)
             .await
             .unwrap()
             .unwrap()["id"],
@@ -1735,7 +1735,7 @@ async fn read_opens_a_closed_connection() {
         ReadonlyRepositoryMappingOptions::default()
     )
     .unwrap()
-    .read(&(), None)
+    .read(None, None)
     .try_collect::<Vec<_>>()
     .await
     .expect("read")
@@ -1758,13 +1758,13 @@ async fn table_repository() {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
     }));
-    let rows = repo.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let rows = repo.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT id, name FROM users"
     );
-    assert!(repo.read_single(&(), None).await.unwrap().is_some());
+    assert!(repo.read_single(None, None).await.unwrap().is_some());
 
     let where_clause = Where::new(Operator::equals("id", 9_i64));
     let query = SelectStatement::new(SelectStatementOptions {
@@ -1773,7 +1773,7 @@ async fn table_repository() {
     });
     command.reader_rows.lock().unwrap().clear();
     assert!(repo
-        .read_single(&query, None)
+        .read_single(Some(&query), None)
         .await
         .unwrap()
         .is_none());
@@ -1784,7 +1784,7 @@ async fn table_repository() {
 
     command.reader_rows.lock().unwrap().clear();
     assert!(repo
-        .read_single(&Where::new(Operator::equals("id", 9_i64)), None)
+        .read_single_where(&Where::new(Operator::equals("id", 9_i64)), None)
         .await
         .unwrap()
         .is_none());
@@ -1793,7 +1793,7 @@ async fn table_repository() {
     assert_eq!(last.1[0].name, "id");
     assert_eq!(last.1[0].value, Value::Int(9));
     assert!(repo
-        .read(&Where::new(Operator::equals("id", 9_i64)), None)
+        .read_where(&Where::new(Operator::equals("id", 9_i64)), None)
         .try_collect::<Vec<_>>().await
         .unwrap()
         .is_empty());
@@ -2117,7 +2117,7 @@ async fn table_repository_crud_mapper() {
     )));
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     command.reader_rows.lock().unwrap().clear();
-    assert!(repo.read_single(&(), None).await.unwrap().is_none());
+    assert!(repo.read_single(None, None).await.unwrap().is_none());
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT full_name, user_id FROM people"
@@ -2196,7 +2196,7 @@ async fn read_uses_per_call_object_and_row_converters() {
     options.object_converter = Some(Box::new(FixedLabel("default")));
     let repo = ReadonlyRepository::<Row>::new(connection, options).unwrap();
     assert_eq!(
-        repo.read_single(&(), None).await.unwrap().unwrap()["Label"],
+        repo.read_single(None, None).await.unwrap().unwrap()["Label"],
         Value::from("default")
     );
 
@@ -2215,7 +2215,7 @@ async fn read_uses_per_call_object_and_row_converters() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let repo = ReadonlyRepository::<Row>::new(connection, per_call).unwrap();
     assert_eq!(
-        repo.read_single(&(), None)
+        repo.read_single(None, None)
             .await
             .unwrap()
             .unwrap()["Label"],
@@ -2401,7 +2401,7 @@ async fn typed_entity_create_and_read_single() {
         .unwrap();
     assert_eq!(created.title, "Ada");
     let found = repo
-        .read_single(&(), None)
+        .read_single(None, None)
         .await
         .unwrap()
         .expect("note");

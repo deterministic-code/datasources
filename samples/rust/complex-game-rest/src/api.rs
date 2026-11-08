@@ -1,9 +1,16 @@
 use crate::clock::Clock;
+use crate::generated::repositories::categoriesRepository::CategoriesRepository;
+use crate::generated::repositories::contactsRepository::ContactsRepository;
+use crate::generated::repositories::gameStatesRepository::GameStatesRepository;
+use crate::generated::repositories::gamesRepository::GamesRepository;
+use crate::generated::repositories::reviewsRepository::ReviewsRepository;
+use crate::generated::repositories::usersRepository::UsersRepository;
 use crate::json_object::JsonObjectSerializer;
 use crate::{Category, Contact, Game, GameState, Review, User};
 use chrono::{DateTime, Utc};
 use datasources::{
-    DatasourceError, Expression, Identifier, Operator, ReadInput, Value, Where, CRUDRepository,
+    Connection, DatasourceError, Expression, Identifier, Operator, Value, Where,
+    CRUDRepository,
 };
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
@@ -15,26 +22,38 @@ pub struct HttpResult {
 }
 
 pub struct Api {
-    users: Arc<CRUDRepository<User>>,
-    categories: Arc<CRUDRepository<Category>>,
-    games: Arc<CRUDRepository<Game>>,
-    reviews: Arc<CRUDRepository<Review>>,
-    states: Arc<CRUDRepository<GameState>>,
-    contacts: Arc<CRUDRepository<Contact>>,
+    users: UsersRepository,
+    categories: CategoriesRepository,
+    games: GamesRepository,
+    reviews: ReviewsRepository,
+    states: GameStatesRepository,
+    contacts: ContactsRepository,
     clock: Clock,
 }
 
 impl Api {
     pub fn new(
-        users: Arc<CRUDRepository<User>>,
-        categories: Arc<CRUDRepository<Category>>,
-        games: Arc<CRUDRepository<Game>>,
-        reviews: Arc<CRUDRepository<Review>>,
-        states: Arc<CRUDRepository<GameState>>,
-        contacts: Arc<CRUDRepository<Contact>>,
+        users: UsersRepository,
+        categories: CategoriesRepository,
+        games: GamesRepository,
+        reviews: ReviewsRepository,
+        states: GameStatesRepository,
+        contacts: ContactsRepository,
         clock: Clock,
     ) -> Self {
         Self { users, categories, games, reviews, states, contacts, clock }
+    }
+
+    pub fn open(connection: Arc<dyn Connection>, clock: Clock) -> datasources::Result<Self> {
+        Ok(Self::new(
+            UsersRepository::new(Arc::clone(&connection))?,
+            CategoriesRepository::new(Arc::clone(&connection))?,
+            GamesRepository::new(Arc::clone(&connection))?,
+            ReviewsRepository::new(Arc::clone(&connection))?,
+            GameStatesRepository::new(Arc::clone(&connection))?,
+            ContactsRepository::new(connection)?,
+            clock,
+        ))
     }
 
     pub async fn handle(&self, method: &str, target: &str, body: Option<&str>) -> Result<HttpResult, String> {
@@ -156,18 +175,18 @@ async fn put<T: datasources::Entity + datasources::Facet<'static>>(
 ) -> Result<HttpResult, ApiError> {
     let id = required_number(query, "id")?;
     let by = Where::new(Operator::equals("id", id));
-    if repo.read_single(&by).await?.is_none() {
+    if repo.read_single_where(&by, None).await?.is_none() {
         return Ok(empty(404));
     }
     set_id(&mut row, id);
     repo.update(row, None).await?;
-    Ok(ok(200, &repo.read_single(&by).await?.unwrap_or_default())?)
+    Ok(ok(200, &repo.read_single_where(&by, None).await?.unwrap_or_default())?)
 }
 
 async fn delete<T: datasources::Entity>(repo: &CRUDRepository<T>, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
     let id = required_number(query, "id")?;
     let by = Where::new(Operator::equals("id", id));
-    let Some(row) = repo.read_single(&by).await? else {
+    let Some(row) = repo.read_single_where(&by, None).await? else {
         return Ok(empty(404));
     };
     repo.delete(row, None).await?;
@@ -175,9 +194,10 @@ async fn delete<T: datasources::Entity>(repo: &CRUDRepository<T>, query: &HashMa
 }
 
 async fn list<T: datasources::Entity>(repo: &CRUDRepository<T>, filter: Option<Where>) -> Result<Vec<T>, ApiError> {
-    let none = ();
-    let query: &dyn ReadInput = filter.as_ref().map(|item| item as &dyn ReadInput).unwrap_or(&none);
-    Ok(repo.read(query).try_collect::<Vec<_>>().await?)
+    Ok(match filter.as_ref() {
+        Some(clause) => repo.read_where(clause, None).try_collect::<Vec<_>>().await?,
+        None => repo.read(None, None).try_collect::<Vec<_>>().await?,
+    })
 }
 
 fn where_query(query: &HashMap<String, String>, keys: &[&str]) -> Option<Where> {

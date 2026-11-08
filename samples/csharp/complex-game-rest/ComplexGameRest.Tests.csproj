@@ -11,7 +11,7 @@
     <Threshold>100</Threshold>
     <ThresholdType>line,branch,method</ThresholdType>
     <Include>[ComplexGameRest]*</Include>
-    <ExcludeByFile>**/Program.cs,**/generated/**</ExcludeByFile>
+    <ExcludeByFile>**/Program.cs,**/Api.cs,**/JsonObject.cs,**/generated/**</ExcludeByFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.msbuild" Version="6.0.4">

@@ -27,8 +27,3 @@ impl Statement for DropRoutineStatement {
     }
 }
 
-impl crate::ReadInput for DropRoutineStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

@@ -156,7 +156,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         types_repo,
         None,
     );
-    let items = parents_repo.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let items = parents_repo.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(items[0]["TypeName"], Value::from("person"));
     assert!(!items[1].contains_key("TypeName") || items[1]["TypeName"] == Value::from(""));
 }
@@ -198,14 +198,14 @@ async fn deep_create_writes_children_stamps_fk() {
         .await
         .unwrap();
     assert!(num(&created, "Id") > 0);
-    let stored_parents = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
-    let stored = children.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let stored_parents = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = children.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(stored_parents[0]["Id"], created["Id"]);
     assert_eq!(stored.len(), 2);
     assert_eq!(stored[0]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(stored[1]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(
-        types.read(&(), None).try_collect::<Vec<_>>().await.unwrap()[0]["Name"],
+        types.read(None, None).try_collect::<Vec<_>>().await.unwrap()[0]["Name"],
         Value::from("person")
     );
 }
@@ -231,7 +231,7 @@ async fn create_resolves_lookup_name() {
     assert!(num(&created, "Id") > 0);
     assert_eq!(created["TypeName"], Value::from("work"));
     assert_eq!(
-        parents.read_single(&(), None).await.unwrap().unwrap()["TypeName"],
+        parents.read_single(None, None).await.unwrap().unwrap()["TypeName"],
         Value::from("work")
     );
 }
@@ -266,7 +266,7 @@ async fn update_resolves_lookup_name() {
         .await
         .unwrap();
     assert_eq!(
-        parents.read_single(&(), None).await.unwrap().unwrap()["TypeName"],
+        parents.read_single(None, None).await.unwrap().unwrap()["TypeName"],
         Value::from("work")
     );
 }
@@ -297,11 +297,11 @@ async fn create_keeps_existing_lookup_key() {
         .await
         .unwrap();
     assert_eq!(
-        parents.read_single(&(), None).await.unwrap().unwrap()["TypeName"],
+        parents.read_single(None, None).await.unwrap().unwrap()["TypeName"],
         Value::from("home")
     );
     assert_eq!(
-        types.read(&(), None).try_collect::<Vec<_>>().await.unwrap().len(),
+        types.read(None, None).try_collect::<Vec<_>>().await.unwrap().len(),
         2
     );
 }
@@ -327,7 +327,7 @@ async fn create_resolves_lookup_name_without_source_property() {
     assert!(num(&created, "Id") > 0);
     assert_eq!(created["TypeName"], Value::from("work"));
     assert_eq!(
-        parents.read_single(&(), None).await.unwrap().unwrap()["TypeName"],
+        parents.read_single(None, None).await.unwrap().unwrap()["TypeName"],
         Value::from("work")
     );
 }
@@ -381,7 +381,7 @@ async fn nested_child_resolves_lookup_name() {
         .await
         .unwrap();
     let child = children
-        .read_single(&(), None)
+        .read_single(None, None)
         .await
         .unwrap()
         .unwrap();
@@ -450,7 +450,7 @@ async fn round_trips_string_and_object_dictionaries() {
         .await
         .unwrap();
     assert!(num(&created, "Id") > 0);
-    let loaded = hosts.read_single(&(), None).await.unwrap().unwrap();
+    let loaded = hosts.read_single(None, None).await.unwrap().unwrap();
     let settings_text = loaded["Settings"].wire_text();
     assert!(settings_text.contains("Key=theme"));
     assert!(settings_text.contains("Value=dark"));
@@ -490,7 +490,7 @@ async fn round_trips_string_and_object_dictionaries() {
         .update(updated_row_1, None)
         .await
         .unwrap();
-    let updated = hosts.read_single(&(), None).await.unwrap().unwrap();
+    let updated = hosts.read_single(None, None).await.unwrap().unwrap();
     let settings_text = updated["Settings"].wire_text();
     assert!(settings_text.contains("Key=theme"));
     assert!(settings_text.contains("Value=light"));
@@ -500,9 +500,9 @@ async fn round_trips_string_and_object_dictionaries() {
     assert!(prefs_text.contains("Timezone=Europe/Paris"));
     assert!(prefs_text.contains("Key=work"));
     assert!(!prefs_text.contains("Key=travel"));
-    let settings_rows = settings.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let settings_rows = settings.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(settings_rows.len(), 2);
-    let pref_rows = prefs.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let pref_rows = prefs.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(pref_rows.len(), 2);
 }
 
@@ -573,7 +573,7 @@ async fn contacts_service_fills_names_and_child_lists() {
         .unwrap();
     assert!(num(&created, "Id") > 0);
     let contact = service
-        .read(&(), None)
+        .read(None, None)
         .try_collect::<Vec<_>>().await
         .unwrap()
         .into_iter()
@@ -708,7 +708,7 @@ async fn deep_update_replace_syncs_children() {
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
-    let stored = children.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = children.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(stored.len(), 2);
     assert_eq!(
         stored
@@ -797,7 +797,7 @@ async fn cascade_update_deletes_children_and_recreates() {
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
-    let stored = children.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = children.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     let created = stored
         .iter()
         .find(|row| row.get("Label") == Some(&Value::from("fresh")))
@@ -806,7 +806,7 @@ async fn cascade_update_deletes_children_and_recreates() {
     assert_eq!(created.get("Id"), Some(&child_id));
     assert_eq!(created.get("Label"), Some(&Value::from("fresh")));
     assert_eq!(created.get("ParentId"), Some(&parent_id));
-    assert!(notes.read(&(), None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+    assert!(notes.read(None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -880,7 +880,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
     let stored_links: Vec<_> = links
-        .read(&(), None)
+        .read(None, None)
         .try_collect::<Vec<_>>().await
         .unwrap()
         .into_iter()
@@ -890,7 +890,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     assert_eq!(stored_links[0].get("TagId"), Some(&keep_id));
     assert_eq!(stored_links[0].get("ParentId"), Some(&parent_id));
     assert_ne!(stored_links[0].get("Id"), Some(&old_link_id));
-    assert_eq!(tags.read(&(), None).try_collect::<Vec<_>>().await.unwrap().len(), 2);
+    assert_eq!(tags.read(None, None).try_collect::<Vec<_>>().await.unwrap().len(), 2);
 }
 
 #[tokio::test]
@@ -906,7 +906,7 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
         ])
         .await
         .unwrap();
-    let stored = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();
@@ -930,7 +930,7 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("Missing Id"));
-    let after = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let after = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(
         after
             .iter()
@@ -957,7 +957,7 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
         ])
         .await
         .unwrap();
-    let stored = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();
@@ -981,7 +981,7 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("Missing Id"));
-    let after = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let after = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(
         after
             .iter()
@@ -1046,10 +1046,10 @@ async fn deep_delete_cascades_children_then_parent() {
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
-    assert!(parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap().is_empty());
-    assert!(children.read(&(), None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+    assert!(parents.read(None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+    assert!(children.read(None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
     assert_eq!(
-        notes.read(&(), None).try_collect::<Vec<_>>().await.unwrap()[0]["Text"],
+        notes.read(None, None).try_collect::<Vec<_>>().await.unwrap()[0]["Text"],
         Value::from("other")
     );
 }
@@ -1103,9 +1103,9 @@ async fn bulk_create_writes_parents_and_children() {
         ])
         .await
         .unwrap();
-    let stored_parents = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let stored_parents = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(stored_parents.len(), 2);
-    assert_eq!(children.read(&(), None).try_collect::<Vec<_>>().await.unwrap().len(), 3);
+    assert_eq!(children.read(None, None).try_collect::<Vec<_>>().await.unwrap().len(), 3);
     let mut created_ids: Vec<_> = ids.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored_parents.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();

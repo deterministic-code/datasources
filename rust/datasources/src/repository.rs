@@ -3,10 +3,10 @@ use crate::entity::Entity;
 use crate::i_repository::IRepository;
 use crate::IWhere;
 use crate::id_key::IdKey;
-use crate::read_input::ReadInput;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::StreamExt;
@@ -29,12 +29,22 @@ pub trait IReadonlyRepository<T: Entity = Row>: IRepository {
 
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&crate::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<T>>;
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>>;
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>>;
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
         options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>>;
 }
@@ -65,7 +75,7 @@ impl<T: Entity> IRepository for AsReadonly<T> {
 impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&crate::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<T>> {
         self.0.read_single(query, options).await
@@ -73,10 +83,26 @@ impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
         self.0.read(query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        self.0.read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.0.read_where(clause, options)
     }
 }
 

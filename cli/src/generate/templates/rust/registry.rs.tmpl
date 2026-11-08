@@ -1,4 +1,4 @@
-use datasources::{CRUDRepository, Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
+use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
 {{#imports}}use super::super::{{typeName}};
 {{/imports}}use std::sync::Arc;
 
@@ -7,8 +7,8 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "{{typeName}}",
         "{{plural}}",
-        |connection| {{#optimisticConcurrency}}Arc::new(super::{{module}}::{{optimisticClass}}::new(super::{{module}}::{{repoFn}}(connection).expect("repository"))) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc::new(super::{{module}}::{{repoFn}}(connection).expect("repository")) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}},
-        |connection| Arc::new(super::{{module}}::{{readonlyFn}}(connection).expect("repository")) as Arc<dyn IReadonlyRepository<{{entityType}}>>,
+        |connection| {{#optimisticConcurrency}}Arc::new(super::{{module}}::{{optimisticClass}}::new(Arc::try_unwrap(super::{{module}}::{{className}}::new(connection).expect("repository").inner).unwrap_or_else(|_| panic!("repository")))) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc::new(super::{{module}}::{{className}}::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}},
+        |connection| Arc::new(super::{{module}}::{{className}}::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<{{entityType}}>>,
     );
 {{/models}}
 }
@@ -17,14 +17,14 @@ datasources::bind_repositories!(register);
 
 pub trait Repositories {
 {{#models}}
-    fn {{plural}}(&self) -> {{#optimisticConcurrency}}Arc<super::{{module}}::{{optimisticClass}}>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc<CRUDRepository<{{entityType}}>>{{/optimisticConcurrency}};
+    fn {{plural}}(&self) -> {{#optimisticConcurrency}}Arc<super::{{module}}::{{optimisticClass}}>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc<super::{{module}}::{{className}}>{{/optimisticConcurrency}};
 {{/models}}
 }
 
 impl Repositories for Arc<dyn Datasource> {
 {{#models}}
-    fn {{plural}}(&self) -> {{#optimisticConcurrency}}Arc<super::{{module}}::{{optimisticClass}}>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc<CRUDRepository<{{entityType}}>>{{/optimisticConcurrency}} {
-        {{#optimisticConcurrency}}Arc::new(super::{{module}}::{{optimisticClass}}::new(super::{{module}}::{{repoFn}}(self.bind_connection(None)).expect("{{plural}}"))){{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc::new(super::{{module}}::{{repoFn}}(self.bind_connection(None)).expect("{{plural}}")){{/optimisticConcurrency}}
+    fn {{plural}}(&self) -> {{#optimisticConcurrency}}Arc<super::{{module}}::{{optimisticClass}}>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc<super::{{module}}::{{className}}>{{/optimisticConcurrency}} {
+        {{#optimisticConcurrency}}Arc::new(super::{{module}}::{{optimisticClass}}::new(Arc::try_unwrap(super::{{module}}::{{className}}::new(self.bind_connection(None)).expect("{{plural}}").inner).unwrap_or_else(|_| panic!("{{plural}}")))){{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc::new(super::{{module}}::{{className}}::new(self.bind_connection(None)).expect("{{plural}}")){{/optimisticConcurrency}}
     }
 {{/models}}
 }

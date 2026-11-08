@@ -65,8 +65,3 @@ impl Statement for SqlSeedStatement {
     }
 }
 
-impl crate::ReadInput for SqlSeedStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

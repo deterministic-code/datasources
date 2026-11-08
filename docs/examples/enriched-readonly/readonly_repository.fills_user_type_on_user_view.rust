@@ -54,7 +54,7 @@ users_repo.add_enriched(
     None,
 );
 let account = users_repo
-    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
+    .read_single_where(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
     .await
     .unwrap()
     .unwrap();

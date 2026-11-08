@@ -27,8 +27,3 @@ impl Statement for DropTableStatement {
     }
 }
 
-impl crate::ReadInput for DropTableStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

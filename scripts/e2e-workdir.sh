@@ -47,11 +47,16 @@ if [ -n "${E2E_LANG:-}" ]; then
   exec "$@"
 fi
 
-sample="${SAMPLE:?}"
-src="/opt/repo/$sample"
-if [ ! -d "$src" ]; then
-  printf 'e2e-workdir: missing %s\n' "$src" >&2
-  exit 1
+sample="${SAMPLE:-}"
+if [ -d /sample ]; then
+  src=/sample
+else
+  sample="${SAMPLE:?}"
+  src="/opt/repo/$sample"
+  if [ ! -d "$src" ]; then
+    printf 'e2e-workdir: missing %s\n' "$src" >&2
+    exit 1
+  fi
 fi
 e2e_step copy copy_tree "$src" /work
 e2e_step cli-install install_cli
@@ -69,6 +74,13 @@ start=$(date +%s)
 case "$sample" in
   samples/csharp/*)
     ( flock 8; "$@" ) 8>/e2e-cache/dotnet.lock
+    ;;
+  samples/typescript/*)
+    ( flock 7; "$@" ) 7>/e2e-cache/npm-build.lock
+    ;;
+  samples/rust/*)
+    export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
+    "$@"
     ;;
   *)
     "$@"

@@ -68,7 +68,7 @@ pub(crate) async fn delete_linked<T: Entity, TLink: Entity>(
         return Ok(());
     }
     let existing = writer
-        .read(&Where::new(Operator::equals(
+        .read_where(&Where::new(Operator::equals(
             association.parent.clone(),
             parent_key.clone(),
         )), None)

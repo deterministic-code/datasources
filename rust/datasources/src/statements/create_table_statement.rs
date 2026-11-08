@@ -50,8 +50,3 @@ impl Statement for CreateTableStatement {
     }
 }
 
-impl crate::ReadInput for CreateTableStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

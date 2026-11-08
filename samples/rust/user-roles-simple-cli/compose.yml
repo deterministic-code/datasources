@@ -35,16 +35,13 @@ services:
       interval: 1s
       timeout: 2s
       retries: 30
-  runner:
+  app:
     depends_on:
       mysql:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    image: datasources-e2e-rust
-    build:
-      context: ../../../scripts
-      dockerfile: e2e-rust.Dockerfile
+    build: .
     pull_policy: never
     restart: "no"
     stop_grace_period: 0s

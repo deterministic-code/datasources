@@ -6,6 +6,12 @@ import {
   type ICRUDRepository,
   type IWhere,
 } from "@deterministic-code/datasources";
+import { CategoriesRepository } from "../generated/repositories/categoriesRepository.ts";
+import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
+import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
+import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
+import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
+import { UsersRepository } from "../generated/repositories/usersRepository.ts";
 import type { Contact } from "../generated/types/view/contact.ts";
 import type { User } from "../generated/types/view/user.ts";
 import type { Game } from "../generated/types/view/game.ts";
@@ -19,12 +25,12 @@ export type HttpResult = { status: number; body: string };
 
 export class Api {
   constructor(
-    private readonly users: ICRUDRepository<User>,
-    private readonly categories: ICRUDRepository<Category>,
-    private readonly games: ICRUDRepository<Game>,
-    private readonly reviews: ICRUDRepository<Review>,
-    private readonly states: ICRUDRepository<GameState>,
-    private readonly contacts: ICRUDRepository<Contact>,
+    private readonly users: UsersRepository,
+    private readonly categories: CategoriesRepository,
+    private readonly games: GamesRepository,
+    private readonly reviews: ReviewsRepository,
+    private readonly states: GameStatesRepository,
+    private readonly contacts: ContactsRepository,
   ) {}
 
   handle = async (method: string, target: string, body: string | undefined): Promise<HttpResult> => {

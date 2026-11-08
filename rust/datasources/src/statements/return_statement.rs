@@ -34,8 +34,3 @@ impl Statement for ReturnStatement {
     }
 }
 
-impl crate::ReadInput for ReturnStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

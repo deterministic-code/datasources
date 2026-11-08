@@ -35,16 +35,13 @@ services:
       interval: 1s
       timeout: 2s
       retries: 30
-  runner:
+  app:
     depends_on:
       mysql:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    image: datasources-e2e-rust
-    build:
-      context: ../../../scripts
-      dockerfile: e2e-rust.Dockerfile
+    build: .
     pull_policy: never
     restart: "no"
     stop_grace_period: 0s
@@ -61,6 +58,7 @@ services:
     environment:
       SAMPLE: samples/rust/contacts-crud-enriched-medium-rest
       CARGO_TARGET_DIR: /cargo-target/contacts-crud-enriched-medium-rest
+      CARGO_BUILD_JOBS: "1"
       npm_config_cache: /npm-cache
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources

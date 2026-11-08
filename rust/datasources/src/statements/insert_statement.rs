@@ -24,11 +24,6 @@ impl InsertStatement {
     }
 }
 
-impl crate::ReadInput for InsertStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl Statement for InsertStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

@@ -283,7 +283,7 @@ async fn create_rereads_typed_list_option_and_dictionary() {
         created.prefs.get("home").map(|pref| pref.locale.as_str()),
         Some("en-GB")
     );
-    let read = contacts.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let read = contacts.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read[0].addresses[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(read[0].prefs["home"].timezone, "Europe/London");
 }

@@ -19,12 +19,12 @@ options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(&Where::binary("Id", eq, 1_i64), None)
+    .read_single_where(&Where::binary("Id", eq, 1_i64), None)
     .await
     .unwrap()
     .unwrap();
 let row = repo
-    .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
+    .read_where(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
     .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()

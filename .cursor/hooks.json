@@ -16,11 +16,17 @@
     "afterFileEdit": [
       {
         "command": ".cursor/hooks/sync-examples.mjs"
+      },
+      {
+        "command": ".cursor/hooks/generated-child-repos.mjs"
       }
     ],
     "afterTabFileEdit": [
       {
         "command": ".cursor/hooks/sync-examples.mjs"
+      },
+      {
+        "command": ".cursor/hooks/generated-child-repos.mjs"
       }
     ]
   }

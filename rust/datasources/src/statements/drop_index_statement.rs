@@ -33,8 +33,3 @@ impl Statement for DropIndexStatement {
     }
 }
 
-impl crate::ReadInput for DropIndexStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

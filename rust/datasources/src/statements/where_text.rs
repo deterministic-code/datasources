@@ -28,11 +28,6 @@ impl WhereText {
     }
 }
 
-impl crate::ReadInput for WhereText {
-    fn as_where(&self) -> Option<&dyn IWhere> {
-        Some(self)
-    }
-}
 
 impl crate::ICondition for WhereText {
     fn as_any(&self) -> &dyn std::any::Any {

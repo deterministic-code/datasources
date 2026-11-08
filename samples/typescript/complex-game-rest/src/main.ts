@@ -1,26 +1,45 @@
 import "../generated/repositories/repositoryRegistry.ts";
 import "./datasources-register.ts";
 import { Datasource } from "@deterministic-code/datasources";
-import { Api } from "./api.ts";
-import type { Role } from "../generated/types/datasource/role.ts";
-import type { Group } from "../generated/types/datasource/group.ts";
+import { AddressTypesRepository } from "../generated/repositories/addressTypesRepository.ts";
+import { CategoriesRepository } from "../generated/repositories/categoriesRepository.ts";
+import { ContactSourcesRepository } from "../generated/repositories/contactSourcesRepository.ts";
+import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
+import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
+import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
+import { GroupsRepository } from "../generated/repositories/groupsRepository.ts";
+import { PhoneTypesRepository } from "../generated/repositories/phoneTypesRepository.ts";
+import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
+import { RolesRepository } from "../generated/repositories/rolesRepository.ts";
+import { UsersRepository } from "../generated/repositories/usersRepository.ts";
+import type { AddressType } from "../generated/types/datasource/addressType.ts";
 import type { ContactSource } from "../generated/types/datasource/contactSource.ts";
+import type { Group } from "../generated/types/datasource/group.ts";
+import type { PhoneType } from "../generated/types/datasource/phoneType.ts";
+import type { Role } from "../generated/types/datasource/role.ts";
+import { Api } from "./api.ts";
 
-await using ds = Datasource.default as Datasource & {
-  users: never;
-  categories: never;
-  games: never;
-  reviews: never;
-  gameStates: never;
-  contacts: never;
-  roles: { create: (row: Role) => Promise<Role> };
-  groups: { create: (row: Group) => Promise<Group> };
-  contactSources: { create: (row: ContactSource) => Promise<ContactSource> };
-};
-const api = new Api(ds.users, ds.categories, ds.games, ds.reviews, ds.gameStates, ds.contacts);
-const role = await ds.roles.create({ name: "player", description: "plays" } as Role);
-const group = await ds.groups.create({ name: "guild", description: "guild" } as Group);
-await ds.contactSources.create({ name: "Manual" } as ContactSource);
+await using ds = Datasource.default;
+const connection = await ds.createConnection();
+await connection.open();
+const api = new Api(
+  new UsersRepository(connection),
+  new CategoriesRepository(connection),
+  new GamesRepository(connection),
+  new ReviewsRepository(connection),
+  new GameStatesRepository(connection),
+  new ContactsRepository(connection),
+);
+const roles = new RolesRepository(connection);
+const groups = new GroupsRepository(connection);
+const sources = new ContactSourcesRepository(connection);
+const role = await roles.create({ name: "player", description: "plays" } as Role);
+const group = await groups.create({ name: "guild", description: "guild" } as Group);
+await sources.create({ name: "Manual" } as ContactSource);
+const addressTypes = new AddressTypesRepository(connection);
+await addressTypes.create({ name: "Home" } as AddressType);
+await addressTypes.create({ name: "Work" } as AddressType);
+await new PhoneTypesRepository(connection).create({ name: "Mobile" } as PhoneType);
 
 const user = await call(api, "POST", "/users", {
   username: "ada",
@@ -83,15 +102,40 @@ const contact = await call(api, "POST", "/contacts", {
   lastName: "Lovelace",
   contactSourceName: "Manual",
   userId,
+  addresses: [
+    { addressTypeName: "Home", line1: "12 Analytical Engine", city: "London", country: "GB" },
+    { addressTypeName: "Work", line1: "1 Strand", city: "London", country: "GB" },
+  ],
+  phones: [{ phoneTypeName: "Mobile", number: "555-0100" }],
 }, 201);
 const contactId = contact.id as number;
-await call(api, "GET", `/contacts?userId=${userId}`, undefined, 200);
+const created = await call(api, "GET", `/contacts?id=${contactId}`, undefined, 200);
+requireAdaChildren(created, "Home", "London", "555-0100");
+if (addressByLine1(contactRow(created), "1 Strand").addressTypeName !== "Work")
+  throw new Error("create work address");
+const engine = addressByLine1(contactRow(created), "12 Analytical Engine");
+const phone = contactRow(created).phones[0];
 await call(api, "PUT", `/contacts?id=${contactId}`, {
   firstName: "Ada Byron",
   lastName: "Lovelace",
   contactSourceName: "Manual",
   userId,
+  addresses: [
+    {
+      id: engine.id,
+      addressTypeName: "Work",
+      line1: "12 Analytical Engine",
+      city: "Cambridge",
+      country: "FR",
+    },
+    { addressTypeName: "Home", line1: "1 College", city: "Cambridge", country: "GB" },
+  ],
+  phones: [{ id: phone.id, phoneTypeName: "Mobile", number: "555-0111" }],
 }, 200);
+const updated = await call(api, "GET", `/contacts?id=${contactId}`, undefined, 200);
+requireAdaChildren(updated, "Work", "Cambridge", "555-0111");
+if (addressByLine1(contactRow(updated), "1 College").addressTypeName !== "Home")
+  throw new Error("update home address");
 
 for (const target of [
   `/contacts?id=${contactId}`,
@@ -111,4 +155,29 @@ async function call(api: Api, method: string, target: string, body: object | und
   const result = await api.handle(method, target, body == null ? undefined : JSON.stringify(body));
   if (result.status !== status) throw new Error(`${method} ${target} => ${result.status} ${result.body}`);
   return result.body.length === 0 ? {} : JSON.parse(result.body);
+}
+
+type ContactJson = {
+  addresses: Array<{ id?: number; line1: string; addressTypeName: string; city: string }>;
+  phones: Array<{ id?: number; number: string; phoneTypeName: string }>;
+};
+
+function contactRow(listed: unknown): ContactJson {
+  if (!Array.isArray(listed) || listed.length !== 1) throw new Error("contact list");
+  return listed[0] as ContactJson;
+}
+
+function addressByLine1(contact: ContactJson, line1: string) {
+  const address = contact.addresses.find((row) => row.line1 === line1);
+  if (address == null) throw new Error(line1);
+  return address;
+}
+
+function requireAdaChildren(listed: unknown, engineType: string, engineCity: string, number: string) {
+  const contact = contactRow(listed);
+  if (contact.addresses.length !== 2 || contact.phones.length !== 1) throw new Error("child counts");
+  const engine = addressByLine1(contact, "12 Analytical Engine");
+  if (engine.addressTypeName !== engineType || engine.city !== engineCity) throw new Error("engine address");
+  const phone = contact.phones[0];
+  if (phone.number !== number || phone.phoneTypeName !== "Mobile") throw new Error("phone");
 }

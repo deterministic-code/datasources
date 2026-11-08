@@ -152,7 +152,6 @@ fn leaves_raw_and_other_statements() {
     let names = mappings();
     let call = ExecuteStoredProcedureStatement::new("save_user", &[]);
     assert_eq!(stmt_text(&call), "CALL save_user()");
-    assert!(ReadInput::as_where(&WhereText::new("id = 1")).is_some());
     let text = WhereText::new("name = $name");
     let kept = names
         .apply_delete(&DeleteStatement::new("User", Some(&text)), &mapper)

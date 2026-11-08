@@ -1,7 +1,8 @@
 use super::not_implemented::fail;
 use crate::i_repository::IRepository;
 use crate::id_key::IdKey;
-use crate::read_input::ReadInput;
+use crate::IWhere;
+use crate::statement::Statement;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
@@ -41,7 +42,7 @@ impl IReadonlyRepository for StubRepository {
 
     async fn read_single(
         &self,
-        _query: &dyn ReadInput,
+        _query: Option<&dyn Statement>,
         _options: Option<&crate::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
         Err(fail(&self.provider))
@@ -49,7 +50,24 @@ impl IReadonlyRepository for StubRepository {
 
     fn read<'a>(
         &'a self,
-        _query: &'a dyn ReadInput,
+        _query: Option<&'a dyn Statement>,
+        _options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        let provider = self.provider.clone();
+        Box::pin(once(async move { Err(fail(&provider)) }))
+    }
+
+    async fn read_single_where(
+        &self,
+        _clause: &dyn IWhere,
+        _options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Row>> {
+        Err(fail(&self.provider))
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        _clause: &'a dyn IWhere,
         _options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         let provider = self.provider.clone();

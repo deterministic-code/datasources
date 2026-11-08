@@ -1,6 +1,6 @@
 {
   "name": "@deterministic-code/datasources-code-generators",
-  "version": "0.1.2",
+  "version": "0.1.54",
   "type": "module",
   "exports": {
     ".": "./src/generateSql.ts",

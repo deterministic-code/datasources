@@ -25,11 +25,6 @@ impl DeleteStatement {
     }
 }
 
-impl crate::ReadInput for DeleteStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl Statement for DeleteStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

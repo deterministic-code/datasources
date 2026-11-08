@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     );
 
     let ada_read = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", ada.id)))
+        .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("read"))?;
     println!(
@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
     );
 
     let alan_read = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", alan.id)))
+        .read_single_where(&Where::new(Operator::equals("id", alan.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("read"))?;
     println!(
@@ -145,7 +145,7 @@ async fn main() -> Result<()> {
             }, None)
         .await?;
     let ada_after = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", ada.id)))
+        .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("update"))?;
     let mut ada_emails: Vec<_> = ada_after.emails.iter().map(|email| email.address.clone()).collect();
@@ -196,7 +196,7 @@ async fn main() -> Result<()> {
             }, None)
         .await?;
     let alan_after = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", alan.id)))
+        .read_single_where(&Where::new(Operator::equals("id", alan.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("update"))?;
     println!(
@@ -211,7 +211,7 @@ async fn main() -> Result<()> {
 
     let ada_removed = contacts_repo.delete(ada_after, None).await?;
     if contacts_repo
-        .read_single(&Where::new(Operator::equals("id", ada.id)))
+        .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
         .await?
         .is_some()
     {
@@ -221,7 +221,7 @@ async fn main() -> Result<()> {
 
     let alan_removed = contacts_repo.delete(alan_after, None).await?;
     if contacts_repo
-        .read_single(&Where::new(Operator::equals("id", alan.id)))
+        .read_single_where(&Where::new(Operator::equals("id", alan.id)), None)
         .await?
         .is_some()
     {

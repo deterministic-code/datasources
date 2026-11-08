@@ -95,8 +95,3 @@ impl Statement for ForeignKeyStatement {
     }
 }
 
-impl crate::ReadInput for ForeignKeyStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

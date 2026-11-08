@@ -24,11 +24,6 @@ impl ExecuteStoredProcedureStatement {
     }
 }
 
-impl crate::ReadInput for ExecuteStoredProcedureStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl Statement for ExecuteStoredProcedureStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

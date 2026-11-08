@@ -24,23 +24,23 @@ test("watcher exits on the first warning line and does not read the rest", () =>
   assert.doesNotMatch(result.stdout, /AFTER/);
 });
 
-test("0 Warning(s), 0 Error(s), npm env-config warn, and NU1902 do not fail", () => {
+test("0 Warning(s), 0 Error(s), npm env-config warn, npm deprecated, NU1902, and cargo future-incompat do not fail", () => {
   const result = spawnSync(
     "sh",
     [
       "-c",
-      `. "${helper}"; printf '%s\\n' '    0 Warning(s)' '    0 Error(s)' 'npm warn Unknown env config "devdir"' "MigrateMysql.csproj : warning NU1902: Package 'MySqlConnector' 2.4.0 has a known moderate severity vulnerability" | e2e_watch`,
+      `. "${helper}"; printf '%s\\n' '    0 Warning(s)' '    0 Error(s)' 'npm warn Unknown env config "devdir"' 'npm warn deprecated glob@10.5.0: Old versions of glob are not supported' "MigrateMysql.csproj : warning NU1902: Package 'MySqlConnector' 2.4.0 has a known moderate severity vulnerability" 'warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1' | e2e_watch`,
     ],
     { encoding: "utf8" },
   );
   assert.equal(result.status, 0);
 });
 
-test("rustc error and npm warn fail", () => {
+test("rustc error and npm error fail", () => {
   for (const line of [
     "error[E0061]: this method takes 1 argument but 2 arguments were supplied",
     "error: could not compile `contacts-simple-cli`",
-    "npm warn deprecated glob@10.5.0: Old versions of glob are not supported",
+    "npm error code ERESOLVE",
   ]) {
     const result = sh(`e2e_fail_line ${JSON.stringify(line)}`);
     assert.equal(result.status, 0, line);

@@ -65,8 +65,3 @@ impl Statement for CreateBulkUpdateStoredProcedureStatement {
     }
 }
 
-impl crate::ReadInput for CreateBulkUpdateStoredProcedureStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

@@ -9,20 +9,20 @@ namespace ComplexGameRest;
 
 public sealed class Api
 {
-    readonly ICRUDRepository<User> users;
-    readonly ICRUDRepository<Category> categories;
-    readonly ICRUDRepository<Game> games;
-    readonly ICRUDRepository<Review> reviews;
-    readonly ICRUDRepository<GameState> states;
-    readonly ICRUDRepository<Contact> contacts;
+    readonly UsersRepository users;
+    readonly CategoriesRepository categories;
+    readonly GamesRepository games;
+    readonly ReviewsRepository reviews;
+    readonly GameStatesRepository states;
+    readonly ContactsRepository contacts;
 
     public Api(
-        ICRUDRepository<User> users,
-        ICRUDRepository<Category> categories,
-        ICRUDRepository<Game> games,
-        ICRUDRepository<Review> reviews,
-        ICRUDRepository<GameState> states,
-        ICRUDRepository<Contact> contacts)
+        UsersRepository users,
+        CategoriesRepository categories,
+        GamesRepository games,
+        ReviewsRepository reviews,
+        GameStatesRepository states,
+        ContactsRepository contacts)
     {
         this.users = users;
         this.categories = categories;

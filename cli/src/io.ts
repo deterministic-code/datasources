@@ -44,10 +44,21 @@ export const nodeFs: Fs = {
   unlink,
 };
 
+const migrateCargoTarget = (command: string, args: readonly string[]): NodeJS.ProcessEnv => {
+  const env = { ...process.env };
+  const migrate =
+    command === "npx" &&
+    args.some((arg) => arg === "@deterministic-code/migraters" || arg.startsWith("migrate-"));
+  if (migrate && env.CARGO_TARGET_DIR)
+    env.CARGO_TARGET_DIR = `${env.CARGO_TARGET_DIR.replace(/\/+$/, "")}/migraters`;
+  return env;
+};
+
 export const spawnRunner: Runner = (command, args, cwd) =>
   new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
+      env: migrateCargoTarget(command, args),
       stdio: "inherit",
       shell: process.platform === "win32",
     });

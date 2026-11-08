@@ -121,7 +121,7 @@ async fn typed_create_persists_and_reads_list_children() {
     assert_eq!(created.children[0].parent_id, created.id);
     assert_eq!(created.children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(created.children[0].created, Some(stamp));
-    let read = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let read = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read.len(), 1);
     assert_eq!(read[0].children[0].label, "a");
     assert_eq!(read[0].children[0].line2.as_deref(), Some("Room 12"));
@@ -165,7 +165,7 @@ async fn typed_create_persists_list_children_on_typed_repo() {
     assert_eq!(created.children.len(), 1);
     assert_eq!(created.children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(created.children[0].parent_id, created.id);
-    let read = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let read = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read[0].children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(read[0].children[0].created, Some(stamp));
 }
@@ -258,7 +258,7 @@ async fn typed_create_resolves_lookup_name_without_source_property() {
     assert!(created.id > 0);
     assert_eq!(created.gender_type_name, "Female");
     assert_eq!(female.get("name"), Some(&Value::from("Female")));
-    let read = people.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let read = people.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read.len(), 1);
     assert_eq!(read[0].gender_type_name, "Female");
     let unknown = people
@@ -306,7 +306,7 @@ async fn typed_create_resolves_lookup_on_typed_gender_repo() {
     assert!(created.id > 0);
     assert_eq!(created.gender_type_name, "Female");
     assert_eq!(female.name, "Female");
-    let read = people.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let read = people.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read[0].gender_type_name, "Female");
 }
 
@@ -418,6 +418,6 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
         .await
         .unwrap();
     assert!(created.id > 0);
-    let read = contacts.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+    let read = contacts.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read.len(), 1);
 }

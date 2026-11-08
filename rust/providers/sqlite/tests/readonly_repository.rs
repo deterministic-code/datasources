@@ -73,12 +73,12 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     options.property_mappings = Some(std::sync::Arc::new(snake()));
     let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let by_id = repo
-        .read_single(&Where::binary("Id", eq, 1_i64), None)
+        .read_single_where(&Where::binary("Id", eq, 1_i64), None)
         .await
         .unwrap()
         .unwrap();
     let row = repo
-        .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
+        .read_where(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
         .try_collect::<Vec<_>>().await
         .unwrap()
         .into_iter()
@@ -138,7 +138,7 @@ async fn maps_an_object_explicitly() {
     options.object_converter = Some(Box::new(UserConverter));
     let users_repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let user = users_repo
-        .read_single(&Where::binary("Id", eq, 1_i64), None)
+        .read_single_where(&Where::binary("Id", eq, 1_i64), None)
         .await
         .unwrap()
         .unwrap();
@@ -185,16 +185,16 @@ async fn reads_user_by_guid_username_and_created() {
     let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
-        .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
+        .read_single_where(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
         .await
         .unwrap()
         .unwrap();
     let by_login = repo
-        .read(&Where::binary("Login", eq, "ada").and("Active", eq, true), None)
+        .read_where(&Where::binary("Login", eq, "ada").and("Active", eq, true), None)
         .try_collect::<Vec<_>>().await
         .unwrap();
     let later = repo
-        .read(&Where::binary("Active", eq, true).and("Opened", gt, opened), None)
+        .read_where(&Where::binary("Active", eq, true).and("Opened", gt, opened), None)
         .try_collect::<Vec<_>>().await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
@@ -311,7 +311,7 @@ mod user_view {
             None,
         );
         let account = users_repo
-            .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
+            .read_single_where(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
             .await
             .unwrap()
             .unwrap();
@@ -471,7 +471,7 @@ mod users_view_roles {
             Some(strategy),
         );
         let users_view = users_repo
-            .read_single(&Where::binary("Key", eq, ADA), None)
+            .read_single_where(&Where::binary("Key", eq, ADA), None)
             .await
             .unwrap()
             .unwrap();
@@ -547,7 +547,7 @@ mod users_view_roles {
             ))),
         );
         let joined = joined_users();
-        let items = users_repo.read(&joined, None).try_collect::<Vec<_>>().await.unwrap();
+        let items = users_repo.read(Some(&joined), None).try_collect::<Vec<_>>().await.unwrap();
         let view = |login: &str| {
             items
                 .iter()
@@ -630,7 +630,7 @@ mod user_crud {
             .unwrap()
             .unwrap();
         let matches = users_repo
-            .read(&Where::binary("Username", eq, "ada").and(
+            .read_where(&Where::binary("Username", eq, "ada").and(
                     "IsEnabled",
                     eq,
                     Value::Bool(true),
@@ -795,7 +795,7 @@ mod user_crud {
         let grace = users_repo.create(grace).await.unwrap();
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
-            .read_single(&Where::binary("Key", eq, key.clone()), None)
+            .read_single_where(&Where::binary("Key", eq, key.clone()), None)
             .await
             .unwrap()
             .unwrap();
@@ -821,7 +821,7 @@ mod user_crud {
             .await
             .unwrap();
         let current = users_repo
-            .read_single(&Where::binary("Key", eq, key.clone()), None)
+            .read_single_where(&Where::binary("Key", eq, key.clone()), None)
             .await
             .unwrap()
             .unwrap();
@@ -838,7 +838,7 @@ mod user_crud {
         current_names.sort();
         assert_eq!(current_names, ["admin", "editor", "owner"]);
         let roles = user_roles_repo
-            .read(&Where::binary("UserId", eq, key.clone()), None)
+            .read_where(&Where::binary("UserId", eq, key.clone()), None)
             .try_collect::<Vec<_>>().await
             .unwrap();
         assert_eq!(admin.get("Id"), Some(&Value::Int(1)));

@@ -108,16 +108,13 @@ fn write_struct<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) ->
     let object = json
         .as_object()
         .ok_or_else(|| DatasourceError::message("expected a json object"))?;
-    let mut partial = partial;
+    let mut partial = partial.set_default().map_err(reflect)?;
     for field in struct_fields(shape)? {
-        partial = partial.begin_field(field.name).map_err(reflect)?;
-        partial = match field_json(object, field.name) {
-            Some(cell) => write_into(partial, cell, field.shape())?,
-            None if is_datetime(field.shape()) => partial
-                .set(DateTime::<Utc>::default())
-                .map_err(reflect)?,
-            None => partial.set_default().map_err(reflect)?,
+        let Some(cell) = field_json(object, field.name) else {
+            continue;
         };
+        partial = partial.begin_field(field.name).map_err(reflect)?;
+        partial = write_into(partial, cell, field.shape())?;
         partial = partial.end().map_err(reflect)?;
     }
     Ok(partial)
@@ -427,5 +424,39 @@ mod tests {
         let stamp = JsonObjectSerializer::from_str::<Stamp>(r#"{"name":"ada"}"#).unwrap();
         assert_eq!(stamp.name, "ada");
         assert_eq!(stamp.created, DateTime::<Utc>::default());
+    }
+
+    #[derive(Clone, Debug, PartialEq, datasources::Facet)]
+    #[facet(crate = ::datasources::facet)]
+    struct Card {
+        uuid: String,
+        name: String,
+    }
+
+    impl Default for Card {
+        fn default() -> Self {
+            Self {
+                uuid: datasources::uuid::Uuid::new_v4().to_string(),
+                name: String::new(),
+            }
+        }
+    }
+
+    #[derive(Clone, Debug, Default, PartialEq, datasources::Facet)]
+    #[facet(crate = ::datasources::facet)]
+    struct Wallet {
+        cards: Vec<Card>,
+    }
+
+    #[test]
+    fn omitted_uuid_uses_view_default() {
+        let wallet = JsonObjectSerializer::from_str::<Wallet>(
+            r#"{"cards":[{"name":"home"},{"name":"work"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(wallet.cards.len(), 2);
+        assert_ne!(wallet.cards[0].uuid, "");
+        assert_ne!(wallet.cards[1].uuid, "");
+        assert_ne!(wallet.cards[0].uuid, wallet.cards[1].uuid);
     }
 }

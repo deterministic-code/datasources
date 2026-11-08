@@ -45,7 +45,7 @@ impl<T: Entity> UpdateEnrichmentStrategy<T> for CascadeDeleteUpdateEnrichmentStr
             &enrichment.destination_property,
         )?;
         let existing = writer
-            .read(&Where::new(Operator::equals(
+            .read_where(&Where::new(Operator::equals(
                     association.parent.clone(),
                     parent_key.clone(),
                 )), None)

@@ -83,11 +83,6 @@ impl Statement for SelectStatement {
     }
 }
 
-impl crate::ReadInput for SelectStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl ISelectStatement for SelectStatement {
     fn where_clause(&self) -> Option<&dyn IWhere> {

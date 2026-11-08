@@ -1,25 +1,28 @@
 using System.Text.Json;
 using Backend.Types.Datasource;
-using Backend.Types.View;
-using Category = Backend.Types.View.Category;
-using User = Backend.Types.View.User;
 using ComplexGameRest;
 using Datasources;
 
 await using var ds = Datasource.Default;
+var connection = await ds.CreateConnection();
+await connection.Open();
 var api = new Api(
-    ds.CreateRepository<User>("Users"),
-    ds.CreateRepository<Category>("Categories"),
-    ds.CreateRepository<Game>("Games"),
-    ds.CreateRepository<Review>("Reviews"),
-    ds.CreateRepository<GameState>("GameStates"),
-    ds.CreateRepository<Contact>("Contacts"));
-var roles = ds.CreateRepository<Role>("Roles");
-var groups = ds.CreateRepository<Group>("Groups");
-var sources = ds.CreateRepository<ContactSource>("ContactSources");
+    new UsersRepository(connection),
+    new CategoriesRepository(connection),
+    new GamesRepository(connection),
+    new ReviewsRepository(connection),
+    new GameStatesRepository(connection),
+    new ContactsRepository(connection));
+var roles = new RolesRepository(connection);
+var groups = new GroupsRepository(connection);
+var sources = new ContactSourcesRepository(connection);
 var role = await roles.Create(new Role { Name = "player", Description = "plays" });
 var group = await groups.Create(new Group { Name = "guild", Description = "guild" });
 await sources.Create(new ContactSource { Name = "Manual" });
+var addressTypes = new AddressTypesRepository(connection);
+await addressTypes.Create(new AddressType { Name = "Home" });
+await addressTypes.Create(new AddressType { Name = "Work" });
+await new PhoneTypesRepository(connection).Create(new PhoneType { Name = "Mobile" });
 
 var user = await Call(api, "POST", "/users", Json(new
 {
@@ -89,16 +92,52 @@ var contact = await Call(api, "POST", "/contacts", Json(new
     lastName = "Lovelace",
     contactSourceName = "Manual",
     userId = userId.ToString(),
+    addresses = new object[]
+    {
+        new { addressTypeName = "Home", line1 = "12 Analytical Engine", city = "London", country = "GB" },
+        new { addressTypeName = "Work", line1 = "1 Strand", city = "London", country = "GB" },
+    },
+    phones = new object[] { new { phoneTypeName = "Mobile", number = "555-0100" } },
 }), 201);
 var contactId = contact.GetProperty("id").GetInt64();
-await Call(api, "GET", $"/contacts?userId={userId}", null, 200);
+var created = await Call(api, "GET", $"/contacts?id={contactId}", null, 200);
+RequireAdaChildren(created, "Home", "London", "555-0100");
+if (AddressByLine1(ContactRow(created), "1 Strand").GetProperty("addressTypeName").GetString() != "Work")
+    throw new InvalidOperationException("create work address");
+var engine = AddressByLine1(ContactRow(created), "12 Analytical Engine");
+var phone = ContactRow(created).GetProperty("phones")[0];
 await Call(api, "PUT", $"/contacts?id={contactId}", Json(new
 {
     firstName = "Ada Byron",
     lastName = "Lovelace",
     contactSourceName = "Manual",
     userId = userId.ToString(),
+    addresses = new object[]
+    {
+        new
+        {
+            id = engine.GetProperty("id").GetInt64(),
+            addressTypeName = "Work",
+            line1 = "12 Analytical Engine",
+            city = "Cambridge",
+            country = "FR",
+        },
+        new { addressTypeName = "Home", line1 = "1 College", city = "Cambridge", country = "GB" },
+    },
+    phones = new object[]
+    {
+        new
+        {
+            id = phone.GetProperty("id").GetInt64(),
+            phoneTypeName = "Mobile",
+            number = "555-0111",
+        },
+    },
 }), 200);
+var updated = await Call(api, "GET", $"/contacts?id={contactId}", null, 200);
+RequireAdaChildren(updated, "Work", "Cambridge", "555-0111");
+if (AddressByLine1(ContactRow(updated), "1 College").GetProperty("addressTypeName").GetString() != "Home")
+    throw new InvalidOperationException("update home address");
 
 foreach (var target in new[]
 {
@@ -114,6 +153,36 @@ foreach (var target in new[]
     await Call(api, "DELETE", target, null, 204);
     await Call(api, "DELETE", target, null, 404);
     await Call(api, "PUT", target, "{}", 404);
+}
+
+static JsonElement ContactRow(JsonElement listed)
+{
+    if (listed.ValueKind != JsonValueKind.Array || listed.GetArrayLength() != 1)
+        throw new InvalidOperationException("contact list");
+    return listed[0];
+}
+
+static JsonElement AddressByLine1(JsonElement contact, string line1)
+{
+    foreach (var address in contact.GetProperty("addresses").EnumerateArray())
+        if (address.GetProperty("line1").GetString() == line1) return address;
+    throw new InvalidOperationException(line1);
+}
+
+static void RequireAdaChildren(JsonElement listed, string engineType, string engineCity, string number)
+{
+    var contact = ContactRow(listed);
+    if (contact.GetProperty("addresses").GetArrayLength() != 2
+        || contact.GetProperty("phones").GetArrayLength() != 1)
+        throw new InvalidOperationException("child counts");
+    var engine = AddressByLine1(contact, "12 Analytical Engine");
+    if (engine.GetProperty("addressTypeName").GetString() != engineType
+        || engine.GetProperty("city").GetString() != engineCity)
+        throw new InvalidOperationException("engine address");
+    var phone = contact.GetProperty("phones")[0];
+    if (phone.GetProperty("number").GetString() != number
+        || phone.GetProperty("phoneTypeName").GetString() != "Mobile")
+        throw new InvalidOperationException("phone");
 }
 
 static string Json(object value) => JsonSerializer.Serialize(value);

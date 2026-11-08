@@ -80,7 +80,7 @@ async fn maps_join_rows_to_nested_contacts() {
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
         join_repo
-            .read(&contacts_join_query(None), None)
+            .read(Some(&contacts_join_query(None)), None)
             .try_collect::<Vec<_>>().await
             .unwrap(),
     ));
@@ -229,7 +229,7 @@ async fn writes_enriched_contact() {
         panic!("expected insert id");
     };
     let loaded = contacts_repo
-        .read_single(&Where::new(Operator::equals("Id", Value::Int(id))), None)
+        .read_single_where(&Where::new(Operator::equals("Id", Value::Int(id))), None)
         .await
         .unwrap()
         .unwrap();

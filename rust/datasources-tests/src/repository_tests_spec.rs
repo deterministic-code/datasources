@@ -716,7 +716,7 @@ pub async fn run(
                 read: Some(read), ..
             } => {
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&read.id)));
-                let row = repo.read_single(&where_clause, None).await.unwrap();
+                let row = repo.read_single_where(&where_clause, None).await.unwrap();
                 if let Some(expect) = &read.expect {
                     assert_row(
                         &format!("{} READ", spec.name),
@@ -730,11 +730,11 @@ pub async fn run(
                 query: Some(query), ..
             } => {
                 let rows = if let Some(where_clause) = &query.where_clause {
-                    repo.read(&where_of(&mapping, where_clause), None)
+                    repo.read_where(&where_of(&mapping, where_clause), None)
                         .try_collect::<Vec<_>>().await
                         .unwrap()
                 } else {
-                    repo.read(&(), None).try_collect::<Vec<_>>().await.unwrap()
+                    repo.read(None, None).try_collect::<Vec<_>>().await.unwrap()
                 };
                 if let Some(expect) = &query.expect {
                     assert_rows(
@@ -750,7 +750,7 @@ pub async fn run(
                 ..
             } => {
                 let row = repo
-                    .read_single(&where_of(&mapping, &read_by.where_clause), None)
+                    .read_single_where(&where_of(&mapping, &read_by.where_clause), None)
                     .await
                     .unwrap();
                 if let Some(expect) = &read_by.expect {

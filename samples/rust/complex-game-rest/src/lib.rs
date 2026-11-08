@@ -2,7 +2,7 @@ mod datasources_providers;
 pub use api::Api;
 pub use datasources_providers::register;
 pub use crate::generated::{
-    Category, Contact, ContactSource, Game, GameState, Group, Review, Role, User,
+    AddressType, Category, Contact, ContactSource, Game, GameState, Group, PhoneType, Review, Role, User,
 };
 pub use crate::generated::Repositories;
 
