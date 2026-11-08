@@ -77,9 +77,10 @@ impl<T: Entity> WriteEnrichmentStrategy<T> for DefaultWriteEnrichmentStrategy<T>
         tree: &RepositoryTree<T>,
         items: &mut [T],
         record: &mut Row,
+        schema: &crate::schema::Schema,
     ) -> Result<()> {
         let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
-        crate::create_enrichment_strategy::resolve_lookups(&entries, items, record).await
+        crate::create_enrichment_strategy::resolve_lookups(&entries, items, record, schema).await
     }
 
     async fn persist(

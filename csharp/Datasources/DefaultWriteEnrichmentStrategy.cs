@@ -20,9 +20,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 
     public bool UseTransaction { get; }
 
-    public Task ResolveLookups(IRepositoryTree tree, IList<T> items, Row record) =>
+    public Task ResolveLookups(IRepositoryTree tree, IList<T> items, Row record, Schema schema) =>
         tree.Parent.Value is IEnrichmentHost host
-            ? create.ResolveLookups(host.Enrichments, items, record)
+            ? create.ResolveLookups(host.Enrichments, items, record, schema)
             : Task.CompletedTask;
 
     public Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode) =>

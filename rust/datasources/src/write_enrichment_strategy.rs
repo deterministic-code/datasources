@@ -2,6 +2,7 @@ use crate::entity::Entity;
 use crate::repository_tree::RepositoryTree;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::write_mode::WriteMode;
 use async_trait::async_trait;
 
@@ -32,6 +33,7 @@ pub trait WriteEnrichmentStrategy<T: Entity = Row>: Send + Sync {
         _tree: &RepositoryTree<T>,
         _items: &mut [T],
         _record: &mut Row,
+        _schema: &Schema,
     ) -> Result<()> {
         Ok(())
     }

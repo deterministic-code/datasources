@@ -1,2 +1,3 @@
 FROM datasources-e2e-node
-COPY . /sample
+WORKDIR /work
+COPY . .

@@ -94,22 +94,10 @@ build_toolchains() {
       samples/rust/*) rust=1 ;;
     esac
   done
-  # CLI install is Node. Always build the node image so warmup can run once.
+  # CLI install is Node.
   if [ -n "$node$dotnet$rust" ]; then build_image datasources-e2e-node e2e-node.Dockerfile; fi
   if [ -n "$dotnet" ]; then build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile; fi
   if [ -n "$rust" ]; then build_image datasources-e2e-rust e2e-rust.Dockerfile; fi
-}
-
-warmup_cli() {
-  mkdir -p "${HOME}/.cache/datasources-e2e" "${HOME}/.cache/datasources-npm"
-  e2e_step cli-install docker run --rm \
-    -v "$repo:/opt/repo:ro" \
-    -v "${HOME}/.cache/datasources-npm:/npm-cache" \
-    -v "${HOME}/.cache/datasources-e2e:/e2e-cache" \
-    -e E2E_CLI_ONLY=1 \
-    -e npm_config_cache=/npm-cache \
-    -e DATASOURCES_REPO=/opt/repo \
-    datasources-e2e-node
 }
 
 if [ "${1:-}" = --local ]; then
@@ -232,17 +220,12 @@ run_compose() {
     return "$up"
   fi
   run=0
-  run_watched docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" app sh -ec '
-    set -e -o pipefail
-    start=$(date +%s)
-    printf "e2e-workdir: start sqlite\n"
-    sh -e -o pipefail sqlite.sh --local
-    printf "e2e-workdir: done sqlite %ss\n" "$(($(date +%s) - start))"
-    start=$(date +%s)
-    printf "e2e-workdir: start mysql-postgres\n"
-    sh -e -o pipefail mysql-postgres.sh --local
-    printf "e2e-workdir: done mysql-postgres %ss\n" "$(($(date +%s) - start))"
-  ' || run=$?
+  run_watched docker compose run --rm --no-deps app sh sqlite.sh || run=$?
+  if [ "$run" -ne 0 ]; then
+    return "$run"
+  fi
+  run=0
+  run_watched docker compose run --rm --no-deps app sh mysql-postgres.sh || run=$?
   if [ "$run" -ne 0 ]; then
     return "$run"
   fi
@@ -267,6 +250,7 @@ if [ -n "$quickstarts" ]; then
     maybe_prune
   }
   trap 'down; trap - USR1' EXIT
+  mkdir -p "${HOME}/.cache/datasources-npm" "${HOME}/.cache/datasources-nuget" "${HOME}/.cache/datasources-cargo"
   build_image datasources-e2e-node e2e-node.Dockerfile
   build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile
   build_image datasources-e2e-rust e2e-rust.Dockerfile
@@ -328,9 +312,9 @@ trap 'down; trap - USR1' EXIT
 
 suite_start=$(date +%s)
 e2e_log "suite start"
+mkdir -p "${HOME}/.cache/datasources-npm" "${HOME}/.cache/datasources-nuget" "${HOME}/.cache/datasources-cargo"
 # shellcheck disable=SC2086
 build_toolchains $sample_dirs
-warmup_cli
 
 for dir in "$@"; do
   await_slot "$dir"

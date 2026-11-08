@@ -51,12 +51,10 @@ services:
     volumes:
       - ${HOME}/.cache/datasources-npm:/npm-cache
       - ${HOME}/.cache/datasources-cargo:/cargo
-      - ${HOME}/.cache/datasources-cargo-target:/cargo-target
-      - ${HOME}/.cache/datasources-e2e:/e2e-cache
     working_dir: /work
     environment:
       npm_config_cache: /npm-cache
-      CARGO_TARGET_DIR: /cargo-target/contacts-cli-rust
+      CARGO_TARGET_DIR: /tmp/cargo-target/contacts-cli-rust
       E2E_LANG: rust
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources

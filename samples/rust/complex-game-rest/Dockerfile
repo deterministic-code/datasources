@@ -1,2 +1,3 @@
 FROM datasources-e2e-rust
-COPY . /sample
+WORKDIR /work
+COPY . .

@@ -4,6 +4,7 @@ use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::value::Value;
 use async_trait::async_trait;
@@ -106,6 +107,7 @@ pub(crate) async fn resolve_lookups<T: Entity>(
     entries: &[StoredEnrichment<T>],
     items: &mut [T],
     record: &mut Row,
+    schema: &Schema,
 ) -> Result<()> {
     for item in items.iter_mut() {
         for entry in entries {
@@ -120,11 +122,15 @@ pub(crate) async fn resolve_lookups<T: Entity>(
             if enrichment.r#type != crate::EnrichmentPropertyType::Object {
                 continue;
             }
-            let Some(name) = record
-                .get(&enrichment.destination_property)
-                .cloned()
-                .filter(|value| !missing(value))
-            else {
+            let dest = &enrichment.destination_property;
+            let Some(name) = record.get(dest).cloned().filter(|value| !missing(value)) else {
+                if schema
+                    .columns
+                    .get(dest)
+                    .is_some_and(|column| !column.nullable)
+                {
+                    return Err(DatasourceError::message(format!("Unknown {dest}")));
+                }
                 continue;
             };
             if record
@@ -139,11 +145,7 @@ pub(crate) async fn resolve_lookups<T: Entity>(
             let id = found
                 .filter(|value| !missing(value))
                 .ok_or_else(|| {
-                    DatasourceError::message(format!(
-                        "Unknown {} \"{}\"",
-                        enrichment.destination_property,
-                        name.wire_text()
-                    ))
+                    DatasourceError::message(format!("Unknown {dest} \"{}\"", name.wire_text()))
                 })?;
             set(record, &enrichment.source_property, id)?;
         }
