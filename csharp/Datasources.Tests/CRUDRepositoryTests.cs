@@ -25,6 +25,15 @@ public class CRUDRepositoryTests
         public string Value { get; set; } = "";
     }
 
+    sealed class NotedSetting
+    {
+        public long Id { get; set; }
+        public long ParentId { get; set; }
+        public string Key { get; set; } = "";
+        public string Note { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
     sealed class PrefRow
     {
         public long Id { get; set; }
@@ -224,6 +233,27 @@ public class CRUDRepositoryTests
         Assert.Equal("Europe/Paris", updated.Prefs["home"].Timezone);
         Assert.False(updated.Prefs.ContainsKey("travel"));
         Assert.Equal("en-US", updated.Prefs["work"].Locale);
+    }
+
+    [Fact]
+    public async Task StringDictionaryWithoutRelatedPropertyReadsValueColumn()
+    {
+        var connection = await Setup();
+        var hostsRepo = Open<Host>(connection);
+        var settingsRepo = Open<NotedSetting>(connection, schema: new Schema(new Dictionary<string, SchemaColumn>
+        {
+            ["Id"] = new("integer", IsId: true),
+            ["ParentId"] = new("integer"),
+            ["Key"] = new("string"),
+            ["Note"] = new("string"),
+            ["Value"] = new("string"),
+        }));
+        var host = await hostsRepo.Create(new Host { Label = "ada" });
+        Assert.True(host.Id > 0);
+        await settingsRepo.Create(new NotedSetting { ParentId = host.Id, Key = "theme", Note = "side", Value = "dark" });
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", Type: EnrichmentPropertyType.Dictionary), settingsRepo);
+        var loaded = await hostsRepo.ReadSingle();
+        Assert.Equal("dark", loaded!.Settings["theme"]);
     }
 
     [Fact]

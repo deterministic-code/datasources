@@ -595,4 +595,54 @@ mod tests {
         assert_eq!(address.address_type_name, "Home");
         assert!(address.latitude.is_none());
     }
+
+    #[tokio::test]
+    async fn string_dictionary_without_related_property_reads_value_column() {
+        use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+        use crate::mocks::MockRepository;
+        use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+        use std::sync::Arc;
+
+        let mut repo = MockRepository::new();
+        repo.schema = crate::schema::Schema::new(std::collections::HashMap::from([
+            (
+                "id".into(),
+                crate::schema::SchemaColumn {
+                    is_id: true,
+                    ..crate::schema::SchemaColumn::new("integer")
+                },
+            ),
+            ("parent_id".into(), crate::schema::SchemaColumn::new("integer")),
+            ("key".into(), crate::schema::SchemaColumn::new("string")),
+            ("note".into(), crate::schema::SchemaColumn::new("string")),
+            ("value".into(), crate::schema::SchemaColumn::new("string")),
+        ]));
+        let mut row = Row::new();
+        row.insert("parent_id".into(), Value::Int(1));
+        row.insert("key".into(), Value::from("theme"));
+        row.insert("note".into(), Value::from("side"));
+        row.insert("value".into(), Value::from("dark"));
+        repo.items.lock().expect("mock").push(row);
+        let via = Arc::new(repo);
+        let mut parents = vec![House {
+            id: 1,
+            ..House::default()
+        }];
+        DefaultReadonlyEnrichmentStrategy
+            .apply(
+                via,
+                &crate::Enrichment::new(
+                    "settings",
+                    "id",
+                    "parent_id",
+                    None,
+                    crate::EnrichmentPropertyType::Dictionary,
+                ),
+                &mut parents,
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(parents[0].settings.get("theme").map(String::as_str), Some("dark"));
+    }
 }

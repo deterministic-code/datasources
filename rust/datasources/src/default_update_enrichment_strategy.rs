@@ -130,8 +130,6 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
 fn dict_key<TChild: Entity>(child: &TChild, key_name: &str) -> String {
     child
         .cell(key_name)
-        .or_else(|| child.cell("key"))
-        .or_else(|| child.cell("Key"))
         .map(|value| value.wire_text())
         .unwrap_or_default()
 }

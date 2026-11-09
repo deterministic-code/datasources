@@ -7,7 +7,5 @@ pub trait IRepository: Send + Sync {
         TypeId::of::<Row>()
     }
 
-    fn schema(&self) -> &Schema {
-        Schema::empty()
-    }
+    fn schema(&self) -> &Schema;
 }

@@ -39,6 +39,14 @@ class Setting {
   Value = "";
 }
 
+class NotedSetting {
+  Id = 0;
+  ParentId = 0;
+  Key = "";
+  Note = "";
+  Value = "";
+}
+
 class PrefRow {
   Id = 0;
   ParentId = 0;
@@ -253,6 +261,32 @@ describe("CRUDRepository", () => {
     expect(updated?.Prefs.work.Locale).toBe("en-US");
     expect(updated?.Prefs.work.Timezone).toBe("America/New_York");
     expect(updated?.Prefs.travel).toBeUndefined();
+  });
+
+  it("reads the Value column for a string dictionary without relatedProperty", async () => {
+    const connection = await setup();
+    const hostsRepo = repo(Host, connection);
+    const settingsRepo = repo(NotedSetting, connection, undefined, new Schema({
+      Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+      ParentId: { type: "integer", nullable: false, hasDefault: false },
+      Key: { type: "string", nullable: false, hasDefault: false },
+      Note: { type: "string", nullable: false, hasDefault: false },
+      Value: { type: "string", nullable: false, hasDefault: false },
+    }));
+    const host = await hostsRepo.create(Object.assign(new Host(), { Label: "ada" }));
+    expect(host.Id).toBeGreaterThan(0);
+    await settingsRepo.create(Object.assign(new NotedSetting(), {
+      ParentId: host.Id,
+      Key: "theme",
+      Note: "side",
+      Value: "dark",
+    }));
+    hostsRepo.addEnriched(
+      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", type: "dictionary" },
+      settingsRepo,
+    );
+    const loaded = await hostsRepo.readSingle();
+    expect(loaded?.Settings.theme).toBe("dark");
   });
 
   it("creates children, stamps FK, and skips select", async () => {

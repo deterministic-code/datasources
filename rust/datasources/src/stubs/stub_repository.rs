@@ -7,6 +7,7 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::stream::once;
@@ -17,6 +18,7 @@ use std::sync::Arc;
 pub struct StubRepository {
     provider: String,
     entity_type: TypeId,
+    schema: Schema,
 }
 
 impl StubRepository {
@@ -24,6 +26,7 @@ impl StubRepository {
         Self {
             provider: provider.into(),
             entity_type: TypeId::of::<Row>(),
+            schema: Schema::default(),
         }
     }
 }
@@ -31,6 +34,10 @@ impl StubRepository {
 impl IRepository for StubRepository {
     fn entity_type(&self) -> TypeId {
         self.entity_type
+    }
+
+    fn schema(&self) -> &Schema {
+        &self.schema
     }
 }
 

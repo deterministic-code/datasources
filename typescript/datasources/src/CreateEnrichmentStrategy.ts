@@ -103,7 +103,7 @@ export abstract class CreateEnrichmentStrategy<T> {
     const current = this.getCell(related, by);
     if (current !== null && typeof current === "object" && !Array.isArray(current)) {
       const target = current as Props;
-      const name = identityKey(target, by) !== target ? by : "Id" in target ? "Id" : "id";
+      const name = by in target ? by : "Id" in target ? "Id" : "id";
       Object.assign(target, { [name]: key });
       return;
     }
