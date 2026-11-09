@@ -89,42 +89,56 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         IList<T> parents,
         IReadOnlyList<Row?>? sources)
     {
+        var schema = via.Schema;
+        var mapKey = schema.DictionaryKey;
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
             var key = SourceKey(parent, enrichment, At(sources, i));
             if (key is null) continue;
-            var map = (IDictionary)Activator.CreateInstance(Prop(parent, enrichment.DestinationProperty).PropertyType)!;
+            var dest = Prop(parent, enrichment.DestinationProperty);
+            var map = MapOf(parent, dest);
             await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
             {
-                if (Get(item!, MapKey<TRelated>()) is not { } entry) continue;
-                map[entry] = enrichment.RelatedProperty is { } select
-                    ? Get(item, select)
-                    : CopyValue(item!, enrichment, Prop(parent, enrichment.DestinationProperty).PropertyType);
+                if (Get(item!, mapKey) is not { } entry) continue;
+                map[entry] = DictionaryValue(item, enrichment, schema, dest.PropertyType);
             }
             Set(parent, enrichment.DestinationProperty, map);
         }
     }
 
-    static string MapKey<TRelated>()
+    static IDictionary MapOf<TParent>(TParent parent, PropertyInfo dest)
     {
-        var type = typeof(TRelated);
-        return type.GetProperty("Key") is not null ? "Key"
-            : type.GetProperty("key") is not null ? "key"
-            : type.GetProperty("Name") is not null ? "Name"
-            : type.GetProperty("name") is not null ? "name"
-            : "Key";
+        if (Get(parent, dest.Name) is IDictionary existing)
+        {
+            existing.Clear();
+            return existing;
+        }
+        return (IDictionary)(Activator.CreateInstance(dest.PropertyType)
+            ?? throw new DatasourceException($"Cannot create \"{dest.Name}\""));
     }
 
-    static object? CopyValue(object item, Enrichment enrichment, Type mapType)
+    static object? DictionaryValue<TRelated>(TRelated item, Enrichment enrichment, Schema schema, Type mapType)
     {
+        if (enrichment.RelatedProperty is { } select)
+            return Get(item, select);
+        var cells = new Row();
+        foreach (var name in schema.DictionaryValueColumns(enrichment.RelatedKey, schema.DictionaryKey))
+            if (item!.GetType().GetProperty(name)?.GetValue(item) is { } value)
+                cells[name] = Value.From(value);
         var valueType = mapType.IsGenericType ? mapType.GetGenericArguments()[1] : typeof(object);
-        if (valueType == typeof(string) || valueType.IsValueType)
-            return Get(item, "Value") ?? Get(item, "value");
-        var copy = Activator.CreateInstance(valueType)!;
-        foreach (var prop in item.GetType().GetProperties())
-            valueType.GetProperty(prop.Name)?.SetValue(copy, prop.GetValue(item));
-        return copy;
+        return valueType == typeof(string) || valueType.IsValueType
+            ? cells.Values.Select(cell => cell.ToObject()).FirstOrDefault()
+            : Converted(valueType, cells);
+    }
+
+    static object Converted(Type type, Row cells)
+    {
+        var converterType = typeof(MetaDataRowTypeConverter<>).MakeGenericType(type);
+        var converter = Activator.CreateInstance(converterType, [null])
+            ?? throw new DatasourceException($"Cannot create \"{type.Name}\"");
+        return converterType.GetMethod(nameof(MetaDataRowTypeConverter<Row>.Convert), [typeof(Row)])!
+            .Invoke(converter, [cells])!;
     }
 
     protected static Row? At(IReadOnlyList<Row?>? sources, int index) =>
@@ -133,17 +147,17 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
     protected static object? SourceKey<TParent>(TParent parent, Enrichment enrichment, Row? source)
     {
         var name = enrichment.SourceProperty;
-        var raw = source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+        return source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
             ? cell.ToObject()
-            : parent!.GetType().GetProperty(name)?.GetValue(parent);
-        if (raw is null or string || raw is Value || raw.GetType().IsPrimitive)
-            return raw;
-        return raw.GetType().GetProperty(enrichment.RelatedKey)?.GetValue(raw) ?? raw;
+            : Get(parent, name);
     }
 
     protected static string KeyOf(object? key) => key?.ToString() ?? "";
 
-    protected static object? Get<TItem>(TItem obj, string name) => Prop(obj, name).GetValue(obj);
+    protected static object? Get<TItem>(TItem obj, string name) =>
+        obj is IDictionary dict
+            ? dict.Contains(name) ? dict[name] : null
+            : obj!.GetType().GetProperty(name)?.GetValue(obj);
 
     protected static void Set<TItem>(TItem obj, string name, object? value) => Prop(obj, name).SetValue(obj, value);
 

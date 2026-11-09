@@ -28,6 +28,7 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import { StoredEnrichment } from "./StoredEnrichment.ts";
+import { Schema } from "./Schema.ts";
 
 export const untyped = <T>(): Constructable<T> => Object as never as Constructable<T>;
 
@@ -64,6 +65,7 @@ export const builtOf = <T>(
 export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<T> {
   readonly type: Constructable<T>;
   readonly isSchemaRequired = false;
+  readonly schema: Schema = new Schema({});
   private connection?: IConnection;
   protected rowConverter?: TypeConverter<Cells, Cells>;
   protected objectConverter?: TypeConverter<T, Cells>;
@@ -100,6 +102,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     this.propertyMappers = built.propertyMappings;
     this.statementMappers = new StatementMappers(built.entityMapper, built.propertyMappings);
     this.readonlyStatements = built.statements;
+    this.schema = built.schema;
   }
 
   addMiddleware = (middleware: ICommandMiddleware): this => {

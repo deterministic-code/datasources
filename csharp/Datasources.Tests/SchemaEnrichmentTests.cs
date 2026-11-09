@@ -167,6 +167,13 @@ public class SchemaEnrichmentTests
         {
             Ids = ["Id"],
             PropertyMappings = Columns,
+            Schema = new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["Id"] = new("integer", IsId: true),
+                ["ContactId"] = new("integer"),
+                ["Key"] = new("string"),
+                ["Value"] = new("string"),
+            }),
         });
         var contacts = new CRUDRepository<Contact>(connection, new CRUDRepositoryOptions<Contact>
         {

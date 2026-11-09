@@ -578,6 +578,10 @@ impl<T: Entity> IRepository for ReadonlyRepository<T> {
     fn entity_type(&self) -> TypeId {
         self.entity_type
     }
+
+    fn schema(&self) -> &Schema {
+        &self.schema
+    }
 }
 
 impl<T: Entity> ReadonlyRepository<T> {

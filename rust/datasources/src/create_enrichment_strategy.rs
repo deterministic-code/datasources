@@ -32,30 +32,13 @@ fn missing(value: &Value) -> bool {
         || matches!(value, Value::Text(text) if text.is_empty())
 }
 
-pub(crate) fn map_key<TChild: Entity>(related_key: &str) -> &'static str {
-    let probe = TChild::default();
-    if probe.has("Key") {
-        "Key"
-    } else if probe.has("key") {
-        "key"
-    } else if probe.has("Name") {
-        "Name"
-    } else if probe.has("name") {
-        "name"
-    } else {
-        match related_key.chars().next() {
-            Some(first) if related_key.contains('_') || first.is_lowercase() => "key",
-            _ => "Key",
-        }
-    }
-}
-
 pub(crate) fn children<T: Entity, TChild: Entity>(
     enrichment: &Enrichment,
     parent: &T,
+    schema: &Schema,
 ) -> Result<Vec<TChild>> {
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
-        dictionary_children(enrichment, parent)
+        dictionary_children(enrichment, parent, schema)
     } else {
         Ok(parent.related(&enrichment.destination_property))
     }
@@ -64,8 +47,9 @@ pub(crate) fn children<T: Entity, TChild: Entity>(
 fn dictionary_children<T: Entity, TChild: Entity>(
     enrichment: &Enrichment,
     parent: &T,
+    schema: &Schema,
 ) -> Result<Vec<TChild>> {
-    let key_name = map_key::<TChild>(&enrichment.related_key);
+    let key_name = schema.dictionary_key();
     parent
         .payload(&enrichment.destination_property)
         .into_iter()
@@ -87,11 +71,10 @@ fn dictionary_children<T: Entity, TChild: Entity>(
                     .unwrap_or(Value::Null);
                 set(&mut child, select, value)?;
             } else {
-                for (name, cell) in row {
-                    if name.eq_ignore_ascii_case(key_name) {
-                        continue;
+                for name in schema.dictionary_value_columns(&enrichment.related_key, key_name) {
+                    if let Some(cell) = row.get(&name).cloned() {
+                        set(&mut child, &name, cell)?;
                     }
-                    set(&mut child, &name, cell)?;
                 }
             }
             Ok(child)

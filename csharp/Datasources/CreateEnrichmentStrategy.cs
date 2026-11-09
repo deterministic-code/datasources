@@ -101,37 +101,29 @@ public abstract class CreateEnrichmentStrategy<T>
         TParent parent)
         where TChild : new() =>
         enrichment.Type is EnrichmentPropertyType.Dictionary
-            ? DictionaryChildren<TParent, TChild>(enrichment, parent)
+            ? DictionaryChildren<TParent, TChild>(writer.Schema, enrichment, parent)
             : Payload<TParent, TChild>(parent, enrichment.DestinationProperty);
 
-    static List<TChild> DictionaryChildren<TParent, TChild>(Enrichment enrichment, TParent parent)
+    static List<TChild> DictionaryChildren<TParent, TChild>(Schema schema, Enrichment enrichment, TParent parent)
         where TChild : new()
     {
         if (Get(parent, enrichment.DestinationProperty) is not IDictionary map) return [];
+        var mapKey = schema.DictionaryKey;
         var rows = new List<TChild>();
         foreach (DictionaryEntry entry in map)
         {
             if (entry.Key is null) continue;
             var row = new TChild();
-            Set(row, MapKey<TChild>(), entry.Key);
+            Set(row, mapKey, entry.Key);
             if (enrichment.RelatedProperty is { } select)
                 Set(row, select, entry.Value);
             else if (entry.Value is not null)
-                foreach (var prop in entry.Value.GetType().GetProperties())
-                    Set(row, prop.Name, prop.GetValue(entry.Value));
+                foreach (var name in schema.DictionaryValueColumns(enrichment.RelatedKey, mapKey))
+                    if (TryGet(entry.Value, name) is { } value)
+                        Set(row, name, value);
             rows.Add(row);
         }
-        return [.. rows.OrderBy(row => Get(row, MapKey<TChild>())?.ToString() ?? "", StringComparer.Ordinal)];
-    }
-
-    static string MapKey<TChild>()
-    {
-        var type = typeof(TChild);
-        return type.GetProperty("Key") is not null ? "Key"
-            : type.GetProperty("key") is not null ? "key"
-            : type.GetProperty("Name") is not null ? "Name"
-            : type.GetProperty("name") is not null ? "name"
-            : "Key";
+        return [.. rows.OrderBy(row => Get(row, mapKey)?.ToString() ?? "", StringComparer.Ordinal)];
     }
 
     protected static void Stamp<TItem>(TItem related, string by, object? key)

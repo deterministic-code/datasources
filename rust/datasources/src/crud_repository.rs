@@ -627,6 +627,10 @@ impl<T: Entity> IRepository for CRUDRepository<T> {
     fn entity_type(&self) -> TypeId {
         self.readonly.entity_type()
     }
+
+    fn schema(&self) -> &crate::schema::Schema {
+        self.readonly.schema()
+    }
 }
 
 #[async_trait]

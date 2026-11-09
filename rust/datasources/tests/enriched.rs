@@ -500,8 +500,41 @@ async fn nested_child_resolves_lookup_name() {
 async fn round_trips_string_and_object_dictionaries() {
     let connection = setup(&mut []).await;
     let mut hosts = mapped_crud(connection.clone(), "Host");
-    let settings = Arc::new(mapped_crud(connection.clone(), "Setting"));
-    let prefs = Arc::new(mapped_crud(connection, "Pref"));
+    let id = SchemaColumn {
+        is_id: true,
+        ..SchemaColumn::new("integer")
+    };
+    let settings = Arc::new(mapped_crud_schema(
+        connection.clone(),
+        "Setting",
+        Schema::new(
+            [
+                ("Id", id.clone()),
+                ("ParentId", SchemaColumn::new("integer")),
+                ("Key", SchemaColumn::new("string")),
+                ("Value", SchemaColumn::new("string")),
+            ]
+            .into_iter()
+            .map(|(name, column)| (name.to_string(), column))
+            .collect(),
+        ),
+    ));
+    let prefs = Arc::new(mapped_crud_schema(
+        connection,
+        "Pref",
+        Schema::new(
+            [
+                ("Id", id),
+                ("ParentId", SchemaColumn::new("integer")),
+                ("Key", SchemaColumn::new("string")),
+                ("Locale", SchemaColumn::new("string")),
+                ("Timezone", SchemaColumn::new("string")),
+            ]
+            .into_iter()
+            .map(|(name, column)| (name.to_string(), column))
+            .collect(),
+        ),
+    ));
     hosts
         .add_enriched(
             Enrichment::new(

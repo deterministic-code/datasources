@@ -5,9 +5,9 @@ import type { Cells } from "./converters/Value.ts";
 import { defaultId } from "./createCRUDRepositoryOptions.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { Operator, Where } from "./statements/index.ts";
+import { Schema } from "./Schema.ts";
 
 type Props = Record<string, Scalar | object>;
-type ChildType = { type: new () => object };
 
 export abstract class UpdateEnrichmentStrategy<T> {
   abstract updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
@@ -21,7 +21,7 @@ export abstract class UpdateEnrichmentStrategy<T> {
     value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
 
   protected payloadOf = <TChild extends object, TParent>(parent: TParent, into: string, enrichment?: Enrichment, writer?: ICRUDRepository<TChild>): TChild[] =>
-    mapPayload(this.getCell(parent, into), enrichment, writer) as TChild[];
+    mapPayload(this.getCell(parent, into), enrichment, writer?.schema) as TChild[];
 
   protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void => {
     if (key === undefined || key === null || typeof key === "object") return;
@@ -67,22 +67,20 @@ export abstract class UpdateEnrichmentStrategy<T> {
   };
 }
 
-const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment, writer?: ChildType): object[] => {
+const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment, schema?: Schema): object[] => {
   if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
   if (enrichment?.type !== "dictionary" || value === null || typeof value !== "object") return [];
-  const keyName = mapKeyName(enrichment.relatedKey, probe(writer));
-  const valueName = enrichment.relatedProperty ?? (keyName === "Key" ? "Value" : "value");
+  const columns = schema ?? new Schema({});
+  const keyName = columns.dictionaryKey();
   return Object.entries(value as Record<string, Scalar | object>)
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, cell]) => cell !== null && typeof cell === "object" && !Array.isArray(cell)
-      ? { [keyName]: key, ...(cell as object) }
-      : { [keyName]: key, [valueName]: cell });
+    .map(([key, cell]) => {
+      if (enrichment.relatedProperty)
+        return { [keyName]: key, [enrichment.relatedProperty]: cell };
+      const row: Props = { [keyName]: key };
+      if (cell !== null && typeof cell === "object" && !Array.isArray(cell))
+        for (const name of columns.dictionaryValueColumns(enrichment.relatedKey, keyName))
+          row[name] = (cell as Props)[name];
+      return row;
+    });
 };
-
-const probe = (writer?: ChildType): object | undefined => {
-  try { return writer ? new writer.type() : undefined; } catch { return undefined; }
-};
-
-const mapKeyName = (relatedKey: string, child?: object): string =>
-  (["Key", "key", "Name", "name"] as const).find((name) => child && name in child)
-  ?? (relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key");

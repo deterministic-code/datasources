@@ -10,6 +10,7 @@ import type { IMapper } from "./mappers/IMapper.ts";
 import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
+import { Schema } from "./Schema.ts";
 
 export class ReadonlyRepositoryBuilder<T = Cells> {
   protected entityMapper: IMapper<string, string> = new IdentityMapper();
@@ -59,6 +60,7 @@ export class ReadonlyRepositoryBuilder<T = Cells> {
       statements: this.statements(entity, columns),
       ids: this.ids(options),
       type: options.type ?? (Object as never as Constructable<T>),
+      schema: options.schema ?? new Schema({}),
     };
   };
 

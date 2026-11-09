@@ -371,7 +371,11 @@ mod tests {
             None,
             crate::EnrichmentPropertyType::List,
         );
-        let from_children = crate::create_enrichment_strategy::children::<House, Kid>(&enrichment, &house)
+        let from_children = crate::create_enrichment_strategy::children::<House, Kid>(
+            &enrichment,
+            &house,
+            crate::schema::Schema::empty(),
+        )
             .unwrap();
         assert_eq!(from_children[0].extra.as_deref(), Some("Room 12"));
         dest
@@ -446,6 +450,7 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &setting_schema(),
         )
         .unwrap();
         assert_eq!(settings.len(), 1);
@@ -460,6 +465,7 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &pref_schema(),
         )
         .unwrap();
         assert_eq!(prefs.len(), 1);
@@ -473,6 +479,7 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &pref_schema(),
         )
         .unwrap();
         assert_eq!(prefs_rows[0].key, "home");
@@ -483,35 +490,27 @@ mod tests {
         assert_eq!(stamped.contact_id, 1);
     }
 
-    #[derive(Clone, Debug, Default, PartialEq, Facet)]
-    struct NamedSettingRow {
-        id: i32,
-        contact_id: i32,
-        name: String,
-        value: String,
+    fn setting_schema() -> crate::schema::Schema {
+        crate::schema::Schema::new(std::collections::HashMap::from([
+            (
+                "id".into(),
+                crate::schema::SchemaColumn {
+                    is_id: true,
+                    ..crate::schema::SchemaColumn::new("integer")
+                },
+            ),
+            ("contact_id".into(), crate::schema::SchemaColumn::new("integer")),
+            ("key".into(), crate::schema::SchemaColumn::new("string")),
+            ("value".into(), crate::schema::SchemaColumn::new("string")),
+        ]))
     }
 
-    impl SchemaObject for NamedSettingRow {}
-
-    #[test]
-    fn dictionary_rows_use_name_when_child_has_no_key() {
-        let house = House {
-            settings: std::collections::HashMap::from([("theme".into(), "dark".into())]),
-            ..House::default()
-        };
-        let settings = crate::create_enrichment_strategy::children::<House, NamedSettingRow>(
-            &crate::Enrichment::new(
-                "settings",
-                "id",
-                "contact_id",
-                Some("value".into()),
-                crate::EnrichmentPropertyType::Dictionary,
-            ),
-            &house,
-        )
-        .unwrap();
-        assert_eq!(settings[0].name, "theme");
-        assert_eq!(settings[0].value, "dark");
+    fn pref_schema() -> crate::schema::Schema {
+        crate::schema::Schema::new(std::collections::HashMap::from([
+            ("key".into(), crate::schema::SchemaColumn::new("string")),
+            ("locale".into(), crate::schema::SchemaColumn::new("string")),
+            ("timezone".into(), crate::schema::SchemaColumn::new("string")),
+        ]))
     }
 
     #[test]

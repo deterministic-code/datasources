@@ -80,6 +80,12 @@ const graph = async () => {
     type: Setting,
     ids: ["Id"],
     propertyMappings: columns,
+    schema: new Schema({
+      Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+      ContactId: { type: "integer", nullable: false, hasDefault: false },
+      Key: { type: "string", nullable: false, hasDefault: false },
+      Value: { type: "string", nullable: false, hasDefault: false },
+    }),
   });
   const contacts = new CRUDRepository<Contact>(connection, {
     type: Contact,
