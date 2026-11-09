@@ -456,7 +456,8 @@ public class CRUDRepositoryTests
     [Fact]
     public async Task CreateResolvesLookupName()
     {
-        var connection = await Setup();
+        var texts = new List<string>();
+        var connection = new RecordingConnection(await Setup(), texts);
         var typesRepo = Open<UserType>(connection);
         var parentsRepo = Open<Parent>(connection);
         await typesRepo.Create(new UserType { Name = "work" });
@@ -465,6 +466,8 @@ public class CRUDRepositoryTests
         Assert.True(created.Id > 0);
         Assert.Equal("work", created.TypeName);
         Assert.Equal("work", (await parentsRepo.ReadSingle())!.TypeName);
+        var insert = Assert.Single(texts, text => text.StartsWith("INSERT INTO Parent ", StringComparison.Ordinal));
+        Assert.Equal(1, ColumnsOf(insert).Count(name => name == "type_id"));
     }
 
     [Fact]
@@ -493,6 +496,23 @@ public class CRUDRepositoryTests
         await parentsRepo.Create(new Parent { Type = new UserType { Id = home.Id }, TypeName = "work" });
         Assert.Equal("home", (await parentsRepo.ReadSingle())!.TypeName);
         Assert.Equal(2, (await typesRepo.Read().ToListAsync()).Count);
+    }
+
+    [Fact]
+    public async Task CreateThrowsWhenTwoKeysMapToOneColumn()
+    {
+        var connection = await Setup();
+        var repo = new CRUDRepository<Row>(connection, new CRUDRepositoryOptions<Row>
+        {
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["left"] = "slot",
+                ["right"] = "slot",
+            }),
+        });
+        var error = await Assert.ThrowsAsync<DatasourceException>(() =>
+            repo.Create(new Row { ["id"] = 1, ["left"] = 1, ["right"] = 2 }));
+        Assert.Contains("slot", error.Message);
     }
 
     [Fact]
@@ -642,5 +662,48 @@ public class CRUDRepositoryTests
             row["id"] = response.Result;
         }
         return connection;
+    }
+
+    static IReadOnlyList<string> ColumnsOf(string sql)
+    {
+        var open = sql.IndexOf('(');
+        var close = sql.IndexOf(')', open + 1);
+        return sql[(open + 1)..close].Split(", ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    sealed class RecordingConnection(IConnection inner, List<string> texts) : IConnection
+    {
+        public string Provider => inner.Provider;
+        public bool IsOpen => inner.IsOpen;
+        public ICommand CreateCommand() => new RecordingCommand(inner.CreateCommand(), texts);
+        public Task Open() => inner.Open();
+        public Task Close() => inner.Close();
+        public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable) =>
+            inner.StartTransaction(isolation);
+    }
+
+    sealed class RecordingCommand(ICommand inner, List<string> texts) : ICommand
+    {
+        public IConnection Connection => inner.Connection;
+        public ICommand AddMiddleware(ICommandMiddleware middleware)
+        {
+            inner.AddMiddleware(middleware);
+            return this;
+        }
+        public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+            inner.ExecuteReader(text, parameters);
+        public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+            inner.Execute(text, parameters);
+        public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
+            inner.Execute(text, parameters);
+        public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+            inner.ExecuteReader(text, parameters);
+        public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
+            inner.ExecuteReader(statement, parameters);
+        public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
+        {
+            texts.Add(DefaultStatementTextRenderer.Instance.Render(statement));
+            return inner.Execute(statement, parameters);
+        }
     }
 }

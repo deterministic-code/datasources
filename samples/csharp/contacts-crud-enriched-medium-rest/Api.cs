@@ -134,7 +134,7 @@ public sealed class Api
     {
         contact.Email = contact.Email ?? "";
         contact.Notes = string.IsNullOrEmpty(contact.Notes) ? "none" : contact.Notes;
-        contact.Uuid = string.IsNullOrEmpty(contact.Uuid) ? Clock.Uuid() : contact.Uuid;
+        contact.Uuid = contact.Uuid == Guid.Empty ? Clock.Uuid() : contact.Uuid;
         contact.Created = contact.Created == default ? Clock.Now() : contact.Created;
         contact.Updated = Clock.Now();
         contact.Version ??= [0];
@@ -149,7 +149,7 @@ public sealed class Api
             address.Region = address.Region ?? "";
             address.PostalCode = address.PostalCode ?? "";
             address.Country = string.IsNullOrEmpty(address.Country) ? "US" : address.Country;
-            address.Uuid = string.IsNullOrEmpty(address.Uuid) ? Clock.Uuid() : address.Uuid;
+            address.Uuid = address.Uuid == Guid.Empty ? Clock.Uuid() : address.Uuid;
             address.Created = address.Created == default ? Clock.Now() : address.Created;
             address.Updated = Clock.Now();
             address.Version ??= [0];
@@ -158,7 +158,7 @@ public sealed class Api
         {
             phone.Number = phone.Number ?? "";
             phone.Label = string.IsNullOrEmpty(phone.Label) ? "Main" : phone.Label;
-            phone.Uuid = string.IsNullOrEmpty(phone.Uuid) ? Clock.Uuid() : phone.Uuid;
+            phone.Uuid = phone.Uuid == Guid.Empty ? Clock.Uuid() : phone.Uuid;
             phone.Created = phone.Created == default ? Clock.Now() : phone.Created;
             phone.Updated = Clock.Now();
             phone.Version ??= [0];
@@ -170,7 +170,7 @@ public sealed class Api
     {
         group.Name = group.Name ?? "";
         group.Members ??= [];
-        group.Uuid = string.IsNullOrEmpty(group.Uuid) ? Clock.Uuid() : group.Uuid;
+        group.Uuid = group.Uuid == Guid.Empty ? Clock.Uuid() : group.Uuid;
         group.Created = group.Created == default ? Clock.Now() : group.Created;
         group.Updated = Clock.Now();
         group.Version ??= [0];

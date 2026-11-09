@@ -64,6 +64,8 @@ async fn main() {
             let mut guard = n.lock().expect("n");
             *guard += 1;
             format!("00000000-0000-0000-0000-{:012}", *guard)
+                .parse()
+                .expect("uuid")
         });
     }
     let lines = Arc::new(Mutex::new(Vec::<String>::new()));

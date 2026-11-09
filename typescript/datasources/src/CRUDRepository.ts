@@ -65,6 +65,15 @@ const fieldsOf = (
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name, value: cell(name, value, true) as Scalar }));
 
+const distinctColumns = (fields: Field[], column: (property: string) => string): void => {
+  const seen = new Set<string>();
+  for (const field of fields) {
+    const name = column(field.name);
+    if (seen.has(name)) throw new DatasourceError(`Column "${name}" is specified more than once`);
+    seen.add(name);
+  }
+};
+
 const isCells = (id: Scalar | Cells): id is Cells => typeof id === "object" && id !== null;
 
 const named = (row: Cells, property: string, sqlColumn: string): Cells => {
@@ -123,8 +132,8 @@ export class CRUDRepository<T = Cells>
     super.addEnriched(enrichment, via, strategy);
     const stored = lastEnrichment<T, TRelated>(this);
     stored.via = via;
-    const writer = writerOf(via);
-    if (writer) stored.persist = writer;
+    if ("create" in via && typeof via.create === "function")
+      stored.persist = via as ICRUDRepository<TRelated>;
     return this;
   }
 
@@ -202,6 +211,7 @@ export class CRUDRepository<T = Cells>
       this.crudStatements.readColumns,
       this.column,
     );
+    distinctColumns(fields, this.column);
     const statement = this.crudStatements.insert(fields);
     const response = await execute(this.command(), statement, statement.fields);
     if (this.ids.length === 1 && !fields.some((field) => field.name === this.ids[0]))
@@ -247,6 +257,7 @@ export class CRUDRepository<T = Cells>
       this.column,
       false,
     );
+    distinctColumns(fields, this.column);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.crudStatements.update(
       fields,
@@ -291,8 +302,12 @@ export class CRUDRepository<T = Cells>
       if (!assigned(record[source] ?? null) && assigned(record[column] ?? null)) record[source] = record[column]!;
     }
     await this.write.resolveLookups?.(this.tree, [item], record, this.schema);
-    for (const source of this.objectSourceProperties())
-      if (assigned(record[source] ?? null)) record[this.column(source)] = record[source]!;
+    for (const source of this.objectSourceProperties()) {
+      if (!assigned(record[source] ?? null)) continue;
+      const column = this.column(source);
+      record[column] = record[source]!;
+      if (column !== source) delete record[source];
+    }
     return this.mapped(record);
   };
 
@@ -320,9 +335,6 @@ export class CRUDRepository<T = Cells>
   private objectSources = (): Set<string> =>
     new Set(this.objectSourceProperties().flatMap((source) => [source, this.column(source)]));
 }
-
-const writerOf = <TRelated>(via: IReadonlyRepository<TRelated>): ICRUDRepository<TRelated> | undefined =>
-  "create" in via && typeof via.create === "function" ? (via as ICRUDRepository<TRelated>) : undefined;
 
 const lastEnrichment = <T, TRelated = T, TLink = TRelated>(host: object): StoredEnrichment<T, TRelated, TLink> =>
   asRelated(enrichmentsOf<T>(host)!.at(-1)!);

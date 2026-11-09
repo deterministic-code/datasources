@@ -36,9 +36,10 @@ public sealed class PhonesRepository : CRUDRepository<Backend.Types.View.Phone>
                     ["ContactId"] = "contact_id",
                     ["Number"] = "number",
                     ["Label"] = "label",
+                    ["PhoneTypeId"] = "phone_type_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Number", "Label"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Number", "Label", "PhoneTypeId"],
                 CreateProperties = ["ContactId", "Number", "Label"],
                 UpdateProperties = ["Uuid", "ContactId", "Number", "Label"],
                 Schema = new(new Dictionary<string, SchemaColumn>
@@ -69,9 +70,10 @@ public sealed class PhonesRepository : CRUDRepository<Backend.Types.View.Phone>
                     ["ContactId"] = "contact_id",
                     ["Number"] = "number",
                     ["Label"] = "label",
+                    ["PhoneTypeId"] = "phone_type_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Number", "Label"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Number", "Label", "PhoneTypeId"],
                 CreateProperties = ["Uuid", "Created", "Version", "ContactId", "Number", "Label"],
                 UpdateProperties = ["Uuid", "Created", "Version", "ContactId", "Number", "Label"],
                 Schema = new(new Dictionary<string, SchemaColumn>

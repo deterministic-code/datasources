@@ -41,7 +41,7 @@ impl PhonesRepository {
         ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: true, is_id: false }),
     ]));
     options.ids = vec!["id".into()];
-    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into()];
+    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into(), "phone_type_id".into()];
     options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into()]);
     options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into()]);
 
@@ -78,7 +78,7 @@ impl PhonesRepository {
             ("phone_type_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: true, is_id: false }),
         ]));
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into(), "phone_type_id".into()];
         let phone_attribute = PhoneAttributesRepository::new(Arc::clone(&connection))?;
         let label = LabelsRepository::new(Arc::clone(&connection))?;
         let phone_type = PhoneTypesRepository::new(Arc::clone(&connection))?;
@@ -206,7 +206,7 @@ pub fn phones_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepo
         ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: true, is_id: false }),
     ]));
     options.ids = vec!["id".into()];
-    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into()];
+    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into(), "phone_type_id".into()];
     options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into()]);
     options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "display_name".into(), "extention".into(), "is_primary".into(), "is_verified".into()]);
 

@@ -15,6 +15,12 @@ import { DictionaryMapper } from "./mappers/DictionaryMapper.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import { Schema } from "./Schema.ts";
+import type { ICommand } from "./ICommand.ts";
+import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
+import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextRenderer.ts";
+import type { IStatement } from "./statements/IStatement.ts";
+import { Native } from "./statements/Native.ts";
+import type { Parameter } from "./Parameter.ts";
 
 class UserType {
   Id = 0;
@@ -478,7 +484,8 @@ describe("CRUDRepository", () => {
   });
 
   it("create-resolves-lookup-name", async () => {
-    const connection = await setup();
+    const texts: string[] = [];
+    const connection = new RecordingConnection(await setup(), texts);
     const typesRepo = repo(UserType, connection);
     const parentsRepo = repo(Parent, connection);
     await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
@@ -487,6 +494,9 @@ describe("CRUDRepository", () => {
     expect(created.Id).toBeGreaterThan(0);
     expect(created.TypeName).toBe("work");
     expect((await parentsRepo.readSingle())?.TypeName).toBe("work");
+    const insert = texts.filter((text) => text.startsWith("INSERT INTO Parent "));
+    expect(insert).toHaveLength(1);
+    expect(columnList(insert[0]!).filter((name) => name === "type_id")).toEqual(["type_id"]);
   });
 
   it("update-resolves-lookup-name", async () => {
@@ -511,6 +521,17 @@ describe("CRUDRepository", () => {
     await parentsRepo.create(Object.assign(new Parent(), { Type: Object.assign(new UserType(), { Id: home.Id }), TypeName: "work" }));
     expect((await parentsRepo.readSingle())?.TypeName).toBe("home");
     expect((await collectAsync(typesRepo.read())).length).toBe(2);
+  });
+
+  it("create-throws-when-two-keys-map-to-one-column", async () => {
+    const connection = new MemoryDriver().connection();
+    const repo = new CRUDRepository(connection, {
+      propertyMappings: new DictionaryMapper([
+        ["left", "slot"],
+        ["right", "slot"],
+      ]),
+    });
+    await expect(repo.create({ id: 1, left: 1, right: 2 })).rejects.toThrow(/slot/);
   });
 
   it("create-resolves-lookup-name-without-source-property", async () => {
@@ -599,3 +620,72 @@ describe("CRUDRepository", () => {
     expect(item?.Children.map((child) => child.Label)).toEqual(["a"]);
   });
 });
+
+const columnList = (sql: string): string[] => {
+  const open = sql.indexOf("(");
+  const close = sql.indexOf(")", open + 1);
+  return sql.slice(open + 1, close).split(", ").filter((name) => name.length > 0);
+};
+
+class RecordingConnection implements IConnection {
+  constructor(
+    private readonly inner: IConnection,
+    private readonly texts: string[],
+  ) {}
+
+  get provider(): string {
+    return this.inner.provider;
+  }
+
+  get isOpen(): boolean {
+    return this.inner.isOpen;
+  }
+
+  createCommand = (): ICommand => new RecordingCommand(this.inner.createCommand(), this.texts);
+
+  open = (): Promise<void> => this.inner.open();
+
+  close = (): Promise<void> => this.inner.close();
+
+  startTransaction = (isolation?: Parameters<IConnection["startTransaction"]>[0]): ReturnType<IConnection["startTransaction"]> =>
+    this.inner.startTransaction(isolation);
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.inner[Symbol.asyncDispose]();
+}
+
+class RecordingCommand implements ICommand {
+  constructor(
+    private readonly inner: ICommand,
+    private readonly texts: string[],
+  ) {}
+
+  get connection(): IConnection {
+    return this.inner.connection;
+  }
+
+  addMiddleware(middleware: ICommandMiddleware): this {
+    this.inner.addMiddleware(middleware);
+    return this;
+  }
+
+  executeReader = (text: string, parameters?: Parameter[]): ReturnType<ICommand["executeReader"]> =>
+    this.inner.executeReader(text, parameters);
+
+  execute = (text: string, parameters?: Parameter[]): ReturnType<ICommand["execute"]> =>
+    this.inner.execute(text, parameters);
+
+  executeNative = (text: Native, parameters?: Parameter[]): ReturnType<ICommand["executeNative"]> =>
+    this.inner.executeNative(text, parameters);
+
+  executeReaderNative = (text: Native, parameters?: Parameter[]): ReturnType<ICommand["executeReaderNative"]> =>
+    this.inner.executeReaderNative(text, parameters);
+
+  executeStatement = (statement: IStatement, parameters?: Parameter[]): ReturnType<ICommand["execute"]> => {
+    this.texts.push(DefaultStatementTextRenderer.instance.render(statement));
+    return this.inner.executeStatement?.(statement, parameters) ?? this.inner.executeNative(new Native(DefaultStatementTextRenderer.instance.render(statement)), parameters);
+  };
+
+  executeReaderStatement = (statement: IStatement, parameters?: Parameter[]): ReturnType<ICommand["executeReader"]> =>
+    this.inner.executeReaderStatement?.(statement, parameters) ??
+    this.inner.executeReaderNative(new Native(DefaultStatementTextRenderer.instance.render(statement)), parameters);
+}

@@ -5,15 +5,15 @@ namespace Backend.Types.View;
 public class Address
 {
     public long Id { get; set; }
-    public string Uuid { get; set; } = Guid.NewGuid().ToString();
+    public System.Guid Uuid { get; set; } = Guid.NewGuid();
     public System.DateTime Created { get; set; } = DateTime.UtcNow;
     public System.DateTime Updated { get; set; } = DateTime.UtcNow;
     public byte[] Version { get; set; } = new byte[] { 0 };
     public long? Latitude { get; set; }
     public string? LabelNote { get; set; }
     public uint? Floor { get; set; }
-    public string? Score { get; set; }
-    public string? ExternalId { get; set; }
+    public decimal? Score { get; set; }
+    public System.Guid? ExternalId { get; set; }
     public bool? IsVerified { get; set; }
     public System.DateTime? VerifiedAt { get; set; }
     public byte[]? Stamp { get; set; }

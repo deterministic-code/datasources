@@ -3,16 +3,14 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone)]
 pub struct Clock {
     now: Arc<Mutex<Arc<dyn Fn() -> String + Send + Sync>>>,
-    uuid: Arc<Mutex<Arc<dyn Fn() -> String + Send + Sync>>>,
+    uuid: Arc<Mutex<Arc<dyn Fn() -> datasources::uuid::Uuid + Send + Sync>>>,
 }
 
 impl Clock {
     pub fn new() -> Self {
         Self {
             now: Arc::new(Mutex::new(Arc::new(system_now))),
-            uuid: Arc::new(Mutex::new(Arc::new(|| {
-                datasources::uuid::Uuid::new_v4().to_string()
-            }))),
+            uuid: Arc::new(Mutex::new(Arc::new(datasources::uuid::Uuid::new_v4))),
         }
     }
 
@@ -21,7 +19,7 @@ impl Clock {
         now()
     }
 
-    pub fn uuid(&self) -> String {
+    pub fn uuid(&self) -> datasources::uuid::Uuid {
         let uuid = self.uuid.lock().expect("clock").clone();
         uuid()
     }
@@ -30,7 +28,7 @@ impl Clock {
         *self.now.lock().expect("clock") = Arc::new(now);
     }
 
-    pub fn set_uuid(&self, uuid: impl Fn() -> String + Send + Sync + 'static) {
+    pub fn set_uuid(&self, uuid: impl Fn() -> datasources::uuid::Uuid + Send + Sync + 'static) {
         *self.uuid.lock().expect("clock") = Arc::new(uuid);
     }
 }

@@ -1,7 +1,8 @@
 use futures_util::TryStreamExt;
 use datasources::*;
 use datasources_memory::MemoryDriver;
-use std::sync::Arc;
+use std::any::Any;
+use std::sync::{Arc, Mutex};
 
 fn record(pairs: &[(&str, Value)]) -> Row {
     pairs
@@ -221,8 +222,12 @@ async fn deep_create_writes_children_stamps_fk() {
 
 #[tokio::test]
 async fn create_resolves_lookup_name() {
-    let connection = setup(&mut []).await;
-    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let texts = Arc::new(Mutex::new(Vec::new()));
+    let connection: Arc<dyn Connection> = Arc::new(RecordingConnection::new(
+        setup(&mut []).await,
+        Arc::clone(&texts),
+    ));
+    let types = Arc::new(mapped_crud(Arc::clone(&connection), "UserType"));
     let mut parents = mapped_crud(connection, "Parent");
     types
         .create(record(&[("Name", Value::from("work"))]))
@@ -242,6 +247,19 @@ async fn create_resolves_lookup_name() {
     assert_eq!(
         parents.read_single(None, None).await.unwrap().unwrap()["TypeName"],
         Value::from("work")
+    );
+    let sql = texts.lock().expect("texts");
+    let insert: Vec<_> = sql
+        .iter()
+        .filter(|text| text.starts_with("INSERT INTO Parent "))
+        .collect();
+    assert_eq!(insert.len(), 1);
+    assert_eq!(
+        column_list(insert[0])
+            .into_iter()
+            .filter(|name| *name == "type_id")
+            .count(),
+        1
     );
 }
 
@@ -313,6 +331,26 @@ async fn create_keeps_existing_lookup_key() {
         types.read(None, None).try_collect::<Vec<_>>().await.unwrap().len(),
         2
     );
+}
+
+#[tokio::test]
+async fn create_throws_when_two_keys_map_to_one_column() {
+    let connection = setup(&mut []).await;
+    let mut options = CRUDRepositoryOptions::default();
+    options.property_mappings = Some(Arc::new(DictionaryMapper::new([
+        ("left".into(), "slot".into()),
+        ("right".into(), "slot".into()),
+    ])));
+    let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
+    let error = repo
+        .create(record(&[
+            ("id", Value::from(1)),
+            ("left", Value::from(1)),
+            ("right", Value::from(2)),
+        ]))
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("slot"));
 }
 
 #[tokio::test]
@@ -1469,4 +1507,118 @@ async fn create_writes_biginteger_id() {
         repo.read_single(None, None).await.unwrap().unwrap()["Name"],
         Value::from("Ada")
     );
+}
+
+fn column_list(sql: &str) -> Vec<&str> {
+    let open = sql.find('(').unwrap_or(0);
+    let close = sql[open + 1..]
+        .find(')')
+        .map(|index| open + 1 + index)
+        .unwrap_or(sql.len());
+    sql[open + 1..close]
+        .split(", ")
+        .filter(|name| !name.is_empty())
+        .collect()
+}
+
+struct RecordingConnection {
+    inner: Arc<dyn Connection>,
+    texts: Arc<Mutex<Vec<String>>>,
+}
+
+impl RecordingConnection {
+    fn new(inner: Arc<dyn Connection>, texts: Arc<Mutex<Vec<String>>>) -> Self {
+        Self { inner, texts }
+    }
+}
+
+#[async_trait]
+impl Connection for RecordingConnection {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn provider(&self) -> &str {
+        self.inner.provider()
+    }
+
+    fn is_open(&self) -> bool {
+        self.inner.is_open()
+    }
+
+    fn create_command(&self) -> Arc<dyn Command> {
+        Arc::new(RecordingCommand {
+            inner: self.inner.create_command(),
+            texts: Arc::clone(&self.texts),
+        })
+    }
+
+    async fn open(&self) -> Result<()> {
+        self.inner.open().await
+    }
+
+    async fn close(&self) -> Result<()> {
+        self.inner.close().await
+    }
+
+    async fn start_transaction(
+        &self,
+        isolation: Option<IsolationLevel>,
+    ) -> Result<Arc<dyn Transaction>> {
+        self.inner.start_transaction(isolation).await
+    }
+}
+
+struct RecordingCommand {
+    inner: Arc<dyn Command>,
+    texts: Arc<Mutex<Vec<String>>>,
+}
+
+#[async_trait]
+impl Command for RecordingCommand {
+    fn connection(&self) -> Arc<dyn Connection> {
+        self.inner.connection()
+    }
+
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.inner.add_middleware(middleware);
+    }
+
+    async fn execute_reader_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        self.inner.execute_reader_native(text, parameters).await
+    }
+
+    async fn execute_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        self.inner.execute_native(text, parameters).await
+    }
+
+    async fn execute_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        self.texts
+            .lock()
+            .expect("texts")
+            .push(DefaultStatementTextRenderer::instance().render(statement));
+        self.inner.execute_statement(statement, parameters).await
+    }
+
+    async fn execute_reader_statement(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Box<dyn Reader>> {
+        self.inner
+            .execute_reader_statement(statement, parameters)
+            .await
+    }
 }

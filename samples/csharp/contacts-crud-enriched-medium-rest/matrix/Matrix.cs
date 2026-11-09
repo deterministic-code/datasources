@@ -27,7 +27,7 @@ try
     var stamp = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
     var n = 0;
     Clock.Now = () => stamp.UtcDateTime;
-    Clock.Uuid = () => $"00000000-0000-0000-0000-{++n:D12}";
+    Clock.Uuid = () => Guid.Parse($"00000000-0000-0000-0000-{++n:D12}");
     var middleware = new ConsoleCommandMiddleware(lines.Add, () => stamp, new Dictionary<string, string> { ["isVerbose"] = "true" });
     var contacts = new ContactsRepository(connection);
     var legacy = new LegacyContactsRepository(connection);

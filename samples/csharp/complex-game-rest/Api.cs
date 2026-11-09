@@ -155,7 +155,7 @@ public sealed class Api
     {
         contact.Email = contact.Email ?? "";
         contact.Notes = string.IsNullOrEmpty(contact.Notes) ? "none" : contact.Notes;
-        contact.Uuid = string.IsNullOrEmpty(contact.Uuid) ? Clock.Uuid() : contact.Uuid;
+        contact.Uuid = contact.Uuid == Guid.Empty ? Clock.Uuid() : contact.Uuid;
         contact.Created = contact.Created == default ? Clock.Now() : contact.Created;
         contact.Updated = Clock.Now();
         contact.Version ??= [0];
@@ -168,7 +168,7 @@ public sealed class Api
 
     static void Stamp(Base row)
     {
-        row.Uuid = string.IsNullOrEmpty(row.Uuid) ? Clock.Uuid() : row.Uuid;
+        row.Uuid = row.Uuid == Guid.Empty ? Clock.Uuid() : row.Uuid;
         row.Created = row.Created == default ? Clock.Now() : row.Created;
         row.Updated = Clock.Now();
         row.Version ??= [0];

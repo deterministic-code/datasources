@@ -38,6 +38,7 @@ use std::any::TypeId;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::pin::Pin;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct CRUDRepository<T: Entity = Row> {
@@ -266,7 +267,7 @@ impl<T: Entity> CRUDRepository<T> {
     }
 
     fn insert_params(&self, record: &Row) -> Result<Vec<Parameter>> {
-        self.fields(
+        let fields = self.fields(
             record,
             |key, value| {
                 listed(
@@ -276,7 +277,22 @@ impl<T: Entity> CRUDRepository<T> {
                 )
             },
             true,
-        )
+        )?;
+        self.distinct_columns(&fields)?;
+        Ok(fields)
+    }
+
+    fn distinct_columns(&self, fields: &[Parameter]) -> Result<()> {
+        let mut seen = HashSet::new();
+        for field in fields {
+            let column = self.readonly.column(&field.name);
+            if !seen.insert(column.clone()) {
+                return Err(DatasourceError::message(format!(
+                    "Column \"{column}\" is specified more than once"
+                )));
+            }
+        }
+        Ok(())
     }
 
     fn fields(
@@ -389,7 +405,11 @@ impl<T: Entity> CRUDRepository<T> {
                 }
                 let source = &enrichment.source_property;
                 if let Some(value) = record.get(source).cloned().filter(|value| assigned(value)) {
-                    record.insert(self.readonly.column(source), value);
+                    let column = self.readonly.column(source);
+                    record.insert(column.clone(), value);
+                    if column != *source {
+                        record.remove(source);
+                    }
                 }
             }
         }
@@ -478,6 +498,7 @@ impl<T: Entity> CRUDRepository<T> {
         }
         let record = self.readonly.reverse_convert(item)?;
         let fields = self.params(&record, false)?;
+        self.distinct_columns(&fields)?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
                 "Update requires at least one non-Id field",

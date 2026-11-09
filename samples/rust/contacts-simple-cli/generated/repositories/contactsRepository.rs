@@ -51,7 +51,7 @@ impl ContactsRepository {
         ("gender_type_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
     ]));
     options.ids = vec!["id".into()];
-    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into()];
+    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into(), "gender_type_id".into()];
     options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into()]);
     options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into()]);
 
@@ -97,7 +97,7 @@ impl ContactsRepository {
             ("is_deleted".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: false, is_id: false }),
             ("gender_type_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into(), "gender_type_id".into()];
         let address = AddressesRepository::new(Arc::clone(&connection))?;
         let email = EmailsRepository::new(Arc::clone(&connection))?;
         let phone = PhonesRepository::new(Arc::clone(&connection))?;
@@ -234,7 +234,7 @@ pub fn contacts_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRe
         ("gender_type_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
     ]));
     options.ids = vec!["id".into()];
-    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into()];
+    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into(), "gender_type_id".into()];
     options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into()]);
     options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "given_name".into(), "additional_name".into(), "pronunciation".into(), "family_name".into(), "nick_name".into(), "job_title".into(), "organization".into(), "is_starred".into(), "is_favorite".into(), "is_deleted".into()]);
 

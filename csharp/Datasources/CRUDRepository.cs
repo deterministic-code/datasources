@@ -159,6 +159,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         var record = await LookupRow(item);
         var extras = EnrichmentSources();
         var fields = Params(record, col => extras.Contains(col) || Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)), extras);
+        DistinctColumns(fields);
         var statement = CRUDStatements.Insert(fields);
         var response = await Command().Execute(statement, statement.Fields);
         if (ids.Count == 1 && fields.All(field => field.Name != ids[0]))
@@ -208,6 +209,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         var record = await LookupRow(item);
         var extras = EnrichmentSources();
         var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras, omitNull: false);
+        DistinctColumns(fields);
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = CRUDStatements.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
@@ -249,6 +251,17 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
+    void DistinctColumns(IReadOnlyList<Parameter> fields)
+    {
+        var seen = new HashSet<string>();
+        foreach (var field in fields)
+        {
+            var column = Column(field.Name);
+            if (!seen.Add(column))
+                throw new DatasourceException($"Column \"{column}\" is specified more than once");
+        }
+    }
+
     bool Writable(string col) =>
         crudStatements.ReadColumns.Count == 0
         || crudStatements.ReadColumns.Contains(col)
@@ -283,7 +296,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         await write.ResolveLookups(tree, [item!], record, schema);
         foreach (var source in ObjectSourceProperties())
             if (Assigned(record, source))
-                record[Column(source)] = record[source];
+            {
+                var column = Column(source);
+                record[column] = record[source];
+                if (column != source)
+                    record.Remove(source);
+            }
         return RowConverter?.ReverseConvert(record) ?? record;
     }
 

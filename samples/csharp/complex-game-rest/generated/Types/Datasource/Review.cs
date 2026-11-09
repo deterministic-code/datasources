@@ -7,6 +7,6 @@ public class Review : Base
     public long GameId { get; set; }
     public long UserId { get; set; }
     public string Description { get; set; } = "";
-    public string Rating { get; set; } = "";
+    public decimal Rating { get; set; }
     public bool IsApproved { get; set; }
 }

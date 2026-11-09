@@ -10,7 +10,7 @@ var ada = await contacts.Create(new Contact
     Notes = "poet",
     Email = "ada@example.com",
     ContactSourceName = "Manual",
-    Uuid = "00000000-0000-0000-0000-000000000001",
+    Uuid = Guid.Parse("00000000-0000-0000-0000-000000000001"),
     Version = [0],
     Addresses =
     [
@@ -87,7 +87,7 @@ var omitted = await contacts.Create(new Contact
     FirstName = "Outlier",
     LastName = "Types",
     ContactSourceName = "Manual",
-    Uuid = "00000000-0000-0000-0000-000000000003",
+    Uuid = Guid.Parse("00000000-0000-0000-0000-000000000003"),
     Version = [0],
     Addresses = [new Address { AddressTypeName = "Home", Line1 = "1 Null Lane", City = "London" }],
     Phones = [],
@@ -115,8 +115,8 @@ await contacts.Update(new Contact
             Latitude = 51,
             LabelNote = "side",
             Floor = 2,
-            Score = "10.5",
-            ExternalId = "550e8400-e29b-41d4-a716-446655440000",
+            Score = 10.5m,
+            ExternalId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
             IsVerified = true,
             VerifiedAt = DateTime.Parse("2020-01-02T03:04:05.000Z").ToUniversalTime(),
             Stamp = [1],
@@ -128,7 +128,7 @@ await contacts.Update(new Contact
 });
 var valued = await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", omitted.Id)));
 if (valued?.Addresses[0].Latitude != 51 || valued.Addresses[0].LabelNote != "side"
-    || valued.Addresses[0].Floor != 2 || valued.Addresses[0].Score != "10.5"
+    || valued.Addresses[0].Floor != 2 || valued.Addresses[0].Score != 10.5m
     || valued.Addresses[0].IsVerified != true)
     throw new InvalidOperationException("outlier value");
 await contacts.Update(new Contact
@@ -150,7 +150,7 @@ await contacts.Update(new Contact
             Latitude = 0,
             LabelNote = "",
             Floor = 0,
-            Score = "0",
+            Score = 0m,
             IsVerified = false,
         },
     ],

@@ -1,6 +1,6 @@
 // schema-version: 1.0
 /** Type ContactPreference. */
-export const contactPreference = (init: Partial<ContactPreference>): ContactPreference => ({ ...init } as ContactPreference);
+export const contactPreference = (init: Partial<ContactPreference>): ContactPreference => Object.assign(new ContactPreference(), init);
 export class ContactPreference {
   id!: number;
   uuid: string = crypto.randomUUID();
@@ -8,7 +8,7 @@ export class ContactPreference {
   updated: Date = new Date();
   version: string = Buffer.from([0]).toString("base64");
   contactId!: number;
-  key!: string;
-  locale!: string;
-  timezone!: string;
+  key: string = "";
+  locale: string = "";
+  timezone: string = "";
 }
