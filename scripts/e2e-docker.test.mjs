@@ -43,7 +43,7 @@ exit 0
   chmodSync(join(bin, "docker"), 0o755);
   return {
     log,
-    result: spawnSync("sh", [driver, ...args], {
+    result: spawnSync("bash", [driver, ...args], {
       encoding: "utf8",
       timeout: 60_000,
       env: {

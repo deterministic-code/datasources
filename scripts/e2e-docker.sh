@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e -o pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck disable=SC1091
