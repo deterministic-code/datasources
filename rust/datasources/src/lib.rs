@@ -47,7 +47,7 @@ mod enrichment;
 mod entity;
 mod identity;
 mod schema;
-mod enrichment_payload;
+mod enrichment_fields;
 mod enrichment_property_type;
 mod enrichment_via;
 mod expect_console_middleware;

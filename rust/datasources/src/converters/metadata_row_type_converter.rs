@@ -113,6 +113,20 @@ impl<T: SchemaObject> TypeConverter<T, Row> for MetaDataRowTypeConverter<T> {
                     field.shape(),
                     self.should_coerce_id,
                 )?,
+                (true, _) if field.shape().type_identifier.contains("Uuid") => set_field(
+                    partial,
+                    field.name,
+                    &Value::Uuid(uuid::Uuid::nil()),
+                    field.shape(),
+                    self.should_coerce_id,
+                )?,
+                (true, _) if field.shape().type_identifier.contains("Decimal") => set_field(
+                    partial,
+                    field.name,
+                    &Value::Decimal(rust_decimal::Decimal::ZERO),
+                    field.shape(),
+                    self.should_coerce_id,
+                )?,
                 _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
             };
         }
@@ -235,6 +249,12 @@ fn write_value<'a>(
         Value::Null if shape.type_identifier.contains("DateTime") => {
             partial.set(chrono::DateTime::<chrono::Utc>::default())
         }
+        Value::Null if shape.type_identifier.contains("Uuid") => {
+            partial.set(uuid::Uuid::nil())
+        }
+        Value::Null if shape.type_identifier.contains("Decimal") => {
+            partial.set(rust_decimal::Decimal::ZERO)
+        }
         Value::Null => partial.set_default(),
     };
     set.map_err(reflect)
@@ -267,19 +287,25 @@ fn coerced(cell: &Value, shape: &'static Shape, coerce_id: bool) -> Option<Value
             _ => None,
         };
     }
+    if shape.type_identifier.contains("Uuid") {
+        return match cell {
+            Value::Uuid(id) => Some(Value::Uuid(*id)),
+            Value::Text(text) => text.parse().ok().map(Value::Uuid),
+            _ => None,
+        };
+    }
+    if shape.type_identifier.contains("Decimal") {
+        return match cell {
+            Value::Decimal(number) => Some(Value::Decimal(*number)),
+            Value::Text(text) => text.parse().ok().map(Value::Decimal),
+            Value::Int(n) => Some(Value::Decimal(rust_decimal::Decimal::from(*n))),
+            _ => None,
+        };
+    }
     match (cell, ScalarType::try_from_shape(shape)?) {
         (Value::Int(n), ScalarType::I32) if coerce_id => Some(Value::Int(*n)),
         (Value::Int(n), ScalarType::I64) => Some(Value::Int(*n)),
         (Value::Uuid(id), ScalarType::String) => Some(Value::from(id.to_string())),
-        (Value::Text(text), _) if shape.type_identifier.contains("Uuid") => {
-            text.parse().ok().map(Value::Uuid)
-        }
-        (Value::Text(text), _) if shape.type_identifier.contains("Decimal") => {
-            text.parse().ok().map(Value::Decimal)
-        }
-        (Value::Int(n), _) if shape.type_identifier.contains("Decimal") => {
-            Some(Value::Decimal(rust_decimal::Decimal::from(*n)))
-        }
         _ => None,
     }
 }
@@ -413,5 +439,74 @@ mod tests {
             .convert(&record(&[("name", Value::from("ada"))]))
             .unwrap();
         assert_eq!(converted.get("name"), Some(&Value::from("ADA")));
+    }
+
+    #[derive(Clone, Debug, PartialEq, Facet)]
+    struct Card {
+        uuid: uuid::Uuid,
+        name: String,
+    }
+
+    impl Default for Card {
+        fn default() -> Self {
+            Self {
+                uuid: uuid::Uuid::nil(),
+                name: String::new(),
+            }
+        }
+    }
+
+    impl SchemaObject for Card {}
+
+    #[test]
+    fn omitted_uuid_converts_to_nil() {
+        let converter = MetaDataRowTypeConverter::<Card>::new();
+        let card = TypeConverter::<Card, Row>::convert(
+            &converter,
+            &record(&[("name", Value::from("ada"))]),
+        )
+        .unwrap();
+        assert!(card.uuid.is_nil());
+        assert_eq!(card.name, "ada");
+    }
+
+    #[derive(Clone, Debug, PartialEq, Facet)]
+    struct Score {
+        rating: rust_decimal::Decimal,
+        name: String,
+    }
+
+    impl Default for Score {
+        fn default() -> Self {
+            Self {
+                rating: rust_decimal::Decimal::ZERO,
+                name: String::new(),
+            }
+        }
+    }
+
+    impl SchemaObject for Score {}
+
+    #[test]
+    fn omitted_decimal_converts_to_zero() {
+        let converter = MetaDataRowTypeConverter::<Score>::new();
+        let score = TypeConverter::<Score, Row>::convert(
+            &converter,
+            &record(&[("name", Value::from("ada"))]),
+        )
+        .unwrap();
+        assert_eq!(score.rating, rust_decimal::Decimal::ZERO);
+        assert_eq!(score.name, "ada");
+    }
+
+    #[test]
+    fn text_decimal_converts_to_decimal() {
+        let converter = MetaDataRowTypeConverter::<Score>::new();
+        let score = TypeConverter::<Score, Row>::convert(
+            &converter,
+            &record(&[("name", Value::from("ada")), ("rating", Value::from("10.5"))]),
+        )
+        .unwrap();
+        assert_eq!(score.rating, "10.5".parse().unwrap());
     }
 }
