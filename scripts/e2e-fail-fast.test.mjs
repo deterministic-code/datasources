@@ -48,7 +48,7 @@ test("rustc error and npm error fail", () => {
 });
 
 test("false | true under pipefail exits non-zero", () => {
-  const result = spawnSync("sh", ["-e", "-o", "pipefail", "-c", "false | true"], { encoding: "utf8" });
+  const result = spawnSync("bash", ["-e", "-o", "pipefail", "-c", "false | true"], { encoding: "utf8" });
   assert.notEqual(result.status, 0);
 });
 
