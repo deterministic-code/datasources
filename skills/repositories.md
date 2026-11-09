@@ -19,6 +19,7 @@ interface IRepository<T = unknown>
 | Name | Description |
 | --- | --- |
 | type | Item constructor the repository exposes. |
+| schema | Column map the repository exposes. |
 
 #### C#
 
@@ -33,6 +34,7 @@ public interface IRepository
 | Name | Description |
 | --- | --- |
 | Type | Item CLR type the repository exposes. |
+| Schema | Column map the repository exposes. |
 
 #### Rust
 
@@ -47,6 +49,7 @@ pub trait IRepository
 | Name | Description |
 | --- | --- |
 | [entity_type()](#rust-irepository-entity_type) | Item `TypeId` the repository exposes. Defaults to `Row`. |
+| [schema()](#rust-irepository-schema) | Column map the repository exposes. Defaults to empty. |
 
 ##### entity_type() {#rust-irepository-entity_type}
 
@@ -61,6 +64,20 @@ fn entity_type(&self) -> TypeId
 **Returns**
 
 `TypeId`
+
+##### schema() {#rust-irepository-schema}
+
+Column map the repository exposes. Defaults to empty.
+
+**Definition**
+
+```rust
+fn schema(&self) -> &Schema
+```
+
+**Returns**
+
+`&Schema`
 
 #### datasources {#rust-datasources}
 

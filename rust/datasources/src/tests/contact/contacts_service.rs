@@ -102,6 +102,10 @@ impl IRepository for ContactsService {
     fn entity_type(&self) -> TypeId {
         self.contacts.entity_type()
     }
+
+    fn schema(&self) -> &crate::schema::Schema {
+        self.contacts.schema()
+    }
 }
 
 #[async_trait]

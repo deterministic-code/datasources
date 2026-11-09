@@ -42,9 +42,10 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
     parent: &mut T,
 ) -> Result<()> {
     let existing = load(writer, enrichment, parent).await?;
-    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent)?;
+    let schema = writer.schema();
+    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent, schema)?;
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
-        related.sort_by(|left, right| dict_key(left).cmp(&dict_key(right)));
+        related.sort_by(|left, right| dict_key(left, schema.dictionary_key()).cmp(&dict_key(right, schema.dictionary_key())));
     }
     if let Some(key) = parent.cell(&enrichment.source_property) {
         for child in &mut related {
@@ -126,10 +127,11 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
     Ok(())
 }
 
-fn dict_key<TChild: Entity>(child: &TChild) -> String {
+fn dict_key<TChild: Entity>(child: &TChild, key_name: &str) -> String {
     child
-        .cell("Key")
+        .cell(key_name)
         .or_else(|| child.cell("key"))
+        .or_else(|| child.cell("Key"))
         .map(|value| value.wire_text())
         .unwrap_or_default()
 }

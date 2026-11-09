@@ -102,7 +102,8 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const mapKey = mapKeyName(enrichment.relatedKey, probe(via));
+    const schema = via.schema;
+    const mapKey = schema.dictionaryKey();
     for (const [index, parent] of parents.entries()) {
       const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
@@ -115,7 +116,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
         if (entry === undefined || entry === null) continue;
         map[String(entry)] = enrichment.relatedProperty
           ? (row[enrichment.relatedProperty] ?? null)
-          : this.copyValue(item, (parent as Props)[enrichment.destinationProperty], enrichment, mapKey);
+          : this.copyValue(row, schema, enrichment, mapKey);
       }
       Object.assign(parent, { [enrichment.destinationProperty]: map });
     }
@@ -128,8 +129,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     index: number,
   ): Scalar | object | undefined {
     const cell = sources?.[index]?.[enrichment.sourceProperty];
-    const raw = cell !== undefined && cell !== null ? cell : this.props(parent)[enrichment.sourceProperty];
-    return this.lookupKey(raw, enrichment.relatedKey);
+    return cell !== undefined && cell !== null ? cell : this.props(parent)[enrichment.sourceProperty];
   }
 
   protected props = <TItem>(item: TItem): Props => item as never as Props;
@@ -140,36 +140,15 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     identityKey(value, name);
 
   private copyValue = (
-    item: object,
-    dest: Scalar | object | undefined,
+    row: Props,
+    schema: { dictionaryValueColumns: (relatedKey: string, mapKey: string) => string[] },
     enrichment: Enrichment,
     mapKey: string,
   ): Scalar | object => {
-    const row = this.props(item);
-    if (this.stringMap(dest)) return (row.Value ?? row.value ?? null) as Scalar;
-    const names = this.destValueNames(dest);
     const copy: Props = {};
-    for (const [name, value] of Object.entries(row)) {
-      if (names.size > 0 ? names.has(name) : name !== mapKey && name !== enrichment.relatedKey)
-        copy[name] = value;
-    }
+    for (const name of schema.dictionaryValueColumns(enrichment.relatedKey, mapKey))
+      copy[name] = row[name];
     return copy;
-  };
-
-  private stringMap = (dest: Scalar | object | undefined): boolean => {
-    if (!dest || typeof dest !== "object") return false;
-    const values = Object.values(dest);
-    return values.length > 0 && values.every((value) => typeof value === "string");
-  };
-
-  private destValueNames = (dest: Scalar | object | undefined): Set<string> => {
-    const sample = dest && typeof dest === "object"
-      ? Object.values(dest).find((value) => value !== null && typeof value === "object" && !Array.isArray(value))
-      : undefined;
-    if (!sample || typeof sample !== "object") return new Set();
-    const ctor = sample.constructor;
-    const blank = typeof ctor === "function" && ctor !== Object ? new (ctor as new () => object)() : sample;
-    return new Set(Object.keys(this.props(blank)));
   };
 
   protected scalar = (value: Scalar | object): Scalar => {
@@ -185,19 +164,4 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
         })();
   };
 }
-
-const probe = (via?: { type: new () => object }): object | undefined => {
-  try {
-    return via ? new via.type() : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-const mapKeyName = (relatedKey: string, child?: object): string =>
-  child && "Key" in child ? "Key"
-    : child && "key" in child ? "key"
-      : child && "Name" in child ? "Name"
-        : child && "name" in child ? "name"
-          : relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
 

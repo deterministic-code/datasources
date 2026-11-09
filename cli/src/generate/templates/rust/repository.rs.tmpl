@@ -84,6 +84,10 @@ impl IRepository for {{className}} {
     fn entity_type(&self) -> TypeId {
         IRepository::entity_type(self.inner.as_ref())
     }
+
+    fn schema(&self) -> &Schema {
+        self.inner.schema()
+    }
 }
 
 #[async_trait]
@@ -194,6 +198,10 @@ impl {{optimisticClass}} {
 impl IRepository for {{optimisticClass}} {
     fn entity_type(&self) -> TypeId {
         self.repo.entity_type()
+    }
+
+    fn schema(&self) -> &Schema {
+        self.repo.schema()
     }
 }
 

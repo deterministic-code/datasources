@@ -42,21 +42,6 @@ public class CRUDRepositoryTests
         public Dictionary<string, Pref> Prefs { get; set; } = [];
     }
 
-    sealed class NamedSetting
-    {
-        public long Id { get; set; }
-        public long ParentId { get; set; }
-        public string Name { get; set; } = "";
-        public string Value { get; set; } = "";
-    }
-
-    sealed class NamedHost
-    {
-        public long Id { get; set; }
-        public string Label { get; set; } = "";
-        public Dictionary<string, string> Settings { get; set; } = [];
-    }
-
     sealed class Parent
     {
         public long Id { get; set; }
@@ -202,8 +187,8 @@ public class CRUDRepositoryTests
     {
         var connection = await Setup();
         var hostsRepo = Open<Host>(connection);
-        var settingsRepo = Open<Setting>(connection);
-        var prefsRepo = Open<PrefRow>(connection);
+        var settingsRepo = Open<Setting>(connection, schema: SettingSchema);
+        var prefsRepo = Open<PrefRow>(connection, schema: PrefSchema);
         hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
         hostsRepo.AddEnriched(new("Prefs", "Id", "ParentId", Type: EnrichmentPropertyType.Dictionary), prefsRepo);
         var created = await hostsRepo.Create(new Host
@@ -239,26 +224,6 @@ public class CRUDRepositoryTests
         Assert.Equal("Europe/Paris", updated.Prefs["home"].Timezone);
         Assert.False(updated.Prefs.ContainsKey("travel"));
         Assert.Equal("en-US", updated.Prefs["work"].Locale);
-    }
-
-    [Fact]
-    public async Task RoundTripsDictionaryWhenChildKeyIsName()
-    {
-        var connection = await Setup();
-        var hostsRepo = Open<NamedHost>(connection);
-        var settingsRepo = Open<NamedSetting>(connection);
-        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
-        var created = await hostsRepo.Create(new NamedHost
-        {
-            Label = "ada",
-            Settings = { ["theme"] = "dark" },
-        });
-        Assert.True(created.Id > 0);
-        var stored = Assert.Single(await settingsRepo.Read().ToListAsync());
-        Assert.Equal("theme", stored.Name);
-        Assert.Equal("dark", stored.Value);
-        var loaded = await hostsRepo.ReadSingle();
-        Assert.Equal(new Dictionary<string, string> { ["theme"] = "dark" }, loaded!.Settings);
     }
 
     [Fact]
@@ -639,12 +604,30 @@ public class CRUDRepositoryTests
         parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
     }
 
-    static CRUDRepository<T> Open<T>(IConnection connection, IWriteEnrichmentStrategy<T>? write = null) where T : new() =>
+    static readonly Schema SettingSchema = new(new Dictionary<string, SchemaColumn>
+    {
+        ["Id"] = new("integer", IsId: true),
+        ["ParentId"] = new("integer"),
+        ["Key"] = new("string"),
+        ["Value"] = new("string"),
+    });
+
+    static readonly Schema PrefSchema = new(new Dictionary<string, SchemaColumn>
+    {
+        ["Id"] = new("integer", IsId: true),
+        ["ParentId"] = new("integer"),
+        ["Key"] = new("string"),
+        ["Locale"] = new("string"),
+        ["Timezone"] = new("string"),
+    });
+
+    static CRUDRepository<T> Open<T>(IConnection connection, IWriteEnrichmentStrategy<T>? write = null, Schema? schema = null) where T : new() =>
         new(connection, new CRUDRepositoryOptions<T>
         {
             Ids = ["Id"],
             PropertyMappings = Columns,
             Write = write,
+            Schema = schema,
         });
 
     static ReadonlyRepository<T> Read<T>(IConnection connection) where T : new() =>

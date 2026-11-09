@@ -27,7 +27,6 @@ import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
-import { Schema } from "./Schema.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -98,7 +97,6 @@ export class CRUDRepository<T = Cells>
   readonly ids: readonly string[];
   private readonly createProperties?: readonly string[];
   private readonly updateProperties?: readonly string[];
-  private readonly schema: Schema;
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
@@ -118,7 +116,6 @@ export class CRUDRepository<T = Cells>
     this.ids = opened.built.ids;
     this.createProperties = (options as CRUDRepositoryOptions<T>).createProperties;
     this.updateProperties = (options as CRUDRepositoryOptions<T>).updateProperties;
-    this.schema = (options as CRUDRepositoryOptions<T>).schema ?? new Schema({});
     this.crudStatements = opened.statements;
     this.tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();

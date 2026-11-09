@@ -9,7 +9,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     readonly IReadOnlyList<string> ids;
     readonly IReadOnlyList<string>? createProperties;
     readonly IReadOnlyList<string>? updateProperties;
-    readonly Schema schema;
     readonly CRUDRepositoryStatements crudStatements;
     readonly IRepositoryTree tree;
 
@@ -19,7 +18,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(Compose(connection, options)) { }
 
-    static (BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update, Schema Schema) Compose(
+    static (BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update) Compose(
         IConnection connection,
         CRUDRepositoryOptions<T> options)
     {
@@ -29,17 +28,15 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             builder.CRUDStatements ?? throw new DatasourceException("Statements required"),
             options.Write,
             options.CreateProperties,
-            options.UpdateProperties,
-            options.Schema ?? new Schema(new Dictionary<string, SchemaColumn>()));
+            options.UpdateProperties);
     }
 
-    private CRUDRepository((BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update, Schema Schema) composed) :
+    private CRUDRepository((BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update) composed) :
         base(composed.Built)
     {
         ids = composed.Built.Ids;
         createProperties = composed.Create;
         updateProperties = composed.Update;
-        schema = composed.Schema;
         crudStatements = composed.Statements;
         write = composed.Write ?? new DefaultWriteEnrichmentStrategy<T>();
         tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
@@ -293,7 +290,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         foreach (var source in ObjectSourceProperties())
             if (!Assigned(record, source) && Assigned(record, Column(source)))
                 record[source] = record[Column(source)];
-        await write.ResolveLookups(tree, [item!], record, schema);
+        await write.ResolveLookups(tree, [item!], record, Schema);
         foreach (var source in ObjectSourceProperties())
             if (Assigned(record, source))
             {

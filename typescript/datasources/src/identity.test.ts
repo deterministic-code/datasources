@@ -16,5 +16,12 @@ describe("identity", () => {
     expect(identityKey({ Key: "home", Name: "house" }, "Key")).toBe("home");
     expect(identityKey({ Key: "home" }, "Missing")).toEqual({ Key: "home" });
     expect(identityKey({ Key: null as string | null }, "Key")).toEqual({ Key: null });
+    expect(schema.dictionaryKey()).toBe("Key");
+    expect(new Schema({ key: { type: "string", nullable: false, hasDefault: false } }).dictionaryKey()).toBe("key");
+    expect(new Schema({}).dictionaryKey()).toBe("Key");
+    expect(new Schema({}).dictionaryValueColumns("ParentId", "Key")).toEqual([]);
+    expect(
+      schema.dictionaryValueColumns("ParentId", "Key"),
+    ).toEqual(["Name"]);
   });
 });

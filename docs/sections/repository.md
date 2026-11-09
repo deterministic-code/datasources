@@ -22,6 +22,14 @@ Item constructor the repository exposes.
 readonly type: Constructable<T>
 ```
 
+##### schema
+
+Column map the repository exposes.
+
+```typescript
+readonly schema: Schema
+```
+
 ### csharp
 #### IRepository
 
@@ -37,6 +45,14 @@ Item CLR type the repository exposes.
 
 ```csharp
 Type Type { get; }
+```
+
+##### Schema
+
+Column map the repository exposes.
+
+```csharp
+Schema Schema { get; }
 ```
 
 ### rust
@@ -57,6 +73,16 @@ fn entity_type(&self) -> TypeId
 ```
 
 **Returns** `TypeId`
+
+##### schema()
+
+Column map the repository exposes. Defaults to empty.
+
+```rust
+fn schema(&self) -> &Schema
+```
+
+**Returns** `&Schema`
 
 #### datasources
 

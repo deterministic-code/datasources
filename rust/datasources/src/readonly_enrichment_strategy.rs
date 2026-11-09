@@ -126,24 +126,31 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
             )
             .try_collect::<Vec<_>>()
             .await?;
-        match enrichment.related_property.as_deref() {
-            Some(select) => {
-                let key_name = crate::create_enrichment_strategy::map_key::<TRelated>(&enrichment.related_key);
-                let rows = related
-                    .into_iter()
-                    .filter_map(|item| {
-                        let key = item.cell(key_name).or_else(|| item.cell("key")).or_else(|| item.cell("Key"))?;
-                        let value = item.cell(select)?;
-                        let mut row = Row::new();
-                        row.insert(key_name.to_string(), key);
-                        row.insert(select.to_string(), value);
-                        Some(row)
-                    })
-                    .collect();
-                parent.set_payload(&enrichment.destination_property, rows)?;
-            }
-            None => assign_related(parent, &enrichment.destination_property, related)?,
-        }
+        let schema = via.schema();
+        let key_name = schema.dictionary_key();
+        let value_columns = schema.dictionary_value_columns(&enrichment.related_key, key_name);
+        let rows = related
+            .into_iter()
+            .filter_map(|item| {
+                let key = item
+                    .cell(key_name)
+                    .or_else(|| item.cell("key"))
+                    .or_else(|| item.cell("Key"))?;
+                let mut row = Row::new();
+                row.insert(key_name.to_string(), key);
+                if let Some(select) = enrichment.related_property.as_deref() {
+                    row.insert(select.to_string(), item.cell(select)?);
+                } else {
+                    for name in &value_columns {
+                        if let Some(cell) = item.cell(name) {
+                            row.insert(name.clone(), cell);
+                        }
+                    }
+                }
+                Some(row)
+            })
+            .collect();
+        parent.set_payload(&enrichment.destination_property, rows)?;
     }
     Ok(())
 }

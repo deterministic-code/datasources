@@ -236,6 +236,10 @@ impl IRepository for BulkCRUDRepository {
     fn entity_type(&self) -> TypeId {
         self.crud.entity_type()
     }
+
+    fn schema(&self) -> &crate::schema::Schema {
+        self.crud.schema()
+    }
 }
 
 #[async_trait]

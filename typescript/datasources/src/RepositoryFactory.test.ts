@@ -4,12 +4,14 @@ import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockRepository } from "./mocks/mock-repository.ts";
 import { RepositoryFactory } from "./RepositoryFactory.ts";
 import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
+import { Schema } from "./Schema.ts";
 
 class Item {}
 
 const emptyReadonly = (): IReadonlyRepository<Item> => ({
   type: Item,
   isSchemaRequired: false,
+  schema: new Schema({}),
   readSingle: async () => undefined,
   async *read() {},
 });

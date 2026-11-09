@@ -6,6 +6,7 @@ use crate::id_key::IdKey;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::statement::Statement;
 use async_trait::async_trait;
 use futures_core::Stream;
@@ -68,6 +69,10 @@ struct AsReadonly<T: Entity>(Arc<dyn ICRUDRepository<T>>);
 impl<T: Entity> IRepository for AsReadonly<T> {
     fn entity_type(&self) -> TypeId {
         self.0.entity_type()
+    }
+
+    fn schema(&self) -> &Schema {
+        self.0.schema()
     }
 }
 

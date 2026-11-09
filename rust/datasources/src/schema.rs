@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SchemaColumn {
@@ -55,6 +56,29 @@ impl Schema {
             .map(|(name, column)| (name.clone(), column.type_name.clone()))
             .collect()
     }
+
+    pub fn dictionary_key(&self) -> &str {
+        if self.columns.contains_key("Key") {
+            "Key"
+        } else if self.columns.contains_key("key") {
+            "key"
+        } else {
+            "Key"
+        }
+    }
+
+    pub fn dictionary_value_columns(&self, related_key: &str, map_key: &str) -> Vec<String> {
+        self.columns
+            .iter()
+            .filter(|(name, column)| !column.is_id && *name != related_key && *name != map_key)
+            .map(|(name, _)| name.clone())
+            .collect()
+    }
+
+    pub fn empty() -> &'static Schema {
+        static EMPTY: OnceLock<Schema> = OnceLock::new();
+        EMPTY.get_or_init(Schema::default)
+    }
 }
 
 #[cfg(test)]
@@ -75,5 +99,10 @@ mod tests {
             ("Name".into(), SchemaColumn::new("string")),
         ]));
         assert_eq!(schema.ids(), vec!["Key".to_string()]);
+        assert_eq!(schema.dictionary_key(), "Key");
+        assert_eq!(
+            schema.dictionary_value_columns("ParentId", "Key"),
+            vec!["Name".to_string()]
+        );
     }
 }

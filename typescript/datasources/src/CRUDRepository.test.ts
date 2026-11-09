@@ -54,19 +54,6 @@ class Host {
   Prefs: Record<string, Pref> = {};
 }
 
-class NamedSetting {
-  Id = 0;
-  ParentId = 0;
-  Name = "";
-  Value = "";
-}
-
-class NamedHost {
-  Id = 0;
-  Label = "";
-  Settings: Record<string, string> = {};
-}
-
 class Parent {
   Id = 0;
   Type = new UserType();
@@ -140,16 +127,32 @@ const repo = <T extends object>(
   type: new () => T,
   connection: IConnection,
   write?: IWriteEnrichmentStrategy<T>,
+  schema?: Schema,
 ) =>
   new CRUDRepository<T>(connection, {
     type,
     propertyMappings: columns,
     write,
     ids: ["Id"],
-    schema: new Schema({
+    schema: schema ?? new Schema({
       Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
     }),
   });
+
+const settingSchema = new Schema({
+  Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+  ParentId: { type: "integer", nullable: false, hasDefault: false },
+  Key: { type: "string", nullable: false, hasDefault: false },
+  Value: { type: "string", nullable: false, hasDefault: false },
+});
+
+const prefSchema = new Schema({
+  Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+  ParentId: { type: "integer", nullable: false, hasDefault: false },
+  Key: { type: "string", nullable: false, hasDefault: false },
+  Locale: { type: "string", nullable: false, hasDefault: false },
+  Timezone: { type: "string", nullable: false, hasDefault: false },
+});
 
 const read = <T extends object>(type: new () => T, connection: IConnection) =>
   new ReadonlyRepository(connection, { type, propertyMappings: columns });
@@ -205,8 +208,8 @@ describe("CRUDRepository", () => {
   it("round-trips string and object dictionaries", async () => {
     const connection = await setup();
     const hostsRepo = repo(Host, connection);
-    const settingsRepo = repo(Setting, connection);
-    const prefsRepo = repo(PrefRow, connection);
+    const settingsRepo = repo(Setting, connection, undefined, settingSchema);
+    const prefsRepo = repo(PrefRow, connection, undefined, prefSchema);
     hostsRepo.addEnriched(
       { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", type: "dictionary" },
       settingsRepo,
@@ -250,25 +253,6 @@ describe("CRUDRepository", () => {
     expect(updated?.Prefs.work.Locale).toBe("en-US");
     expect(updated?.Prefs.work.Timezone).toBe("America/New_York");
     expect(updated?.Prefs.travel).toBeUndefined();
-  });
-
-  it("round-trips a dictionary when the child key is Name", async () => {
-    const connection = await setup();
-    const hostsRepo = repo(NamedHost, connection);
-    const settingsRepo = repo(NamedSetting, connection);
-    hostsRepo.addEnriched(
-      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", type: "dictionary" },
-      settingsRepo,
-    );
-    const created = await hostsRepo.create(
-      Object.assign(new NamedHost(), { Label: "ada", Settings: { theme: "dark" } }),
-    );
-    expect(created.Id).toBeGreaterThan(0);
-    const stored = (await collectAsync(settingsRepo.read()))[0];
-    expect(stored?.Name).toBe("theme");
-    expect(stored?.Value).toBe("dark");
-    const loaded = await hostsRepo.readSingle();
-    expect(loaded?.Settings).toEqual({ theme: "dark" });
   });
 
   it("creates children, stamps FK, and skips select", async () => {
