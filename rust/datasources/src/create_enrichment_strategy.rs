@@ -55,20 +55,10 @@ fn dictionary_children<T: Entity, TChild: Entity>(
         .into_iter()
         .map(|row| {
             let mut child = TChild::default();
-            let key = row
-                .get(key_name)
-                .or_else(|| row.get("key"))
-                .or_else(|| row.get("Key"))
-                .cloned()
-                .unwrap_or(Value::Null);
+            let key = row.get(key_name).cloned().unwrap_or(Value::Null);
             set(&mut child, key_name, key)?;
             if let Some(select) = enrichment.related_property.as_deref() {
-                let value = row
-                    .get(select)
-                    .or_else(|| row.get("value"))
-                    .or_else(|| row.get("Value"))
-                    .cloned()
-                    .unwrap_or(Value::Null);
+                let value = row.get(select).cloned().unwrap_or(Value::Null);
                 set(&mut child, select, value)?;
             } else {
                 for name in schema.dictionary_value_columns(&enrichment.related_key, key_name) {

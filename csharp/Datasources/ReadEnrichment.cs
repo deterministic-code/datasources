@@ -24,6 +24,6 @@ internal sealed class ReadEnrichment<T, TRelated> : ReadEnrichment<T>
     internal override async Task<Value?> Lookup(string property, Value name, string key)
     {
         var found = await via.ReadSingle(new Where(new Operator.Equals(property, name)));
-        return found is null ? null : Value.From(found.GetType().GetProperty(key)?.GetValue(found));
+        return found is null ? null : Value.From(EnrichmentCells.Get(found, key));
     }
 }

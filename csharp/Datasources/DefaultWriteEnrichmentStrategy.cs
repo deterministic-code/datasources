@@ -104,5 +104,5 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         writer ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{into}\"");
 
     bool Skip(T parent, string into, WriteMode mode) =>
-        SkipUnloaded && mode is not WriteMode.Delete && parent!.GetType().GetProperty(into)?.GetValue(parent) is null;
+        SkipUnloaded && mode is not WriteMode.Delete && EnrichmentCells.Get(parent, into) is null;
 }
