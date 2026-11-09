@@ -1,6 +1,6 @@
-use crate::create_enrichment_strategy::set;
+use crate::create_enrichment_strategy::{dict_key, set};
 use crate::default_write_enrichment_strategy::{related_ids, required};
-use crate::delete_enrichment_strategy::load;
+use crate::delete_enrichment_strategy::{children_where, link_where, load, predicate};
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
@@ -55,12 +55,14 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
     }
     let ids = writer.id_names();
     let keep: HashSet<String> = related.iter().filter_map(|child| child_key(child, &ids)).collect();
+    let clause = children_where(writer, enrichment, parent);
+    let by_parent = predicate(&clause);
     for child in existing.iter().filter(|child| {
         child_key::<TChild>(*child, &ids)
             .map(|key| !keep.contains(&key))
             .unwrap_or(true)
     }) {
-        writer.delete(child.clone(), None).await?;
+        writer.delete(child.clone(), by_parent).await?;
     }
     for child in &related {
         match child_key(child, &ids) {
@@ -111,7 +113,9 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         {
             continue;
         }
-        writer.delete(row.clone(), None).await?;
+        let related = id.unwrap_or(Value::Null);
+        let clause = link_where(association, &parent_key, &related);
+        writer.delete(row.clone(), Some(&clause)).await?;
     }
     for id in wanted {
         if existing
@@ -126,13 +130,6 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         writer.create(row).await?;
     }
     Ok(())
-}
-
-fn dict_key<TChild: Entity>(child: &TChild, key_name: &str) -> String {
-    child
-        .cell(key_name)
-        .map(|value| value.wire_text())
-        .unwrap_or_default()
 }
 
 fn child_key<TChild: Entity>(child: &TChild, ids: &[String]) -> Option<String> {

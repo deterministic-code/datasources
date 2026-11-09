@@ -1,7 +1,7 @@
 use futures_util::TryStreamExt;
 use crate::default_create_enrichment_strategy::{create_children, create_links};
 use crate::default_write_enrichment_strategy::required;
-use crate::delete_enrichment_strategy::load;
+use crate::delete_enrichment_strategy::{children_where, link_where, load, predicate};
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
@@ -23,8 +23,10 @@ impl<T: Entity> UpdateEnrichmentStrategy<T> for CascadeDeleteUpdateEnrichmentStr
         parent: &mut T,
     ) -> Result<()> {
         let existing = load(writer.as_ref(), enrichment, parent).await?;
+        let clause = children_where(writer.as_ref(), enrichment, parent);
+        let by_parent = predicate(&clause);
         for row in &existing {
-            writer.delete(row.clone(), None).await?;
+            writer.delete(row.clone(), by_parent).await?;
         }
         create_children(writer.as_ref(), enrichment, parent).await
     }
@@ -51,13 +53,9 @@ impl<T: Entity> UpdateEnrichmentStrategy<T> for CascadeDeleteUpdateEnrichmentStr
                 )), None)
             .try_collect::<Vec<_>>().await?;
         for row in &existing {
-            let Some(related) = row.get(&association.related).cloned() else {
-                continue;
-            };
-            if related == Value::Null {
-                continue;
-            }
-            writer.delete(row.clone(), None).await?;
+            let related = row.cell(&association.related).unwrap_or(Value::Null);
+            let clause = link_where(association, &parent_key, &related);
+            writer.delete(row.clone(), Some(&clause)).await?;
         }
         create_links(writer.as_ref(), enrichment, parent).await
     }

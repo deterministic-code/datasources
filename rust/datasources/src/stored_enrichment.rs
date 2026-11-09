@@ -94,14 +94,6 @@ impl<T: Entity, TRelated: Entity, TLink: Entity> AppliedRead<T>
 pub(crate) trait AppliedPersist<T: Entity>: Send + Sync {
     async fn write(&self, enrichment: &Enrichment, parent: &mut T, mode: WriteMode) -> Result<()>;
 
-    #[allow(dead_code)]
-    async fn write_bulk(
-        &self,
-        enrichment: &Enrichment,
-        parents: &mut [T],
-        mode: WriteMode,
-    ) -> Result<()>;
-
     fn persist_bulk(&self) -> Option<Arc<BulkCRUDRepository>> {
         None
     }
@@ -131,18 +123,6 @@ impl<T: Entity, TChild: Entity> AppliedPersist<T> for AppliedPersistImpl<T, TChi
                 delete_children(self.repository.as_ref(), enrichment, parent, &NoNested).await
             }
         }
-    }
-
-    async fn write_bulk(
-        &self,
-        enrichment: &Enrichment,
-        parents: &mut [T],
-        mode: WriteMode,
-    ) -> Result<()> {
-        for parent in parents {
-            self.write(enrichment, parent, mode).await?;
-        }
-        Ok(())
     }
 
     fn persist_bulk(&self) -> Option<Arc<BulkCRUDRepository>> {
@@ -180,18 +160,6 @@ impl<T: Entity, TLink: Entity> AppliedPersist<T> for AppliedLinkPersist<T, TLink
         }
     }
 
-    async fn write_bulk(
-        &self,
-        enrichment: &Enrichment,
-        parents: &mut [T],
-        mode: WriteMode,
-    ) -> Result<()> {
-        for parent in parents {
-            self.write(enrichment, parent, mode).await?;
-        }
-        Ok(())
-    }
-
     fn row_writer(&self) -> Option<Arc<dyn ICRUDRepository>> {
         as_row_crud(self.repository.clone())
     }
@@ -211,7 +179,6 @@ pub(crate) struct StoredEnrichment<T: Entity = Row> {
     pub read: Arc<dyn AppliedRead<T>>,
     pub persist: Option<Arc<dyn AppliedPersist<T>>>,
     pub link: Option<Arc<dyn AppliedPersist<T>>>,
-    linked: bool,
 }
 
 impl<T: Entity> StoredEnrichment<T> {
@@ -243,7 +210,6 @@ impl<T: Entity> StoredEnrichment<T> {
             read: Arc::new(AppliedReadImpl { via, strategy }),
             persist,
             link: None,
-            linked: false,
         }
     }
 
@@ -265,7 +231,6 @@ impl<T: Entity> StoredEnrichment<T> {
                 repository: link,
                 entity: std::marker::PhantomData,
             })),
-            linked: true,
         }
     }
 
@@ -294,7 +259,6 @@ impl<T: Entity> Clone for StoredEnrichment<T> {
             read: self.read.clone(),
             persist: self.persist.clone(),
             link: self.link.clone(),
-            linked: self.linked,
         }
     }
 }

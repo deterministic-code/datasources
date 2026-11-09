@@ -1,11 +1,11 @@
-import { dictionaryMapKey, dictionaryValueColumns, type Enrichment } from "./Enrichment.ts";
+import { mapPayload, type Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Value.ts";
 import { identityKey } from "./identity.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { Schema } from "./Schema.ts";
+import type { Schema } from "./Schema.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import { Operator, Where } from "./statements/index.ts";
 
@@ -148,27 +148,4 @@ const holds = (related: object, by: string): boolean => {
   if (Object.getPrototypeOf(related) === Object.prototype || by in related) return true;
   const instance = blank(related);
   return instance !== undefined && by in instance;
-};
-
-const mapPayload = (
-  value: Scalar | object | undefined,
-  enrichment?: Enrichment,
-  schema?: Schema,
-): object[] => {
-  if (value === undefined || value === null || typeof value === "string") return [];
-  if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
-  if (enrichment?.type !== "dictionary" || typeof value !== "object") return [];
-  const columns = schema ?? new Schema({});
-  const keyName = dictionaryMapKey(enrichment);
-  return Object.entries(value as Record<string, Scalar | object>)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, cell]) => {
-      if (enrichment.relatedProperty)
-        return { [keyName]: key, [enrichment.relatedProperty]: cell };
-      const row: Props = { [keyName]: key };
-      if (cell !== null && typeof cell === "object" && !Array.isArray(cell))
-        for (const name of dictionaryValueColumns(columns, enrichment))
-          row[name] = (cell as Props)[name];
-      return row;
-    });
 };

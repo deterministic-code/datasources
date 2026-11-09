@@ -481,16 +481,6 @@ impl<T: Entity> CRUDRepository<T> {
             .collect()
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn enrichment_into(&self, name: &str) -> bool {
-        self.readonly
-            .enrichments
-            .lock()
-            .expect("enrichments")
-            .iter()
-            .any(|entry| entry.enrichment.destination_property == name)
-    }
-
     async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if self.readonly.memory_items().is_some() {
             let stored = self.without_enrichment(item);

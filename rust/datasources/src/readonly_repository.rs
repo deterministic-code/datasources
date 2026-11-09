@@ -21,7 +21,6 @@ use crate::schema::Schema;
 use crate::SelectStatement;
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
-use crate::statements::Where;
 use crate::statement_mappers::StatementMappers;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::mocks::MockConnection;
@@ -201,23 +200,6 @@ impl<T: Entity> ReadonlyRepository<T> {
         }
     }
 
-    #[allow(dead_code)]
-    fn store_where(
-        &self,
-        where_clause: &dyn IWhere,
-        fields_applied: bool,
-        mappers: &StatementMappers,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<Where>> {
-        match where_clause.as_any().downcast_ref::<Where>() {
-            Some(clause) => Ok(Some(mappers.apply_where(clause, &|name, cell| {
-                self.cell_with(name, cell, fields_applied, options)
-            })?)),
-            None => Ok(None),
-        }
-    }
-
-    #[allow(dead_code)]
     pub(crate) fn column(&self, property: &str) -> String {
         self.statement_mappers.column(property)
     }

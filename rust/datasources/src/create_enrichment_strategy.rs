@@ -27,7 +27,7 @@ pub trait CreateEnrichmentStrategy<T: Entity = Row>: Send + Sync {
     ) -> Result<()>;
 }
 
-fn missing(value: &Value) -> bool {
+pub(crate) fn missing(value: &Value) -> bool {
     matches!(value, Value::Null | Value::Int(0))
         || matches!(value, Value::Text(text) if text.is_empty())
 }
@@ -74,6 +74,13 @@ fn dictionary_children<T: Entity, TChild: Entity>(
             Ok(child)
         })
         .collect()
+}
+
+pub(crate) fn dict_key<TChild: Entity>(child: &TChild, key_name: &str) -> String {
+    child
+        .cell(key_name)
+        .map(|value| value.wire_text())
+        .unwrap_or_default()
 }
 
 pub(crate) fn set<T: Entity>(item: &mut T, name: &str, value: Value) -> Result<()> {

@@ -1,10 +1,12 @@
 use futures_util::TryStreamExt;
+use crate::association::Association;
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -38,6 +40,34 @@ pub(crate) async fn load<T: Entity, TChild: Entity>(
     writer
         .read_where(&Where::new(Operator::equals(enrichment.related_key.clone(), key)), None)
         .try_collect::<Vec<_>>().await
+}
+
+pub(crate) fn children_where<TParent: Entity, TChild: Entity>(
+    writer: &dyn ICRUDRepository<TChild>,
+    enrichment: &Enrichment,
+    parent: &TParent,
+) -> Option<Where> {
+    if !writer.id_names().is_empty() {
+        return None;
+    }
+    let key = parent
+        .cell(&enrichment.source_property)
+        .filter(|value| *value != Value::Null)?;
+    Some(Where::new(Operator::equals(
+        enrichment.related_key.clone(),
+        key,
+    )))
+}
+
+pub(crate) fn link_where(association: &Association, parent_key: &Value, related_key: &Value) -> Where {
+    Where::new(Operator::and(
+        Operator::equals(association.parent.clone(), parent_key.clone()),
+        Operator::equals(association.related.clone(), related_key.clone()),
+    ))
+}
+
+pub(crate) fn predicate(clause: &Option<Where>) -> Option<&dyn crate::IWhere> {
+    clause.as_ref().map(|item| item as _)
 }
 
 #[cfg(test)]

@@ -18,11 +18,15 @@ export class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentSt
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
     const parentKey = this.requiredKey(parent, enrichment);
-    for (const row of await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey)) {
-      const id = this.getCell(row, association.related);
-      if (!this.presentCell(id)) continue;
-      await writer.delete(row, this.linkWhere(association, parentKey, id));
-    }
+    for (const row of await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey))
+      await writer.delete(
+        row,
+        DeleteEnrichmentStrategy.linkWhere(
+          association,
+          parentKey,
+          DeleteEnrichmentStrategy.linkKey(this.getCell(row, association.related)),
+        ),
+      );
     await this.create.createLinked(writer, enrichment, parent);
   }
 }
