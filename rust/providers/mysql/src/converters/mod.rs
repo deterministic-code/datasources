@@ -25,6 +25,11 @@ fn catalog() -> Vec<(&'static str, Box<dyn TypeConverter<Value, Value> + Send + 
         ("decimal", Box::new(DecimalConverter)),
         ("binary", Box::new(BinaryConverter)),
         ("integer", Box::new(IntegerConverter)),
+        ("unsignedinteger", Box::new(IntegerConverter)),
+        ("smallinteger", Box::new(IntegerConverter)),
+        ("unsignedsmallinteger", Box::new(IntegerConverter)),
+        ("biginteger", Box::new(IntegerConverter)),
+        ("unsignedbiginteger", Box::new(IntegerConverter)),
         ("string", Box::new(StringConverter)),
     ]
 }
@@ -83,6 +88,11 @@ mod tests {
             "decimal",
             "binary",
             "integer",
+            "unsignedinteger",
+            "smallinteger",
+            "unsignedsmallinteger",
+            "biginteger",
+            "unsignedbiginteger",
             "string",
         ] {
             assert!(catalog.contains_key(key));

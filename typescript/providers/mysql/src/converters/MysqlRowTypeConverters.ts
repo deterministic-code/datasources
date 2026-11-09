@@ -6,13 +6,20 @@ import { DecimalConverter } from "./DecimalConverter.ts";
 import { IntegerConverter } from "./IntegerConverter.ts";
 import { UuidConverter } from "./UuidConverter.ts";
 
+const integer = new IntegerConverter();
+
 export const MysqlRowTypeConverters: Record<string, TypeConverter<Value, Value>> = {
   boolean: new BoolConverter(),
   datetime: new DateTimeConverter(),
   uuid: new UuidConverter(),
   decimal: new DecimalConverter(),
   binary: new BinaryConverter(),
-  integer: new IntegerConverter(),
+  integer,
+  unsignedinteger: integer,
+  smallinteger: integer,
+  unsignedsmallinteger: integer,
+  biginteger: integer,
+  unsignedbiginteger: integer,
 };
 
 export const reverse = (value: Value): Value =>
