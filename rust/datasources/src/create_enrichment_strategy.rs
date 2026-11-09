@@ -49,19 +49,23 @@ fn dictionary_children<T: Entity, TChild: Entity>(
     parent: &T,
     schema: &Schema,
 ) -> Result<Vec<TChild>> {
-    let key_name = schema.dictionary_key();
+    let key_name = enrichment.map_key()?;
     parent
         .payload(&enrichment.destination_property)
         .into_iter()
         .map(|row| {
             let mut child = TChild::default();
-            let key = row.get(key_name).cloned().unwrap_or(Value::Null);
+            let key = row
+                .get(key_name)
+                .cloned()
+                .or_else(|| row.get("key").cloned())
+                .unwrap_or(Value::Null);
             set(&mut child, key_name, key)?;
             if let Some(select) = enrichment.related_property.as_deref() {
                 let value = row.get(select).cloned().unwrap_or(Value::Null);
                 set(&mut child, select, value)?;
             } else {
-                for name in schema.dictionary_value_columns(&enrichment.related_key, key_name) {
+                for name in enrichment.value_columns(schema)? {
                     if let Some(cell) = row.get(&name).cloned() {
                         set(&mut child, &name, cell)?;
                     }

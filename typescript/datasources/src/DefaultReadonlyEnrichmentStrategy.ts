@@ -1,6 +1,6 @@
 import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import type { Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, dictionaryValueColumns, type Enrichment } from "./Enrichment.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -104,7 +104,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     sources?: (Row | undefined)[],
   ): Promise<void> {
     const schema = via.schema;
-    const mapKey = schema.dictionaryKey();
+    const mapKey = dictionaryMapKey(enrichment);
     for (const [index, parent] of parents.entries()) {
       const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
@@ -117,7 +117,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
         if (entry === undefined || entry === null) continue;
         map[String(entry)] = enrichment.relatedProperty
           ? (row[enrichment.relatedProperty] ?? null)
-          : this.copyValue(row, schema, enrichment, mapKey);
+          : this.copyValue(row, schema, enrichment);
       }
       Object.assign(parent, { [enrichment.destinationProperty]: map });
     }
@@ -140,17 +140,9 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   protected lookupKey = (value: Scalar | object | undefined, name = ""): Scalar | object | undefined =>
     identityKey(value, name);
 
-  private copyValue = (
-    row: Props,
-    schema: Schema,
-    enrichment: Enrichment,
-    mapKey: string,
-  ): Scalar | object => {
-    const column = schema.dictionaryValue();
-    if (column in schema.columns) return row[column] ?? null;
+  private copyValue = (row: Props, schema: Schema, enrichment: Enrichment): Scalar | object => {
     const copy: Props = {};
-    for (const name of schema.dictionaryValueColumns(enrichment.relatedKey, mapKey))
-      copy[name] = row[name];
+    for (const name of dictionaryValueColumns(schema, enrichment)) copy[name] = row[name];
     return copy;
   };
 

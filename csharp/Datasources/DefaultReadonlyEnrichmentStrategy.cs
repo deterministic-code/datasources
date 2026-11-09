@@ -87,7 +87,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         IReadOnlyList<Row?>? sources)
     {
         var schema = via.Schema;
-        var mapKey = schema.DictionaryKey;
+        var mapKey = EnrichmentCells.MapKey(enrichment);
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];

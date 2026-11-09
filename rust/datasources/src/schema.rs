@@ -42,46 +42,10 @@ impl Schema {
         Self { columns }
     }
 
-    pub fn ids(&self) -> Vec<String> {
-        self.columns
-            .iter()
-            .filter(|(_, column)| column.is_id)
-            .map(|(name, _)| name.clone())
-            .collect()
-    }
-
     pub fn types(&self) -> HashMap<String, String> {
         self.columns
             .iter()
             .map(|(name, column)| (name.clone(), column.type_name.clone()))
-            .collect()
-    }
-
-    pub fn dictionary_key(&self) -> &str {
-        if self.columns.contains_key("Key") {
-            "Key"
-        } else if self.columns.contains_key("key") {
-            "key"
-        } else {
-            "Key"
-        }
-    }
-
-    pub fn dictionary_value(&self) -> &str {
-        if self.columns.contains_key("Value") {
-            "Value"
-        } else if self.columns.contains_key("value") {
-            "value"
-        } else {
-            "Value"
-        }
-    }
-
-    pub fn dictionary_value_columns(&self, related_key: &str, map_key: &str) -> Vec<String> {
-        self.columns
-            .iter()
-            .filter(|(name, column)| !column.is_id && *name != related_key && *name != map_key)
-            .map(|(name, _)| name.clone())
             .collect()
     }
 
@@ -108,17 +72,7 @@ mod tests {
             ),
             ("Name".into(), SchemaColumn::new("string")),
         ]));
-        assert_eq!(schema.ids(), vec!["Key".to_string()]);
-        assert_eq!(schema.dictionary_key(), "Key");
-        assert_eq!(schema.dictionary_value(), "Value");
-        assert_eq!(
-            Schema::new(HashMap::from([("value".into(), SchemaColumn::new("string"))])).dictionary_value(),
-            "value"
-        );
-        assert_eq!(Schema::default().dictionary_value(), "Value");
-        assert_eq!(
-            schema.dictionary_value_columns("ParentId", "Key"),
-            vec!["Name".to_string()]
-        );
+        assert_eq!(crate::identity::ids_from_schema(&schema), vec!["Key".to_string()]);
+        assert_eq!(schema.types().get("Name"), Some(&"string".to_string()));
     }
 }

@@ -541,6 +541,7 @@ types: []
     expect(textOf(csharp, "ContactSourcesRepository.cs")).toContain("ContactSource");
     expect(csharp.some((entry) => entry.filename.includes("ImportContactsRequestRepository"))).toBe(false);
     expect(contactCs).toContain("EnrichmentPropertyType.Dictionary");
+    expect(contactCs).toContain('DictionaryKey: "Key"');
     expect(contactCs).toContain('"Settings"');
     expect(contactCs).toContain('"Prefs"');
     expect(legacyTs).toContain('["LegacyContact", "OldContactsTbl"]');
@@ -576,6 +577,7 @@ types: []
     expect(contactTs).toContain('destinationProperty: "contactSourceName"');
     expect(contactTs).toContain('type: "list"');
     expect(contactTs).toContain('type: "dictionary"');
+    expect(contactTs).toContain('dictionaryKey: "key"');
     expect(textOf(typescript, "contactGroupsRepository.ts")).toContain("addLinked");
     expect(legacyRs).toContain('"LegacyContact"');
     expect(legacyRs).toContain('"OldContactsTbl"');
@@ -584,6 +586,7 @@ types: []
     expect(legacyRs).toContain('vec!["key".into()]');
     expect(contactRs).toContain("EnrichmentPropertyType::List");
     expect(contactRs).toContain("EnrichmentPropertyType::Dictionary");
+    expect(contactRs).toContain('.with_dictionary_key("key")');
     expect(contactRs).toContain('"addresses"');
     expect(contactRs).toContain('"settings"');
     expect(contactRs).toContain('"prefs"');
@@ -1467,7 +1470,7 @@ types:
       fields:
       - bag_id:
           references: bag.id
-      - key:
+      - slot:
           type: string
       - value:
           type: string
@@ -1477,6 +1480,7 @@ types:
       fields:
       - key:
           type: string
+          references: keyed_dict.slot
       - value:
           type: string
   - named_dict:
@@ -1550,7 +1554,54 @@ types:
     const named = models.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "Named");
     expect(named?.relatedKey).toBe("BagId");
     expect(named?.relatedProperty).toBe("AttributeValue");
+    expect(named?.dictionaryKey).toBe("AttributeName");
     expect(named?.via).toBe("named_dict");
+    const keyed = models.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "Keyed");
+    expect(keyed?.dictionaryKey).toBe("Slot");
+    expect(keyed?.relatedProperty).toBe("Value");
+    const typescriptPlan = planRepositories(spec, "typescript", {
+      "backend.datasources": "sqlite",
+      "languages.typescript.casing.fields": "camel",
+    });
+    const rustPlan = planRepositories(spec, "rust", { "backend.datasources": "sqlite" });
+    expect(typescriptPlan.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "named")?.dictionaryKey).toBe(
+      "attributeName",
+    );
+    expect(typescriptPlan.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "keyed")?.dictionaryKey).toBe("slot");
+    expect(rustPlan.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "named")?.dictionaryKey).toBe(
+      "attribute_name",
+    );
+    expect(rustPlan.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "keyed")?.dictionaryKey).toBe("slot");
+    expect(
+      csharpRepositories.generate(models, { "backend.datasources": "sqlite" }, spec).some(
+        (entry) => entry.kind === "content" && entry.contents?.includes('DictionaryKey: "AttributeName"'),
+      ),
+    ).toBe(true);
+    expect(
+      typescriptRepositories.generate(typescriptPlan, { "backend.datasources": "sqlite", "languages.typescript.casing.fields": "camel" }, spec).some(
+        (entry) => entry.kind === "content" && entry.contents?.includes('dictionaryKey: "attributeName"'),
+      ),
+    ).toBe(true);
+    expect(
+      rustRepositories.generate(rustPlan, { "backend.datasources": "sqlite" }, spec).some(
+        (entry) => entry.kind === "content" && entry.contents?.includes('.with_dictionary_key("attribute_name")'),
+      ),
+    ).toBe(true);
+    const dropKeyRef = (name: string) => (type: (typeof spec.types)[number]) =>
+      type.name === name
+        ? { ...type, fields: type.fields.map((field) => (field.name === "key" ? { ...field, references: undefined } : field)) }
+        : type;
+    expect(() =>
+      planRepositories(
+        {
+          ...spec,
+          types: spec.types.map(dropKeyRef("named_dict_map")),
+          expandedTypes: spec.expandedTypes.map(dropKeyRef("named_dict_map")),
+        },
+        "csharp",
+        { "backend.datasources": "sqlite" },
+      ),
+    ).toThrow("named_dict_map.key has no references");
     const cycle = {
       "types.yaml": `version: 1.0.0
 types:

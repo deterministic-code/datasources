@@ -165,7 +165,7 @@ run_scripts() {
       -e DATASOURCES_REPO=/datasources \
       -v "$repo:/datasources" \
       -v /datasources/cli/node_modules \
-      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh sqlite.sh --local && sh mysql-postgres.sh --local'
+      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && npm run prepare --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh sqlite.sh --local && sh mysql-postgres.sh --local'
   else
     docker compose run --rm --no-deps app sh -c 'sh sqlite.sh && sh mysql-postgres.sh'
   fi

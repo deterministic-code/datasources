@@ -24,7 +24,7 @@ public class SchemaEnrichmentTests
     {
         public long Id { get; set; }
         public long ContactId { get; set; }
-        public string Key { get; set; } = "";
+        public string Name { get; set; } = "";
         public string Value { get; set; } = "";
     }
 
@@ -171,7 +171,7 @@ public class SchemaEnrichmentTests
             {
                 ["Id"] = new("integer", IsId: true),
                 ["ContactId"] = new("integer"),
-                ["Key"] = new("string"),
+                ["Name"] = new("string"),
                 ["Value"] = new("string"),
             }),
         });
@@ -188,7 +188,7 @@ public class SchemaEnrichmentTests
             }),
         });
         contacts.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), addresses);
-        contacts.AddEnriched(new("Settings", "Id", "ContactId", "Value", EnrichmentPropertyType.Dictionary), settings);
+        contacts.AddEnriched(new("Settings", "Id", "ContactId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"), settings);
         contacts.AddEnriched(new("ContactSourceName", "ContactSourceId", "Id", "Name"), sources);
         return (contacts, addresses);
     }

@@ -126,23 +126,17 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
             )
             .try_collect::<Vec<_>>()
             .await?;
-        let schema = via.schema();
-        let key_name = schema.dictionary_key();
-        let value_columns = schema.dictionary_value_columns(&enrichment.related_key, key_name);
-        let scalar = schema.columns.contains_key(schema.dictionary_value());
+        let key_name = enrichment.map_key()?;
+        let value_columns = enrichment.value_columns(via.schema())?;
         let rows = related
             .into_iter()
             .filter_map(|item| {
                 let key = item.cell(key_name)?;
                 let mut row = Row::new();
+                row.insert("key".to_string(), key.clone());
                 row.insert(key_name.to_string(), key);
                 if let Some(select) = enrichment.related_property.as_deref() {
                     row.insert(select.to_string(), item.cell(select)?);
-                } else if scalar {
-                    let column = schema.dictionary_value();
-                    if let Some(cell) = item.cell(column) {
-                        row.insert(column.to_string(), cell);
-                    }
                 } else {
                     for name in &value_columns {
                         if let Some(cell) = item.cell(name) {

@@ -21,7 +21,7 @@ public class CRUDRepositoryTests
     {
         public long Id { get; set; }
         public long ParentId { get; set; }
-        public string Key { get; set; } = "";
+        public string Name { get; set; } = "";
         public string Value { get; set; } = "";
     }
 
@@ -29,7 +29,7 @@ public class CRUDRepositoryTests
     {
         public long Id { get; set; }
         public long ParentId { get; set; }
-        public string Key { get; set; } = "";
+        public string Name { get; set; } = "";
         public string Note { get; set; } = "";
         public string Value { get; set; } = "";
     }
@@ -37,8 +37,9 @@ public class CRUDRepositoryTests
     sealed class PrefRow
     {
         public long Id { get; set; }
+        public Guid Uuid { get; set; } = Guid.NewGuid();
         public long ParentId { get; set; }
-        public string Key { get; set; } = "";
+        public string Name { get; set; } = "";
         public string Locale { get; set; } = "";
         public string Timezone { get; set; } = "";
     }
@@ -198,8 +199,8 @@ public class CRUDRepositoryTests
         var hostsRepo = Open<Host>(connection);
         var settingsRepo = Open<Setting>(connection, schema: SettingSchema);
         var prefsRepo = Open<PrefRow>(connection, schema: PrefSchema);
-        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
-        hostsRepo.AddEnriched(new("Prefs", "Id", "ParentId", Type: EnrichmentPropertyType.Dictionary), prefsRepo);
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"), settingsRepo);
+        hostsRepo.AddEnriched(new("Prefs", "Id", "ParentId", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"), prefsRepo);
         var created = await hostsRepo.Create(new Host
         {
             Label = "ada",
@@ -244,14 +245,14 @@ public class CRUDRepositoryTests
         {
             ["Id"] = new("integer", IsId: true),
             ["ParentId"] = new("integer"),
-            ["Key"] = new("string"),
+            ["Name"] = new("string"),
             ["Note"] = new("string"),
             ["Value"] = new("string"),
         }));
         var host = await hostsRepo.Create(new Host { Label = "ada" });
         Assert.True(host.Id > 0);
-        await settingsRepo.Create(new NotedSetting { ParentId = host.Id, Key = "theme", Note = "side", Value = "dark" });
-        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", Type: EnrichmentPropertyType.Dictionary), settingsRepo);
+        await settingsRepo.Create(new NotedSetting { ParentId = host.Id, Name = "theme", Note = "side", Value = "dark" });
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"), settingsRepo);
         var loaded = await hostsRepo.ReadSingle();
         Assert.Equal("dark", loaded!.Settings["theme"]);
     }
@@ -638,15 +639,16 @@ public class CRUDRepositoryTests
     {
         ["Id"] = new("integer", IsId: true),
         ["ParentId"] = new("integer"),
-        ["Key"] = new("string"),
+        ["Name"] = new("string"),
         ["Value"] = new("string"),
     });
 
     static readonly Schema PrefSchema = new(new Dictionary<string, SchemaColumn>
     {
         ["Id"] = new("integer", IsId: true),
+        ["Uuid"] = new("uuid"),
         ["ParentId"] = new("integer"),
-        ["Key"] = new("string"),
+        ["Name"] = new("string"),
         ["Locale"] = new("string"),
         ["Timezone"] = new("string"),
     });

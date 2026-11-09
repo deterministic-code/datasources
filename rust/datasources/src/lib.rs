@@ -45,6 +45,7 @@ mod downcast_connection;
 mod driver;
 mod enrichment;
 mod entity;
+mod identity;
 mod schema;
 mod enrichment_payload;
 mod enrichment_property_type;

@@ -191,11 +191,14 @@ const relations = (
         const ref = referenceOf(item?.references);
         return ref?.type === owner.type ? ref.field : role;
       };
+      const keyRef = referenceOf(dict.fields.find((entry) => entry.name === "key")?.references);
+      if (keyRef === undefined) throw new Error(`${dict.name}.key has no references`);
       planned.push({
         destination: property(field.name),
         source: identity(authored.inherits ?? authored.name),
         relatedKey: property(owner.field),
         relatedProperty: nested === undefined ? property(roleColumn("value")) : undefined,
+        dictionaryKey: property(keyRef.field),
         kind: "dictionary",
         via: via.via,
         viaType: via.viaType,

@@ -121,6 +121,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
       source: this.quote(item.source),
       relatedKey: this.quote(item.relatedKey),
       relatedProperty: item.relatedProperty === undefined ? undefined : this.quote(item.relatedProperty),
+      dictionaryKey: item.dictionaryKey === undefined ? undefined : this.quote(item.dictionaryKey),
       via: childField(casing, item.via),
       viaType: item.viaType,
       object: item.kind === "object" ? {} : undefined,

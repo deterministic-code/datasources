@@ -10,6 +10,6 @@ public class IdentityTests
             ["Key"] = new("string", IsId: true),
             ["Name"] = new("string"),
         });
-        Assert.Equal(["Key"], schema.Ids);
+        Assert.Equal(["Key"], Identity.Ids(schema));
     }
 }

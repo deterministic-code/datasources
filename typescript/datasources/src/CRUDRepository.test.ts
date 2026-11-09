@@ -35,22 +35,23 @@ class Pref {
 class Setting {
   Id = 0;
   ParentId = 0;
-  Key = "";
+  Name = "";
   Value = "";
 }
 
 class NotedSetting {
   Id = 0;
   ParentId = 0;
-  Key = "";
+  Name = "";
   Note = "";
   Value = "";
 }
 
 class PrefRow {
   Id = 0;
+  Uuid = "";
   ParentId = 0;
-  Key = "";
+  Name = "";
   Locale = "";
   Timezone = "";
 }
@@ -150,14 +151,15 @@ const repo = <T extends object>(
 const settingSchema = new Schema({
   Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
   ParentId: { type: "integer", nullable: false, hasDefault: false },
-  Key: { type: "string", nullable: false, hasDefault: false },
+  Name: { type: "string", nullable: false, hasDefault: false },
   Value: { type: "string", nullable: false, hasDefault: false },
 });
 
 const prefSchema = new Schema({
   Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+  Uuid: { type: "uuid", nullable: false, hasDefault: true },
   ParentId: { type: "integer", nullable: false, hasDefault: false },
-  Key: { type: "string", nullable: false, hasDefault: false },
+  Name: { type: "string", nullable: false, hasDefault: false },
   Locale: { type: "string", nullable: false, hasDefault: false },
   Timezone: { type: "string", nullable: false, hasDefault: false },
 });
@@ -219,11 +221,11 @@ describe("CRUDRepository", () => {
     const settingsRepo = repo(Setting, connection, undefined, settingSchema);
     const prefsRepo = repo(PrefRow, connection, undefined, prefSchema);
     hostsRepo.addEnriched(
-      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", type: "dictionary" },
+      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" },
       settingsRepo,
     );
     hostsRepo.addEnriched(
-      { destinationProperty: "Prefs", sourceProperty: "Id", relatedKey: "ParentId", type: "dictionary" },
+      { destinationProperty: "Prefs", sourceProperty: "Id", relatedKey: "ParentId", dictionaryKey: "Name", type: "dictionary" },
       prefsRepo,
     );
     const created = await hostsRepo.create(
@@ -269,7 +271,7 @@ describe("CRUDRepository", () => {
     const settingsRepo = repo(NotedSetting, connection, undefined, new Schema({
       Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
       ParentId: { type: "integer", nullable: false, hasDefault: false },
-      Key: { type: "string", nullable: false, hasDefault: false },
+      Name: { type: "string", nullable: false, hasDefault: false },
       Note: { type: "string", nullable: false, hasDefault: false },
       Value: { type: "string", nullable: false, hasDefault: false },
     }));
@@ -277,12 +279,12 @@ describe("CRUDRepository", () => {
     expect(host.Id).toBeGreaterThan(0);
     await settingsRepo.create(Object.assign(new NotedSetting(), {
       ParentId: host.Id,
-      Key: "theme",
+      Name: "theme",
       Note: "side",
       Value: "dark",
     }));
     hostsRepo.addEnriched(
-      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", type: "dictionary" },
+      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" },
       settingsRepo,
     );
     const loaded = await hostsRepo.readSingle();

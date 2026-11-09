@@ -51,7 +51,7 @@ struct LocalePref {
 struct PrefRow {
     id: i64,
     contact_id: i64,
-    key: String,
+    name: String,
     locale: String,
     timezone: String,
 }
@@ -98,7 +98,7 @@ async fn open() -> Arc<SqliteConnection> {
         "CREATE TABLE prefs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             contact_id INTEGER NOT NULL,
-            key TEXT NOT NULL,
+            name TEXT NOT NULL,
             locale TEXT NOT NULL,
             timezone TEXT NOT NULL
         )",
@@ -181,26 +181,26 @@ fn pref_repo(connection: Arc<dyn Connection>) -> CRUDRepository<PrefRow> {
     options.read_properties = vec![
         "id".into(),
         "contact_id".into(),
-        "key".into(),
+        "name".into(),
         "locale".into(),
         "timezone".into(),
     ];
     options.create_properties = Some(vec![
         "contact_id".into(),
-        "key".into(),
+        "name".into(),
         "locale".into(),
         "timezone".into(),
     ]);
     options.update_properties = Some(vec![
         "contact_id".into(),
-        "key".into(),
+        "name".into(),
         "locale".into(),
         "timezone".into(),
     ]);
     options.schema = Schema::new(HashMap::from([
         ("id".into(), column("integer", false, true, true)),
         ("contact_id".into(), column("integer", false, false, false)),
-        ("key".into(), column("string", false, false, false)),
+        ("name".into(), column("string", false, false, false)),
         ("locale".into(), column("string", false, false, false)),
         ("timezone".into(), column("string", false, false, false)),
     ]));
@@ -241,7 +241,8 @@ fn wired(connection: Arc<SqliteConnection>) -> CRUDRepository<ContactView> {
             "contact_id",
             None,
             EnrichmentPropertyType::Dictionary,
-        ),
+        )
+        .with_dictionary_key("name"),
         prefs,
         None,
     );

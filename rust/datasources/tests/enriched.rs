@@ -511,7 +511,7 @@ async fn round_trips_string_and_object_dictionaries() {
             [
                 ("Id", id.clone()),
                 ("ParentId", SchemaColumn::new("integer")),
-                ("Key", SchemaColumn::new("string")),
+                ("Name", SchemaColumn::new("string")),
                 ("Value", SchemaColumn::new("string")),
             ]
             .into_iter()
@@ -526,7 +526,7 @@ async fn round_trips_string_and_object_dictionaries() {
             [
                 ("Id", id),
                 ("ParentId", SchemaColumn::new("integer")),
-                ("Key", SchemaColumn::new("string")),
+                ("Name", SchemaColumn::new("string")),
                 ("Locale", SchemaColumn::new("string")),
                 ("Timezone", SchemaColumn::new("string")),
             ]
@@ -543,7 +543,8 @@ async fn round_trips_string_and_object_dictionaries() {
                 "ParentId",
                 Some("Value".into()),
                 datasources::EnrichmentPropertyType::Dictionary,
-            ),
+            )
+            .with_dictionary_key("Name"),
             settings.clone(),
             None,
         )
@@ -554,7 +555,8 @@ async fn round_trips_string_and_object_dictionaries() {
                 "ParentId",
                 None,
                 datasources::EnrichmentPropertyType::Dictionary,
-            ),
+            )
+            .with_dictionary_key("Name"),
             prefs.clone(),
             None,
         );
@@ -564,9 +566,9 @@ async fn round_trips_string_and_object_dictionaries() {
             (
                 "Settings",
                 encode_rows(&[
-                    record(&[("Key", Value::from("theme")), ("Value", Value::from("dark"))]),
+                    record(&[("Name", Value::from("theme")), ("Value", Value::from("dark"))]),
                     record(&[
-                        ("Key", Value::from("density")),
+                        ("Name", Value::from("density")),
                         ("Value", Value::from("comfortable")),
                     ]),
                 ]),
@@ -575,12 +577,12 @@ async fn round_trips_string_and_object_dictionaries() {
                 "Prefs",
                 encode_rows(&[
                     record(&[
-                        ("Key", Value::from("home")),
+                        ("Name", Value::from("home")),
                         ("Locale", Value::from("en-GB")),
                         ("Timezone", Value::from("Europe/London")),
                     ]),
                     record(&[
-                        ("Key", Value::from("travel")),
+                        ("Name", Value::from("travel")),
                         ("Locale", Value::from("en-US")),
                         ("Timezone", Value::from("America/New_York")),
                     ]),
@@ -592,34 +594,34 @@ async fn round_trips_string_and_object_dictionaries() {
     assert!(num(&created, "Id") > 0);
     let loaded = hosts.read_single(None, None).await.unwrap().unwrap();
     let settings_text = loaded["Settings"].wire_text();
-    assert!(settings_text.contains("Key=theme"));
+    assert!(settings_text.contains("Name=theme"));
     assert!(settings_text.contains("Value=dark"));
-    assert!(settings_text.contains("Key=density"));
+    assert!(settings_text.contains("Name=density"));
     assert!(settings_text.contains("Value=comfortable"));
     let prefs_text = loaded["Prefs"].wire_text();
-    assert!(prefs_text.contains("Key=home"));
+    assert!(prefs_text.contains("Name=home"));
     assert!(prefs_text.contains("Timezone=Europe/London"));
-    assert!(prefs_text.contains("Key=travel"));
+    assert!(prefs_text.contains("Name=travel"));
     let updated_row_1 = record(&[
         ("Id", created["Id"].clone()),
         ("Label", Value::from("ada")),
         (
             "Settings",
             encode_rows(&[
-                record(&[("Key", Value::from("theme")), ("Value", Value::from("light"))]),
-                record(&[("Key", Value::from("locale")), ("Value", Value::from("en"))]),
+                record(&[("Name", Value::from("theme")), ("Value", Value::from("light"))]),
+                record(&[("Name", Value::from("locale")), ("Value", Value::from("en"))]),
             ]),
         ),
         (
             "Prefs",
             encode_rows(&[
                 record(&[
-                    ("Key", Value::from("home")),
+                    ("Name", Value::from("home")),
                     ("Locale", Value::from("en-GB")),
                     ("Timezone", Value::from("Europe/Paris")),
                 ]),
                 record(&[
-                    ("Key", Value::from("work")),
+                    ("Name", Value::from("work")),
                     ("Locale", Value::from("en-US")),
                     ("Timezone", Value::from("America/New_York")),
                 ]),
@@ -632,14 +634,14 @@ async fn round_trips_string_and_object_dictionaries() {
         .unwrap();
     let updated = hosts.read_single(None, None).await.unwrap().unwrap();
     let settings_text = updated["Settings"].wire_text();
-    assert!(settings_text.contains("Key=theme"));
+    assert!(settings_text.contains("Name=theme"));
     assert!(settings_text.contains("Value=light"));
-    assert!(settings_text.contains("Key=locale"));
-    assert!(!settings_text.contains("Key=density"));
+    assert!(settings_text.contains("Name=locale"));
+    assert!(!settings_text.contains("Name=density"));
     let prefs_text = updated["Prefs"].wire_text();
     assert!(prefs_text.contains("Timezone=Europe/Paris"));
-    assert!(prefs_text.contains("Key=work"));
-    assert!(!prefs_text.contains("Key=travel"));
+    assert!(prefs_text.contains("Name=work"));
+    assert!(!prefs_text.contains("Name=travel"));
     let settings_rows = settings.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(settings_rows.len(), 2);
     let pref_rows = prefs.read(None, None).try_collect::<Vec<_>>().await.unwrap();
@@ -1338,7 +1340,8 @@ async fn schema_graph() -> (CRUDRepository, Arc<CRUDRepository>) {
             "ContactId",
             Some("Value".into()),
             EnrichmentPropertyType::Dictionary,
-        ),
+        )
+        .with_dictionary_key("Name"),
         settings,
         None,
     );
@@ -1440,7 +1443,7 @@ async fn create_contact_stamps_child_contact_id_and_resolves_names() {
             (
                 "Settings",
                 encode_rows(&[record(&[
-                    ("Key", Value::from("theme")),
+                    ("Name", Value::from("theme")),
                     ("Value", Value::from("dark")),
                 ])]),
             ),

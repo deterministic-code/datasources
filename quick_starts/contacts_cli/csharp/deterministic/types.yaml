@@ -336,9 +336,11 @@ types:
         - key:
             type: string
             size: 255
+            references: contact_attribute.key
         - value:
             type: string
             size: unlimited
+            references: contact_attribute.value
 
   - address:
       tags:

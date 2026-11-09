@@ -22,7 +22,7 @@ class Address {
 class Setting {
   Id = 0;
   ContactId = 0;
-  Key = "";
+  Name = "";
   Value = "";
 }
 
@@ -83,7 +83,7 @@ const graph = async () => {
     schema: new Schema({
       Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
       ContactId: { type: "integer", nullable: false, hasDefault: false },
-      Key: { type: "string", nullable: false, hasDefault: false },
+      Name: { type: "string", nullable: false, hasDefault: false },
       Value: { type: "string", nullable: false, hasDefault: false },
     }),
   });
@@ -103,7 +103,7 @@ const graph = async () => {
     addressRepo,
   );
   contacts.addEnriched(
-    { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ContactId", relatedProperty: "Value", type: "dictionary" },
+    { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ContactId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" },
     settings,
   );
   contacts.addEnriched(
