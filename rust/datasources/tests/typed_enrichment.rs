@@ -314,7 +314,7 @@ async fn typed_create_resolves_lookup_on_typed_gender_repo() {
 #[facet(crate = ::datasources::facet)]
 struct AddressView {
     id: i64,
-    contact_id: String,
+    contact_id: i64,
     line: String,
 }
 
@@ -329,7 +329,7 @@ impl SchemaObject for AddressView {}
 impl SchemaObject for ContactView {}
 
 #[tokio::test]
-async fn typed_via_skips_integer_contact_id_on_string_view() {
+async fn typed_list_stamps_integer_contact_id() {
     let connection = MemoryDriver.connection(None);
     connection.open().await.unwrap();
     let mut contacts = CRUDRepository::<ContactView>::new(Arc::clone(&connection), {
@@ -371,18 +371,18 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
                 SchemaColumn {
                     type_name: "integer".into(),
                     nullable: false,
-                has_default: false,
-                is_id: false,
-            },
+                    has_default: false,
+                    is_id: false,
+                },
             ),
             (
                 "line".into(),
                 SchemaColumn {
                     type_name: "string".into(),
                     nullable: false,
-                has_default: false,
-                is_id: false,
-            },
+                    has_default: false,
+                    is_id: false,
+                },
             ),
         ]));
         options
@@ -399,17 +399,9 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
         Arc::new(addresses),
         None,
     );
-    let mut row = Row::new();
-    row.insert("id".into(), Value::Int(1));
-    row.insert("contact_id".into(), Value::Int(9));
-    row.insert("line".into(), Value::from("1 Main"));
-    let converted = AddressView::object_converter().convert(&row).unwrap();
-    assert_eq!(converted.line, "1 Main");
-    assert_eq!(converted.contact_id, "");
     let created = contacts
         .create(ContactView {
             addresses: vec![AddressView {
-                contact_id: String::new(),
                 line: "1 Main".into(),
                 ..Default::default()
             }],
@@ -420,4 +412,6 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
     assert!(created.id > 0);
     let read = contacts.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read.len(), 1);
+    assert_eq!(read[0].addresses[0].contact_id, created.id);
+    assert_eq!(read[0].addresses[0].line, "1 Main");
 }

@@ -29,13 +29,13 @@ export abstract class CreateEnrichmentStrategy<T> {
         }
         if ((enrichment.type ?? "object") !== "object") continue;
         const dest = enrichment.destinationProperty;
+        if (this.presentCell(record[enrichment.sourceProperty])) continue;
         const name = record[dest];
         if (!this.presentCell(name)) {
           const column = schema.columns[dest];
           if (column && !column.nullable) throw new DatasourceError(`Unknown ${dest}`);
           continue;
         }
-        if (this.presentCell(record[enrichment.sourceProperty])) continue;
         const found = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedProperty, name)));
         if (!found)
           throw new DatasourceError(`Unknown ${dest} "${String(name)}"`);

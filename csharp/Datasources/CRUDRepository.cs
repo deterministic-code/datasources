@@ -156,7 +156,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Insert(T item)
     {
-        var record = MergeZeros(await LookupRow(item));
+        var record = await LookupRow(item);
         var extras = EnrichmentSources();
         var fields = Params(record, col => extras.Contains(col) || Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)), extras);
         var statement = CRUDStatements.Insert(fields);
@@ -205,7 +205,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Save(T item, IWhere? byWhere)
     {
-        var record = ApplyEmptyDefaults(await LookupRow(item), updateProperties, fillMissing: false);
+        var record = await LookupRow(item);
         var extras = EnrichmentSources();
         var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras, omitNull: false);
         if (fields.Count == 0)
@@ -243,36 +243,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     static bool Listed(IReadOnlyList<string>? list, string col, bool fallback) =>
         list is null ? fallback : list.Contains(col);
 
-    internal static bool LanguageZero(Value value) => value is Value.Text("") or Value.Bool(false);
-
-    Row MergeZeros(Row record)
-    {
-        ApplyEmptyDefaults(record, createProperties, fillMissing: true);
-        foreach (var (key, value) in ReverseConvert(new T()))
-            if (LanguageZero(value) && Listed(createProperties, key, !ids.Contains(key)))
-                record.TryAdd(key, value);
-        return record;
-    }
-
-    Row ApplyEmptyDefaults(Row record, IReadOnlyList<string>? properties, bool fillMissing)
-    {
-        foreach (var (key, column) in schema.Columns)
-        {
-            if (!Listed(properties, key, !ids.Contains(key)) || column.HasDefault || EnrichmentSource(key))
-                continue;
-            var zero = SchemaDefault.Of(column);
-            if (!record.TryGetValue(key, out var existing))
-            {
-                if (fillMissing && LanguageZero(zero))
-                    record[key] = zero;
-                continue;
-            }
-            if (existing is Value.Text("") && !column.Nullable)
-                record[key] = zero;
-        }
-        return record;
-    }
-
     IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include, IReadOnlySet<string>? extras = null, bool omitNull = true) =>
         [.. record.Where(pair => include(pair.Key) && (!omitNull || pair.Value is not Value.Null)
                 && (extras?.Contains(pair.Key) == true || Writable(pair.Key) && !EnrichmentInto(pair.Key)))
@@ -295,9 +265,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     protected bool EnrichmentInto(string name) =>
         ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.DestinationProperty == name);
-
-    bool EnrichmentSource(string name) =>
-        ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.SourceProperty == name);
 
     IEnumerable<string> ObjectSourceProperties() =>
         ((IEnrichmentHost)this).Enrichments

@@ -28,7 +28,6 @@ import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { Schema } from "./Schema.ts";
-import { SchemaDefault } from "./SchemaDefault.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -37,34 +36,6 @@ const assigned = (value: Value): boolean =>
 
 const listed = (list: readonly string[] | undefined, col: string, fallback: boolean): boolean =>
   list === undefined ? fallback : list.includes(col);
-
-const languageZero = (value: Value): boolean => value === "" || value === false;
-
-const applyEmptyDefaults = (
-  record: Cells,
-  schema: Schema,
-  ids: readonly string[],
-  properties: readonly string[] | undefined,
-  fillMissing: boolean,
-  skip: (name: string) => boolean,
-): Cells => {
-  const filled = { ...record };
-  for (const [name, column] of Object.entries(schema.columns)) {
-    if (ids.includes(name) || !listed(properties, name, true) || column.hasDefault || skip(name))
-      continue;
-    const zero = SchemaDefault.of(column);
-    if (filled[name] === "" && !column.nullable) filled[name] = zero;
-    else if (fillMissing && filled[name] === undefined && languageZero(zero)) filled[name] = zero;
-  }
-  return filled;
-};
-
-const zerosFromSchema = (
-  schema: Schema,
-  ids: readonly string[],
-  createProperties: readonly string[] | undefined,
-  skip: (name: string) => boolean,
-): Cells => applyEmptyDefaults({}, schema, ids, createProperties, true, skip);
 
 const writable = (
   key: string,
@@ -118,7 +89,6 @@ export class CRUDRepository<T = Cells>
   readonly ids: readonly string[];
   private readonly createProperties?: readonly string[];
   private readonly updateProperties?: readonly string[];
-  protected createZeros?: Cells;
   private readonly schema: Schema;
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
@@ -221,7 +191,7 @@ export class CRUDRepository<T = Cells>
     this.readSingle(this.byId(id));
 
   private insert = async (item: T): Promise<Response> => {
-    const record = this.fillCreateZeros(await this.lookupRow(item));
+    const record = await this.lookupRow(item);
     const extras = this.objectSources();
     const fields = fieldsOf(
       record,
@@ -265,14 +235,7 @@ export class CRUDRepository<T = Cells>
   private idValue = (item: T): Scalar | undefined => scalarOf((item as Props)[this.ids[0]!]);
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    const record = applyEmptyDefaults(
-      await this.lookupRow(item),
-      this.schema,
-      this.ids,
-      this.updateProperties,
-      false,
-      (name) => this.enrichmentSource(name),
-    );
+    const record = await this.lookupRow(item);
     const extras = this.objectSources();
     const fields = fieldsOf(
       record,
@@ -316,16 +279,6 @@ export class CRUDRepository<T = Cells>
     return this.idWhere({ [this.ids[0]!]: id });
   };
 
-  fillCreateZeros = (record: Cells): Cells => {
-    const skip = (name: string): boolean => this.enrichmentSource(name);
-    const zeros =
-      this.createZeros !== undefined && Object.keys(this.createZeros).length > 0
-        ? this.createZeros
-        : zerosFromSchema(this.schema, this.ids, this.createProperties, skip);
-    const filled = Object.keys(zeros).length === 0 ? { ...record } : { ...zeros, ...record };
-    return applyEmptyDefaults(filled, this.schema, this.ids, this.createProperties, false, skip);
-  };
-
   private mapped = (row: Cells): Cells =>
     this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
 
@@ -358,9 +311,6 @@ export class CRUDRepository<T = Cells>
 
   protected enrichmentInto = (name: string): boolean =>
     enrichmentsOf<T>(this)!.some((entry) => entry.enrichment.destinationProperty === name);
-
-  private enrichmentSource = (name: string): boolean =>
-    enrichmentsOf<T>(this)!.some((entry) => entry.enrichment.sourceProperty === name);
 
   private objectSourceProperties = (): string[] =>
     enrichmentsOf<T>(this)!

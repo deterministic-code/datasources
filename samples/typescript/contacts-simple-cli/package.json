@@ -11,5 +11,15 @@
     "tsx": "^4.20.5",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"
+  },
+  "dependencies": {
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-code-generators": "file:../../../typescript/code-generators",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",
+    "@deterministic-code/deterministic-generators-common": "^0.1.0",
+    "@deterministic-code/generators-common": "^0.0.1",
+    "@deterministic-code/migraters": "^0.0.19"
   }
 }

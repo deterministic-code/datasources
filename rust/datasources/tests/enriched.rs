@@ -1181,3 +1181,292 @@ async fn bulk_create_writes_parents_and_children() {
     stored_ids.sort();
     assert_eq!(created_ids, stored_ids);
 }
+
+fn id_column() -> SchemaColumn {
+    SchemaColumn {
+        is_id: true,
+        ..SchemaColumn::new("integer")
+    }
+}
+
+fn named_address_repo(connection: Arc<dyn Connection>) -> CRUDRepository {
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "Address".into();
+    options.ids = vec!["Id".into()];
+    options.property_mappings = Some(Arc::new(columns()));
+    options.read_properties = vec![
+        "Id".into(),
+        "ContactId".into(),
+        "Line1".into(),
+        "AddressTypeId".into(),
+    ];
+    options.create_properties = Some(vec!["ContactId".into(), "Line1".into()]);
+    options.schema = Schema::new(std::collections::HashMap::from([
+        ("Id".into(), id_column()),
+        ("ContactId".into(), SchemaColumn::new("integer")),
+        ("Line1".into(), SchemaColumn::new("string")),
+        ("AddressTypeName".into(), SchemaColumn::new("string")),
+    ]));
+    CRUDRepository::<Row>::new(connection, options).unwrap()
+}
+
+async fn schema_graph() -> (CRUDRepository, Arc<CRUDRepository>) {
+    let connection = setup(&mut []).await;
+    let sources = Arc::new(mapped_crud(connection.clone(), "ContactSource"));
+    let types = Arc::new(mapped_crud(connection.clone(), "AddressType"));
+    sources
+        .create(record(&[("Name", Value::from("import"))]))
+        .await
+        .unwrap();
+    types
+        .create(record(&[("Name", Value::from("Home"))]))
+        .await
+        .unwrap();
+    let mut addresses = named_address_repo(connection.clone());
+    addresses.add_enriched(
+        Enrichment::new(
+            "AddressTypeName",
+            "AddressTypeId",
+            "Id",
+            Some("Name".into()),
+            EnrichmentPropertyType::Object,
+        ),
+        types,
+        None,
+    );
+    let settings = Arc::new(mapped_crud(connection.clone(), "Setting"));
+    let mut contacts = {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Contact".into();
+        options.ids = vec!["Id".into()];
+        options.property_mappings = Some(Arc::new(columns()));
+        options.read_properties = vec!["Id".into(), "ContactSourceId".into()];
+        options.create_properties = Some(vec![]);
+        options.schema = Schema::new(std::collections::HashMap::from([
+            ("Id".into(), id_column()),
+            ("ContactSourceName".into(), SchemaColumn::new("string")),
+        ]));
+        CRUDRepository::<Row>::new(connection, options).unwrap()
+    };
+    let address_repo = Arc::new(addresses);
+    contacts.add_enriched(
+        Enrichment::new(
+            "Addresses",
+            "Id",
+            "ContactId",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        address_repo.clone(),
+        None,
+    );
+    contacts.add_enriched(
+        Enrichment::new(
+            "Settings",
+            "Id",
+            "ContactId",
+            Some("Value".into()),
+            EnrichmentPropertyType::Dictionary,
+        ),
+        settings,
+        None,
+    );
+    contacts.add_enriched(
+        Enrichment::new(
+            "ContactSourceName",
+            "ContactSourceId",
+            "Id",
+            Some("Name".into()),
+            EnrichmentPropertyType::Object,
+        ),
+        sources,
+        None,
+    );
+    (contacts, address_repo)
+}
+
+#[tokio::test]
+async fn create_resolves_address_type_name_without_address_type_id_in_schema() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "AddressType"));
+    let mut addresses = named_address_repo(connection);
+    let home = types
+        .create(record(&[("Name", Value::from("Home"))]))
+        .await
+        .unwrap();
+    addresses.add_enriched(
+        Enrichment::new(
+            "AddressTypeName",
+            "AddressTypeId",
+            "Id",
+            Some("Name".into()),
+            EnrichmentPropertyType::Object,
+        ),
+        types,
+        None,
+    );
+    let created = addresses
+        .create(record(&[
+            ("Line1", Value::from("1 Main")),
+            ("AddressTypeName", Value::from("Home")),
+        ]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    let loaded = addresses.read_single(None, None).await.unwrap().unwrap();
+    assert_eq!(loaded["Line1"], Value::from("1 Main"));
+    assert_eq!(loaded["AddressTypeName"], Value::from("Home"));
+    assert_eq!(loaded["AddressTypeId"], home["Id"]);
+}
+
+#[tokio::test]
+async fn create_keeps_address_type_id_when_name_is_empty() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "AddressType"));
+    let mut addresses = named_address_repo(connection);
+    let home = types
+        .create(record(&[("Name", Value::from("Home"))]))
+        .await
+        .unwrap();
+    addresses.add_enriched(
+        Enrichment::new(
+            "AddressTypeName",
+            "AddressTypeId",
+            "Id",
+            Some("Name".into()),
+            EnrichmentPropertyType::Object,
+        ),
+        types,
+        None,
+    );
+    let created = addresses
+        .create(record(&[
+            ("Line1", Value::from("1 Main")),
+            ("AddressTypeId", home["Id"].clone()),
+        ]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    assert_eq!(
+        addresses.read_single(None, None).await.unwrap().unwrap()["AddressTypeId"],
+        home["Id"]
+    );
+}
+
+#[tokio::test]
+async fn create_contact_stamps_child_contact_id_and_resolves_names() {
+    let (contacts, addresses) = schema_graph().await;
+    let created = contacts
+        .create(record(&[
+            ("ContactSourceName", Value::from("import")),
+            (
+                "Addresses",
+                encode_rows(&[record(&[
+                    ("Line1", Value::from("1 Main")),
+                    ("AddressTypeName", Value::from("Home")),
+                ])]),
+            ),
+            (
+                "Settings",
+                encode_rows(&[record(&[
+                    ("Key", Value::from("theme")),
+                    ("Value", Value::from("dark")),
+                ])]),
+            ),
+        ]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    let loaded = contacts.read_single(None, None).await.unwrap().unwrap();
+    assert_eq!(loaded["ContactSourceName"], Value::from("import"));
+    let stored = addresses
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0]["Line1"], Value::from("1 Main"));
+    assert_eq!(stored[0]["AddressTypeName"], Value::from("Home"));
+    assert_eq!(stored[0]["ContactId"], created["Id"]);
+}
+
+#[tokio::test]
+async fn create_unknown_contact_source_name_throws() {
+    let (contacts, _) = schema_graph().await;
+    let error = contacts
+        .create(record(&[("ContactSourceName", Value::from("Nope"))]))
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("ContactSourceName"));
+    assert!(error.to_string().contains("Nope"));
+}
+
+#[tokio::test]
+async fn create_missing_contact_source_name_throws() {
+    let (contacts, _) = schema_graph().await;
+    let error = contacts.create(Row::new()).await.unwrap_err();
+    assert!(error.to_string().contains("ContactSourceName"));
+}
+
+#[tokio::test]
+async fn create_unknown_nested_address_type_name_throws() {
+    let (contacts, _) = schema_graph().await;
+    let error = contacts
+        .create(record(&[
+            ("ContactSourceName", Value::from("import")),
+            (
+                "Addresses",
+                encode_rows(&[record(&[
+                    ("Line1", Value::from("1 Main")),
+                    ("AddressTypeName", Value::from("Nope")),
+                ])]),
+            ),
+        ]))
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("AddressTypeName"));
+    assert!(error.to_string().contains("Nope"));
+}
+
+#[tokio::test]
+async fn create_keeps_unknown_contact_source_id_when_name_is_empty() {
+    let (contacts, _) = schema_graph().await;
+    let created = contacts
+        .create(record(&[("ContactSourceId", Value::Int(99))]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    assert_eq!(
+        contacts.read_single(None, None).await.unwrap().unwrap()["ContactSourceId"],
+        Value::Int(99)
+    );
+}
+
+#[tokio::test]
+async fn create_writes_biginteger_id() {
+    let connection = setup(&mut []).await;
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "BigId".into();
+    options.ids = vec!["Id".into()];
+    options.schema = Schema::new(std::collections::HashMap::from([
+        (
+            "Id".into(),
+            SchemaColumn {
+                type_name: "biginteger".into(),
+                is_id: true,
+                ..SchemaColumn::new("biginteger")
+            },
+        ),
+        ("Name".into(), SchemaColumn::new("string")),
+    ]));
+    let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
+    let created = repo
+        .create(record(&[("Name", Value::from("Ada"))]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    assert_eq!(
+        repo.read_single(None, None).await.unwrap().unwrap()["Name"],
+        Value::from("Ada")
+    );
+}

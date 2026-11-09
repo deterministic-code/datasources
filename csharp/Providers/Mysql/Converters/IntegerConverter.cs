@@ -6,8 +6,9 @@ internal sealed class IntegerConverter : TypeConverter<Value, Value>
 {
     public override Value Convert(Value from) => from switch
     {
-        Value.Text("") => 0L,
-        Value.Text(var text) when long.TryParse(text, out var number) => number,
+        Value.Text(var text) => long.TryParse(text, out var number)
+            ? number
+            : throw new FormatException($"\"{text}\" is not a long"),
         _ => from
     };
 

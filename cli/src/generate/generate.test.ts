@@ -1142,7 +1142,8 @@ types:
         expect(textOf(types, "View/User.cs")).toContain("Backend.Types.Datasource.UserBase");
       }
       if (dialect === "typescript") {
-        expect(textOf(types, "types/view/user.ts")).toContain("export interface User extends UserBase");
+        expect(textOf(types, "types/view/user.ts")).toContain("export class User");
+        expect(textOf(types, "types/view/user.ts")).not.toContain("extends UserBase");
         expect(textOf(repos, "repositoryRegistry.ts")).toContain('"Category", "categories"');
         expect(textOf(repos, "repositoryRegistry.ts")).toContain('"User", "users"');
       }
@@ -1163,8 +1164,8 @@ types:
         expect(textOf(clashTypes, "View/User.cs")).toContain("Backend.Types.Datasource.User");
       }
       if (dialect === "typescript") {
-        expect(textOf(clashTypes, "types/view/user.ts")).toContain("User as UserBase");
-        expect(textOf(clashTypes, "types/view/user.ts")).toContain("export interface User extends UserBase");
+        expect(textOf(clashTypes, "types/view/user.ts")).toContain("export class User");
+        expect(textOf(clashTypes, "types/view/user.ts")).not.toContain("UserBase");
       }
       if (dialect === "rust") {
         const clashMod = clashRepos.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "mod.rs");
@@ -1226,12 +1227,18 @@ types:
   it("emits a typescript Contact type and sqlite tables", async () => {
     const types = await deterministic.generateTypes(request("typescript"));
     const text = types.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
-    expect(text).toContain("export interface Contact");
-    expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => ({ ...init } as Contact);");
+    expect(text).toContain("export class Contact");
+    expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => Object.assign(new Contact(), init);");
+    expect(text).not.toContain("Omit<");
     expect(text).toContain("export class AddressType");
-    expect(text).toContain("export const addressType = (init: Partial<AddressType>): AddressType => ({ ...init } as AddressType);");
+    expect(text).toContain("export const addressType = (init: Partial<AddressType>): AddressType => Object.assign(new AddressType(), init);");
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
+    const repos = await deterministic.generateRepositories(request("typescript"));
+    const contactsRepo = textOf(repos, "contactsRepository.ts");
+    expect(contactsRepo).toContain("import { Contact }");
+    expect(contactsRepo).not.toContain("import type { Contact }");
+    expect(contactsRepo).toContain("type: Contact");
     const sql = await deterministic.generateDatasource(request("typescript"));
     await deterministic.generateDatasource(request("typescript", {}, { INSTALLED_PROVIDERS: "sqlite" }));
     await deterministic.generateDatasource(

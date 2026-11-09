@@ -1869,6 +1869,16 @@ async fn create_and_update_honor_write_properties() {
     );
 }
 
+#[derive(Clone, Default, Facet)]
+struct ContactZeros {
+    id: i64,
+    name: String,
+    given_name: String,
+    is_starred: bool,
+}
+
+impl SchemaObject for ContactZeros {}
+
 #[tokio::test]
 async fn create_fills_missing_string_and_bool_zeros() {
     let command = Arc::new(MockCommand::new());
@@ -1881,41 +1891,37 @@ async fn create_fills_missing_string_and_bool_zeros() {
         "name".into(),
         "given_name".into(),
         "is_starred".into(),
-        "uuid".into(),
-        "gender_type_id".into(),
     ];
-    options.create_properties = Some(vec![
-        "name".into(),
-        "given_name".into(),
-        "is_starred".into(),
-        "uuid".into(),
-        "gender_type_id".into(),
-    ]);
-    let mut zeros = Row::new();
-    zeros.insert("name".into(), Value::from(""));
-    zeros.insert("is_starred".into(), Value::from(false));
-    let repo = CRUDRepository::<Row>::new(connection, options)
-        .unwrap()
-        .with_create_zeros(zeros);
+    options.create_properties = Some(vec!["name".into(), "given_name".into(), "is_starred".into()]);
+    let repo = CRUDRepository::<ContactZeros>::new(connection, options).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     command
         .reader_rows
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1))]));
-    repo.create(record(&[("given_name", Value::from("Ada"))]))
-        .await
-        .unwrap();
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(2))]));
+    repo.create(ContactZeros {
+        given_name: "Ada".into(),
+        ..Default::default()
+    })
+    .await
+    .unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)"
     );
     command.execute_logs.lock().unwrap().clear();
-    repo.create(record(&[
-        ("given_name", Value::from("Ada")),
-        ("is_starred", Value::from(true)),
-        ("name", Value::from("Ada Lovelace")),
-    ]))
+    repo.create(ContactZeros {
+        given_name: "Ada".into(),
+        is_starred: true,
+        name: "Ada Lovelace".into(),
+        ..Default::default()
+    })
     .await
     .unwrap();
     assert_eq!(

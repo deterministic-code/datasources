@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -51,9 +52,9 @@ const walk = async (dir, skip) => {
 const skipPack = (path) =>
   path.endsWith(".test.ts") || path.endsWith("generate-datasource-type-validators.ts") || path.includes(`${join("src", "templates")}`);
 
-const transpile = async (name) => {
-  const src = join(packages, name, "src");
-  const dist = join(packages, name, "dist");
+const transpileRoot = async (pkg) => {
+  const src = join(pkg, "src");
+  const dist = join(pkg, "dist");
   await build({
     entryPoints: await walk(src, skipPack),
     outdir: dist,
@@ -66,6 +67,8 @@ const transpile = async (name) => {
   });
   await cp(join(src, "templates"), join(dist, "templates"), { recursive: true }).catch(() => undefined);
 };
+
+const transpile = async (name) => transpileRoot(join(packages, name));
 
 const parserRoot = join(packages, "deterministic-generators-common/typescript/parser");
 const parserSource = join(parserRoot, "parser/specification-parser.ts");
@@ -95,6 +98,10 @@ await build({
 
 for (const name of ["generators-common", "typescript-generators", "csharp-generators", "rust-generators"]) {
   await transpile(name);
+}
+for (const name of ["typescript-generators", "csharp-generators", "rust-generators"]) {
+  const nestedCommon = join(packages, name, "node_modules/@deterministic-code/generators-common");
+  if (existsSync(join(nestedCommon, "src"))) await transpileRoot(nestedCommon);
 }
 
 const tsc = spawnSync(
