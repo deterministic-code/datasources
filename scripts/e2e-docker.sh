@@ -23,8 +23,13 @@ quick_starts/contacts_cli/csharp
 quick_starts/contacts_cli/rust
 "
 
-if [ "${1:-}" = --local ]; then shift; fi
+local=
+if [ "${1:-}" = --local ]; then
+  local=1
+  shift
+fi
 if [ "${1:-}" = --quickstarts ]; then
+  local=
   shift
   # shellcheck disable=SC2086
   set -- $quickstarts
@@ -72,8 +77,21 @@ run() {
   trap 'docker compose down -v --remove-orphans -t 0' EXIT
   docker compose build app
   docker compose up -d --wait mysql postgres
-  docker compose run --rm --no-deps app sh sqlite.sh
-  docker compose run --rm --no-deps app sh mysql-postgres.sh
+  if [ -n "$local" ]; then
+    docker compose run --rm --no-deps \
+      -e DATASOURCES_REPO=/datasources \
+      -v "$repo:/datasources" \
+      -v /datasources/cli/node_modules \
+      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh sqlite.sh --local'
+    docker compose run --rm --no-deps \
+      -e DATASOURCES_REPO=/datasources \
+      -v "$repo:/datasources" \
+      -v /datasources/cli/node_modules \
+      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh mysql-postgres.sh --local'
+  else
+    docker compose run --rm --no-deps app sh sqlite.sh
+    docker compose run --rm --no-deps app sh mysql-postgres.sh
+  fi
 }
 
 for dir in "$@"; do

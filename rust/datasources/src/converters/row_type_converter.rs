@@ -25,8 +25,7 @@ impl RowTypeConverter {
     ) -> Self {
         let mut fields = HashMap::new();
         for (name, ty) in columns {
-            let key = catalog_key(ty);
-            if let Some(converter) = catalog().remove(&key).or_else(|| catalog().remove(ty)) {
+            if let Some(converter) = catalog().remove(ty) {
                 fields.insert(name.clone(), converter);
             }
         }
@@ -52,32 +51,6 @@ impl RowTypeConverter {
                 Ok((key.clone(), cell))
             })
             .collect()
-    }
-}
-
-fn catalog_key(ty: &str) -> String {
-    let name = ty.to_ascii_lowercase();
-    if name.contains("datetime") {
-        "datetime".into()
-    } else if name.contains("uuid") || name.contains("guid") {
-        "uuid".into()
-    } else if name.contains("decimal") {
-        "decimal".into()
-    } else if name.contains("binary") || name.contains("bytes") || name.contains("vec<u8>") {
-        "binary".into()
-    } else if name.contains("bool") {
-        "boolean".into()
-    } else if name.contains("int")
-        || matches!(
-            name.as_str(),
-            "long" | "short" | "byte" | "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64"
-        )
-    {
-        "integer".into()
-    } else if name == "string" || name == "str" {
-        "string".into()
-    } else {
-        ty.to_string()
     }
 }
 
@@ -143,7 +116,7 @@ mod tests {
         }
         let converter = RowTypeConverter::from(
             || HashMap::from([(
-                "integer".into(),
+                "unsignedinteger".into(),
                 Box::new(TextInt) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
             )]),
             &HashMap::from([("id".into(), "unsignedinteger".into())]),
@@ -198,7 +171,7 @@ mod tests {
                 ])
             },
             &HashMap::from([
-                ("created".into(), "DateTime<Utc>".into()),
+                ("created".into(), "datetime".into()),
                 ("name".into(), "string".into()),
             ]),
         );

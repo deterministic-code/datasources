@@ -123,6 +123,12 @@ pub(crate) async fn resolve_lookups<T: Entity>(
                 continue;
             }
             let dest = &enrichment.destination_property;
+            if record
+                .get(&enrichment.source_property)
+                .is_some_and(|value| !missing(value))
+            {
+                continue;
+            }
             let Some(name) = record.get(dest).cloned().filter(|value| !missing(value)) else {
                 if schema
                     .columns
@@ -133,12 +139,6 @@ pub(crate) async fn resolve_lookups<T: Entity>(
                 }
                 continue;
             };
-            if record
-                .get(&enrichment.source_property)
-                .is_some_and(|value| !missing(value))
-            {
-                continue;
-            }
             let found = entry
                 .lookup(related, name.clone(), &enrichment.related_key)
                 .await?;

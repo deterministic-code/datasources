@@ -58,13 +58,13 @@ public abstract class CreateEnrichmentStrategy<T>
             if (entry.Enrichment.Type is not EnrichmentPropertyType.Object) continue;
             var dest = entry.Enrichment.DestinationProperty;
             var source = entry.Enrichment.SourceProperty;
+            if (record.TryGetValue(source, out var existing) && !Missing(existing)) continue;
             if (!record.TryGetValue(dest, out var name) || Missing(name))
             {
                 if (schema.Columns.TryGetValue(dest, out var column) && !column.Nullable)
                     throw new DatasourceException($"Unknown {dest}");
                 continue;
             }
-            if (record.TryGetValue(source, out var existing) && !Missing(existing)) continue;
             var id = await stored.Read.Lookup(related, name, entry.Enrichment.RelatedKey)
                 ?? throw new DatasourceException($"Unknown {dest} \"{name.ToObject()}\"");
             Set(record, source, id);

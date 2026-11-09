@@ -154,13 +154,7 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     {
         var objects = Options.ObjectConverter ?? new MetaDataRowTypeConverter<T> { ShouldCoerceId = true };
         var row = objects.ReverseConvert(item);
-        row = Options.RowConverter?.ReverseConvert(row) ?? row;
-        var zeros = objects.ReverseConvert(new T());
-        zeros = Options.RowConverter?.ReverseConvert(zeros) ?? zeros;
-        foreach (var (key, value) in zeros)
-            if (CRUDRepository<T>.LanguageZero(value) && Listed(Options.CreateProperties, key, !Ids.Contains(key)))
-                row.TryAdd(key, value);
-        return row;
+        return Options.RowConverter?.ReverseConvert(row) ?? row;
     }
 
     IReadOnlyList<Parameter> Fields(Row record, Func<string, bool> include, bool omitNull = true) =>

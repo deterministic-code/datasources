@@ -11,6 +11,7 @@ public class MysqlRowTypeConvertersTests
         Assert.Equal(
             [
                 "boolean", "datetime", "uuid", "decimal", "binary", "integer",
+                "unsignedinteger", "smallinteger", "unsignedsmallinteger", "biginteger", "unsignedbiginteger",
             ],
             types.Keys);
     }

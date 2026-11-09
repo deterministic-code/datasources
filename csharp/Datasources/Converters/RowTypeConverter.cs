@@ -21,10 +21,7 @@ public sealed class RowTypeConverter : TypeConverter<Row, Row>
     static TypeConverter<Value, Value>? FieldConverter(
         IReadOnlyDictionary<string, TypeConverter<Value, Value>> converters,
         string type) =>
-        converters.TryGetValue(type, out var converter) ? converter
-        : type.EndsWith("integer", StringComparison.Ordinal) && converters.TryGetValue("integer", out converter)
-            ? converter
-            : null;
+        converters.TryGetValue(type, out var converter) ? converter : null;
 
     public override Row Convert(Row from) => Apply(from, reverse: false);
 

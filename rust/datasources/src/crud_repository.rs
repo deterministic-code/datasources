@@ -45,7 +45,6 @@ pub struct CRUDRepository<T: Entity = Row> {
     ids: Vec<String>,
     create_properties: Option<Vec<String>>,
     update_properties: Option<Vec<String>>,
-    create_zeros: Row,
     crud_statements: CRUDRepositoryStatements,
     tree: RepositoryTree<T>,
     write: Arc<dyn WriteEnrichmentStrategy<T>>,
@@ -105,7 +104,6 @@ impl<T: Entity> CRUDRepository<T> {
             ids: id,
             create_properties,
             update_properties,
-            create_zeros: Row::new(),
             tree,
             write: Arc::new(DefaultWriteEnrichmentStrategy::<T>::default()),
             entity: PhantomData,
@@ -128,7 +126,6 @@ impl<T: Entity> CRUDRepository<T> {
             ids,
             create_properties: None,
             update_properties: None,
-            create_zeros: Row::new(),
             tree,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::<T>::default())),
             entity: PhantomData,
@@ -138,51 +135,6 @@ impl<T: Entity> CRUDRepository<T> {
     pub fn with_write(mut self, write: Arc<dyn WriteEnrichmentStrategy<T>>) -> Self {
         self.write = write;
         self
-    }
-
-    pub fn with_create_zeros(mut self, zeros: Row) -> Self {
-        self.create_zeros = zeros;
-        self
-    }
-
-    pub fn fill_create_zeros(&self, record: &Row) -> Row {
-        let mut filled = record.clone();
-        if self.create_zeros.is_empty() {
-            self.apply_empty_defaults(&mut filled, &self.create_properties, true);
-        } else {
-            for (key, value) in &self.create_zeros {
-                filled.entry(key.clone()).or_insert_with(|| value.clone());
-            }
-            self.apply_empty_defaults(&mut filled, &self.create_properties, false);
-        }
-        filled
-    }
-
-    fn apply_empty_defaults(
-        &self,
-        filled: &mut Row,
-        properties: &Option<Vec<String>>,
-        fill_missing: bool,
-    ) {
-        for (key, column) in &self.readonly.schema().columns {
-            if self.ids.iter().any(|id| id == key)
-                || !listed(properties, key, true)
-                || column.has_default
-                || self.enrichment_source(key)
-            {
-                continue;
-            }
-            let zero = crate::schema_default::of(column);
-            match filled.get(key) {
-                Some(Value::Text(text)) if text.is_empty() && !column.nullable => {
-                    filled.insert(key.clone(), zero);
-                }
-                None if fill_missing && language_zero(&zero) => {
-                    filled.insert(key.clone(), zero);
-                }
-                _ => {}
-            }
-        }
     }
 
     pub fn add_enriched<TRelated: Entity>(
@@ -448,7 +400,7 @@ impl<T: Entity> CRUDRepository<T> {
     }
 
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
-        let record = self.fill_create_zeros(&self.readonly.reverse_convert(stored)?);
+        let record = self.readonly.reverse_convert(stored)?;
         let fields = self.insert_params(&record)?;
         let statement = self.crud_statements.insert(&fields);
         let response = self
@@ -519,23 +471,12 @@ impl<T: Entity> CRUDRepository<T> {
             .any(|entry| entry.enrichment.destination_property == name)
     }
 
-    fn enrichment_source(&self, name: &str) -> bool {
-        self.readonly
-            .enrichments
-            .lock()
-            .expect("enrichments")
-            .iter()
-            .any(|entry| entry.enrichment.source_property == name)
-    }
-
     async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if self.readonly.memory_items().is_some() {
             let stored = self.without_enrichment(item);
             return Ok(self.readonly.memory_items().expect("memory").save(&stored));
         }
         let record = self.readonly.reverse_convert(item)?;
-        let mut record = record;
-        self.apply_empty_defaults(&mut record, &self.update_properties, false);
         let fields = self.params(&record, false)?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
@@ -820,10 +761,6 @@ fn listed(list: &Option<Vec<String>>, key: &str, fallback: bool) -> bool {
         Some(names) => names.iter().any(|name| name == key),
         None => fallback,
     }
-}
-
-fn language_zero(value: &Value) -> bool {
-    matches!(value, Value::Text(text) if text.is_empty()) || matches!(value, Value::Bool(false))
 }
 
 fn assigned(value: &Value) -> bool {

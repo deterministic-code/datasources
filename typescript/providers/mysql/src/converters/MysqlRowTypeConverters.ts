@@ -19,7 +19,6 @@ export const reverse = (value: Value): Value =>
   typeof value === "boolean"
     ? MysqlRowTypeConverters.boolean.reverseConvert(value)
     : value instanceof Date
-      || (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value))
       ? MysqlRowTypeConverters.datetime.reverseConvert(value)
       : value instanceof Uint8Array
         ? MysqlRowTypeConverters.binary.reverseConvert(value)

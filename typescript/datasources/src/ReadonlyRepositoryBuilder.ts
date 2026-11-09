@@ -33,12 +33,7 @@ export class ReadonlyRepositoryBuilder<T = Cells> {
       objectConverter.referenceColumns = propertyMappings;
       objectConverter.ids = options.schema?.ids().length ? options.schema.ids() : this.ids(options);
       objectConverter.references.clear();
-      const columns = options.schema?.columns;
-      const schemaHasValues = !!columns && Object.keys(columns).some((name) => !columns[name].isId);
-      if (schemaHasValues) {
-        for (const name of names)
-          if (!(name in columns)) objectConverter.references.add(name);
-      } else if (options.type) {
+      if (options.type) {
         const instance = new options.type() as T & Record<string, T>;
         for (const name of names) {
           const value = instance[name];

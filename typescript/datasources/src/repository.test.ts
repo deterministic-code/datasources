@@ -35,6 +35,15 @@ class PascalId {
   Id = 0;
 }
 
+class ContactZeros {
+  id = 0;
+  name = "";
+  given_name = "";
+  is_starred = false;
+  uuid = "new-id";
+  gender_type_id = 0;
+}
+
 class Composite {
   org_id = 0;
   user_id = 0;
@@ -250,48 +259,41 @@ describe("CRUDRepository", () => {
     );
   });
 
-  it("fills missing string and bool zeros on create", async () => {
+  it("fills omitted string and bool keys from the type class on create", async () => {
+    class Starred {
+      name = "";
+      isStarred = false;
+    }
     const { repo, command } = create({
+      type: asType(Starred),
       entity: "contacts",
       ids: ["id"],
-      readProperties: ["id", "name", "given_name", "is_starred", "uuid", "gender_type_id"],
-      createProperties: ["name", "given_name", "is_starred", "uuid", "gender_type_id"],
+      createProperties: ["name", "isStarred", "givenName"],
+      readProperties: ["id", "name", "isStarred", "givenName"],
     });
-    Object.assign(repo, { createZeros: { name: "", is_starred: false } });
     command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 1 }]);
-    await repo.create({ given_name: "Ada" });
+    await repo.create(Object.assign(new Starred(), { givenName: "Ada" }));
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
+      "INSERT INTO contacts (givenName, isStarred, name) VALUES ($givenName, $isStarred, $name)",
     );
-    await repo.create({ given_name: "Ada", is_starred: true, name: "Ada Lovelace" });
-    expect(command.executeCalls[1]?.text).toBe(
-      "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
-    );
-    expect(command.executeCalls[1]?.parameters?.find((field) => field.name === "is_starred")?.value).toBe(true);
+    expect(command.executeCalls[0]?.parameters?.find((field) => field.name === "name")?.value).toBe("");
+    expect(command.executeCalls[0]?.parameters?.find((field) => field.name === "isStarred")?.value).toBe(false);
   });
 
-  it("fills missing string and bool zeros from schema on create", async () => {
+  it("fills missing string and bool zeros from the empty entity on create", async () => {
     const { repo, command } = create({
+      type: asType(ContactZeros),
       entity: "contacts",
       ids: ["id"],
       readProperties: ["id", "name", "given_name", "is_starred", "uuid", "gender_type_id"],
-      createProperties: ["name", "given_name", "is_starred", "uuid", "gender_type_id"],
-      schema: new Schema({
-        id: { type: "integer", nullable: false, hasDefault: true },
-        name: { type: "string", nullable: false, hasDefault: false },
-        given_name: { type: "string", nullable: false, hasDefault: false },
-        is_starred: { type: "boolean", nullable: false, hasDefault: false },
-        uuid: { type: "uuid", nullable: false, hasDefault: true },
-        gender_type_id: { type: "integer", nullable: false, hasDefault: false },
-        secret: { type: "string", nullable: false, hasDefault: false },
-      }),
+      createProperties: ["name", "given_name", "is_starred", "uuid"],
     });
     command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 1 }]);
-    await repo.create({ given_name: "Ada" });
+    await repo.create(Object.assign(new ContactZeros(), { given_name: "Ada" }));
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
+      "INSERT INTO contacts (given_name, is_starred, name, uuid) VALUES ($given_name, $is_starred, $name, $uuid)",
     );
     const skipped = create({
       entity: "contacts",
@@ -303,11 +305,12 @@ describe("CRUDRepository", () => {
         flag: { type: "boolean", nullable: false, hasDefault: true },
       }),
     });
-    Object.assign(skipped.repo, { createZeros: {} });
     skipped.command.response = { result: null, rowsAffected: 1 };
     skipped.command.reader = new MockReader([{ id: 1 }]);
     await skipped.repo.create({ name: "Ada" });
     expect(skipped.command.executeCalls[0]?.text).toBe("INSERT INTO contacts (name) VALUES ($name)");
+    await skipped.repo.create({ name: "" });
+    expect(skipped.command.executeCalls[1]?.parameters?.find((field) => field.name === "name")?.value).toBe("");
   });
 
   it("writes only readProperties on create and update", async () => {
