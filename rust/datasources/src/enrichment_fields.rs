@@ -178,6 +178,12 @@ fn copy_field<'a>(
             _ if shape.type_identifier.contains("DateTime") => {
                 set_value(partial, &Value::DateTime(chrono::DateTime::<chrono::Utc>::default()), shape, true)?
             }
+            _ if shape.type_identifier.contains("Uuid") => {
+                set_value(partial, &Value::Uuid(uuid::Uuid::nil()), shape, true)?
+            }
+            _ if shape.type_identifier.contains("Decimal") => {
+                set_value(partial, &Value::Decimal(rust_decimal::Decimal::ZERO), shape, true)?
+            }
             _ => partial.set_default().map_err(reflect)?,
         }
     } else {
@@ -282,6 +288,20 @@ fn set_row_field<'a>(
             field.shape(),
             true,
         ),
+        (true, _) if field.shape().type_identifier.contains("Uuid") => set_field(
+            partial,
+            field.name,
+            &Value::Uuid(uuid::Uuid::nil()),
+            field.shape(),
+            true,
+        ),
+        (true, _) if field.shape().type_identifier.contains("Decimal") => set_field(
+            partial,
+            field.name,
+            &Value::Decimal(rust_decimal::Decimal::ZERO),
+            field.shape(),
+            true,
+        ),
         _ => partial.set_nth_field_to_default(index).map_err(reflect),
     }
 }
@@ -328,6 +348,30 @@ mod tests {
     impl SchemaObject for Pref {}
     impl SchemaObject for House {}
 
+    #[derive(Clone, Debug, PartialEq, Facet)]
+    struct Tagged {
+        uuid: uuid::Uuid,
+        label: String,
+    }
+
+    impl Default for Tagged {
+        fn default() -> Self {
+            Self {
+                uuid: uuid::Uuid::nil(),
+                label: String::new(),
+            }
+        }
+    }
+
+    impl SchemaObject for Tagged {}
+
+    #[derive(Clone, Debug, Default, PartialEq, Facet)]
+    struct Album {
+        tags: Vec<Tagged>,
+    }
+
+    impl SchemaObject for Album {}
+
     #[test]
     fn struct_payload_round_trips_list() {
         let house = House {
@@ -345,6 +389,15 @@ mod tests {
         let copied = set_payload_on_struct(&House::default(), "kids", rows).unwrap();
         assert_eq!(copied.kids[0].label, "a");
         assert_eq!(copied.kids[0].id, 2);
+    }
+
+    #[test]
+    fn omitted_uuid_on_list_child_is_nil() {
+        let mut row = Row::new();
+        row.insert("label".into(), Value::from("home"));
+        let album = set_payload_on_struct(&Album::default(), "tags", vec![row]).unwrap();
+        assert!(album.tags[0].uuid.is_nil());
+        assert_eq!(album.tags[0].label, "home");
     }
 
     #[test]

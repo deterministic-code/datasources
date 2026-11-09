@@ -108,16 +108,39 @@ fn write_struct<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) ->
     let object = json
         .as_object()
         .ok_or_else(|| DatasourceError::message("expected a json object"))?;
-    let mut partial = partial.set_default().map_err(reflect)?;
+    let mut partial = partial;
     for field in struct_fields(shape)? {
-        let Some(cell) = field_json(object, field.name) else {
-            continue;
-        };
         partial = partial.begin_field(field.name).map_err(reflect)?;
-        partial = write_into(partial, cell, field.shape())?;
+        partial = match field_json(object, field.name) {
+            Some(cell) => write_into(partial, cell, field.shape())?,
+            None => write_omitted(partial, field.shape())?,
+        };
         partial = partial.end().map_err(reflect)?;
     }
     Ok(partial)
+}
+
+fn write_omitted<'a>(partial: Partial<'a>, shape: &'static Shape) -> Result<Partial<'a>> {
+    if is_option(shape) {
+        return partial.set_default().map_err(reflect);
+    }
+    if is_uuid(shape) {
+        return partial.set(datasources::uuid::Uuid::new_v4()).map_err(reflect);
+    }
+    if is_decimal(shape) {
+        return partial.set(datasources::rust_decimal::Decimal::ZERO).map_err(reflect);
+    }
+    if is_datetime(shape) {
+        return partial.set(DateTime::<Utc>::default()).map_err(reflect);
+    }
+    if is_column(shape) {
+        return partial.set_default().map_err(reflect);
+    }
+    match shape.def {
+        Def::List(list) => write_list(partial, &Json::Array(vec![]), list.t),
+        Def::Map(map) => write_map(partial, &Json::Object(Map::new()), map.v()),
+        _ => write_struct(partial, &Json::Object(Map::new()), shape),
+    }
 }
 
 fn write_column<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) -> Result<Partial<'a>> {
@@ -130,14 +153,8 @@ fn write_column<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) ->
         };
         return partial.set(date).map_err(reflect);
     }
-    if shape.type_identifier.contains("Uuid") {
-        return match json {
-            Json::String(text) => match text.parse::<datasources::uuid::Uuid>() {
-                Ok(id) => partial.set(id).map_err(reflect),
-                Err(_) => partial.set_default().map_err(reflect),
-            },
-            _ => partial.set_default().map_err(reflect),
-        };
+    if is_uuid(shape) {
+        return partial.set(uuid_from_json(json)).map_err(reflect);
     }
     if is_binary(shape) {
         let bytes = match json {
@@ -146,18 +163,14 @@ fn write_column<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) ->
         };
         return partial.set(bytes).map_err(reflect);
     }
-    if shape.type_identifier.contains("Decimal") {
-        if let Json::String(text) = json {
-            if let Ok(number) = text.parse::<datasources::rust_decimal::Decimal>() {
-                return partial.set(number).map_err(reflect);
-            }
-        }
+    if is_decimal(shape) {
+        return partial.set(decimal_from_json(json)).map_err(reflect);
     }
     match json {
         Json::Null => partial.set_default().map_err(reflect),
         Json::Bool(flag) => partial.set(*flag).map_err(reflect),
         Json::Number(number) => write_number(partial, number, shape),
-        Json::String(text) => partial.set(text.clone()).map_err(reflect),
+        Json::String(text) => write_string(partial, text, shape),
         Json::Array(_) | Json::Object(_) => Err(DatasourceError::message(format!(
             "cannot assign json to {}",
             shape.type_identifier
@@ -186,6 +199,28 @@ fn write_number<'a>(partial: Partial<'a>, number: &Number, shape: &'static Shape
                 None => Err(DatasourceError::message("cannot read json number")),
             },
         },
+    }
+}
+
+fn write_string<'a>(partial: Partial<'a>, text: &str, shape: &'static Shape) -> Result<Partial<'a>> {
+    match ScalarType::try_from_shape(shape) {
+        Some(ScalarType::I64) => match text.parse::<i64>() {
+            Ok(value) => partial.set(value).map_err(reflect),
+            Err(_) => partial.set_default().map_err(reflect),
+        },
+        Some(ScalarType::I32) => match text.parse::<i32>() {
+            Ok(value) => partial.set(value).map_err(reflect),
+            Err(_) => partial.set_default().map_err(reflect),
+        },
+        Some(ScalarType::U32) => match text.parse::<u32>() {
+            Ok(value) => partial.set(value).map_err(reflect),
+            Err(_) => partial.set_default().map_err(reflect),
+        },
+        Some(ScalarType::F64) => match text.parse::<f64>() {
+            Ok(value) => partial.set(value).map_err(reflect),
+            Err(_) => partial.set_default().map_err(reflect),
+        },
+        _ => partial.set(text.to_string()).map_err(reflect),
     }
 }
 
@@ -313,6 +348,32 @@ fn is_datetime(shape: &'static Shape) -> bool {
     shape.type_identifier.contains("DateTime")
 }
 
+fn is_uuid(shape: &'static Shape) -> bool {
+    shape.type_identifier.contains("Uuid")
+}
+
+fn is_decimal(shape: &'static Shape) -> bool {
+    shape.type_identifier.contains("Decimal")
+}
+
+fn decimal_from_json(json: &Json) -> datasources::rust_decimal::Decimal {
+    match json {
+        Json::String(text) => text.parse().unwrap_or(datasources::rust_decimal::Decimal::ZERO),
+        Json::Number(number) => number
+            .to_string()
+            .parse()
+            .unwrap_or(datasources::rust_decimal::Decimal::ZERO),
+        _ => datasources::rust_decimal::Decimal::ZERO,
+    }
+}
+
+fn uuid_from_json(json: &Json) -> datasources::uuid::Uuid {
+    match json {
+        Json::String(text) => text.parse().unwrap_or_else(|_| datasources::uuid::Uuid::nil()),
+        _ => datasources::uuid::Uuid::nil(),
+    }
+}
+
 fn is_binary(shape: &'static Shape) -> bool {
     matches!(shape.def, Def::List(list) if list.t.type_identifier == "u8")
 }
@@ -429,17 +490,8 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, datasources::Facet)]
     #[facet(crate = ::datasources::facet)]
     struct Card {
-        uuid: String,
+        uuid: datasources::uuid::Uuid,
         name: String,
-    }
-
-    impl Default for Card {
-        fn default() -> Self {
-            Self {
-                uuid: datasources::uuid::Uuid::new_v4().to_string(),
-                name: String::new(),
-            }
-        }
     }
 
     #[derive(Clone, Debug, Default, PartialEq, datasources::Facet)]
@@ -449,14 +501,39 @@ mod tests {
     }
 
     #[test]
-    fn omitted_uuid_uses_view_default() {
+    fn omitted_uuid_is_new_v4() {
         let wallet = JsonObjectSerializer::from_str::<Wallet>(
             r#"{"cards":[{"name":"home"},{"name":"work"}]}"#,
         )
         .unwrap();
         assert_eq!(wallet.cards.len(), 2);
-        assert_ne!(wallet.cards[0].uuid, "");
-        assert_ne!(wallet.cards[1].uuid, "");
+        assert!(!wallet.cards[0].uuid.is_nil());
+        assert!(!wallet.cards[1].uuid.is_nil());
         assert_ne!(wallet.cards[0].uuid, wallet.cards[1].uuid);
+        assert_eq!(wallet.cards[0].name, "home");
+    }
+
+    #[test]
+    fn reads_uuid_string() {
+        let wallet = JsonObjectSerializer::from_str::<Wallet>(
+            r#"{"cards":[{"uuid":"54ef41f2-0cb4-4c72-97a7-776fd183f5ed","name":"home"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(wallet.cards[0].uuid.to_string(), "54ef41f2-0cb4-4c72-97a7-776fd183f5ed");
+        assert_eq!(wallet.cards[0].name, "home");
+    }
+
+    #[derive(Clone, Debug, Default, PartialEq, datasources::Facet)]
+    #[facet(crate = ::datasources::facet)]
+    struct Linked {
+        user_id: i64,
+        name: String,
+    }
+
+    #[test]
+    fn reads_integer_from_string() {
+        let linked = JsonObjectSerializer::from_str::<Linked>(r#"{"user_id":"7","name":"ada"}"#).unwrap();
+        assert_eq!(linked.user_id, 7);
+        assert_eq!(linked.name, "ada");
     }
 }

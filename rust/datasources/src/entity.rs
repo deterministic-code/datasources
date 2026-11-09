@@ -2,7 +2,7 @@ use crate::connection::Connection;
 use crate::converters::{MetaDataRowTypeConverter, SchemaObject, TypeConverter};
 use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
-use crate::enrichment_payload::{
+use crate::enrichment_fields::{
     cell_from_row, cell_from_struct, payload_from_row, payload_from_struct, set_cell_on_row,
     set_cell_on_struct, set_one_on_struct, set_payload_on_row, set_payload_on_struct,
     set_typed_list_on_struct, typed_list_from_struct,
