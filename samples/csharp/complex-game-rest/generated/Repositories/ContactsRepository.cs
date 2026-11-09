@@ -58,9 +58,10 @@ public sealed class ContactsRepository : CRUDRepository<Backend.Types.View.Conta
                     ["Email"] = "email",
                     ["Notes"] = "notes",
                     ["UserId"] = "user_id",
+                    ["ContactSourceId"] = "contact_source_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "FirstName", "LastName", "Email", "Notes", "UserId"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "FirstName", "LastName", "Email", "Notes", "UserId", "ContactSourceId"],
                 CreateProperties = ["FirstName", "LastName", "Email", "Notes", "UserId"],
                 UpdateProperties = ["Uuid", "FirstName", "LastName", "Email", "Notes", "UserId"],
                 Schema = new(new Dictionary<string, SchemaColumn>
@@ -95,9 +96,10 @@ public sealed class ContactsRepository : CRUDRepository<Backend.Types.View.Conta
                     ["Email"] = "email",
                     ["Notes"] = "notes",
                     ["UserId"] = "user_id",
+                    ["ContactSourceId"] = "contact_source_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "FirstName", "LastName", "Email", "Notes", "UserId"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "FirstName", "LastName", "Email", "Notes", "UserId", "ContactSourceId"],
                 CreateProperties = ["Uuid", "Created", "Version", "FirstName", "LastName", "Email", "Notes", "UserId"],
                 UpdateProperties = ["Uuid", "Created", "Version", "FirstName", "LastName", "Email", "Notes", "UserId"],
                 Schema = new(new Dictionary<string, SchemaColumn>

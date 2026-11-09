@@ -1,6 +1,6 @@
 // schema-version: 1.0
 /** Type UserRole. */
-export const userRole = (init: Partial<UserRole>): UserRole => ({ ...init } as UserRole);
+export const userRole = (init: Partial<UserRole>): UserRole => Object.assign(new UserRole(), init);
 export class UserRole {
   id!: number;
   uuid: string = crypto.randomUUID();

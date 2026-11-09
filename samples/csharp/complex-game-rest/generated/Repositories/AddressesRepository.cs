@@ -48,9 +48,10 @@ public sealed class AddressesRepository : CRUDRepository<Backend.Types.View.Addr
                     ["Region"] = "region",
                     ["PostalCode"] = "postal_code",
                     ["Country"] = "country",
+                    ["AddressTypeId"] = "address_type_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country", "AddressTypeId"],
                 CreateProperties = ["Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 UpdateProperties = ["Uuid", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 Schema = new(new Dictionary<string, SchemaColumn>
@@ -105,9 +106,10 @@ public sealed class AddressesRepository : CRUDRepository<Backend.Types.View.Addr
                     ["Region"] = "region",
                     ["PostalCode"] = "postal_code",
                     ["Country"] = "country",
+                    ["AddressTypeId"] = "address_type_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country", "AddressTypeId"],
                 CreateProperties = ["Uuid", "Created", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 UpdateProperties = ["Uuid", "Created", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 Schema = new(new Dictionary<string, SchemaColumn>

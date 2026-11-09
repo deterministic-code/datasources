@@ -1,6 +1,6 @@
 // schema-version: 1.0
 /** Type AddressBase. */
-export const addressBase = (init: Partial<AddressBase>): AddressBase => ({ ...init } as AddressBase);
+export const addressBase = (init: Partial<AddressBase>): AddressBase => Object.assign(new AddressBase(), init);
 export class AddressBase {
   id!: number;
   uuid: string = crypto.randomUUID();
@@ -17,9 +17,9 @@ export class AddressBase {
   stamp!: string | null;
   contactId!: number;
   addressTypeId!: number;
-  line1!: string;
+  line1: string = "";
   line2!: string | null;
-  city!: string;
+  city: string = "";
   region!: string | null;
   postalCode!: string | null;
   country!: string | null;

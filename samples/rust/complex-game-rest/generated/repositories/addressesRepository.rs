@@ -1,4 +1,4 @@
-use datasources::{Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result, async_trait, CommandMiddleware, IdKey, IWhere, ReadInput, Response, Stream};
+use datasources::{Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, IWhere, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Statement, Result, async_trait, CommandMiddleware, IdKey, Response, Stream};
 use super::super::Address;
 use super::addressTypesRepository::AddressTypesRepository;
 use std::any::TypeId;
@@ -46,7 +46,7 @@ impl AddressesRepository {
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
         ]));
         options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into(), "address_type_id".into()];
         options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options.update_properties = Some(vec!["uuid".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options
@@ -82,7 +82,7 @@ impl AddressesRepository {
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
         ]));
         options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into(), "address_type_id".into()];
         options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options
@@ -126,7 +126,7 @@ impl AddressesRepository {
             ("address_type_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
         ]));
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into(), "address_type_id".into()];
         let address_type = AddressTypesRepository::new(Arc::clone(&connection))?;
         let mut repo = ReadonlyRepository::<Address>::new(connection, options)?;
         repo.add_enriched(Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), &address_type, None);
@@ -170,7 +170,7 @@ impl IReadonlyRepository<Address> for AddressesRepository {
 
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Address>> {
         self.inner.as_ref().read_single(query, options).await
@@ -178,10 +178,26 @@ impl IReadonlyRepository<Address> for AddressesRepository {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<Address>> + Send + 'a>> {
         IReadonlyRepository::read(self.inner.as_ref(), query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Address>> {
+        self.inner.as_ref().read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Address>> + Send + 'a>> {
+        IReadonlyRepository::read_where(self.inner.as_ref(), clause, options)
     }
 }
 
@@ -245,7 +261,7 @@ pub fn addresses_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDR
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
         ]));
         options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into(), "address_type_id".into()];
         options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options.update_properties = Some(vec!["uuid".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options
@@ -281,7 +297,7 @@ pub fn addresses_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDR
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
         ]));
         options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into(), "address_type_id".into()];
         options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
         options

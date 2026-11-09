@@ -1,4 +1,4 @@
-use datasources::{Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result, async_trait, CommandMiddleware, IdKey, IWhere, ReadInput, Response, Stream};
+use datasources::{Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, IWhere, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Statement, Result, async_trait, CommandMiddleware, IdKey, Response, Stream};
 use super::super::Category;
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -126,7 +126,7 @@ impl IReadonlyRepository<Category> for CategoriesRepository {
 
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Category>> {
         self.inner.as_ref().read_single(query, options).await
@@ -134,10 +134,26 @@ impl IReadonlyRepository<Category> for CategoriesRepository {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<Category>> + Send + 'a>> {
         IReadonlyRepository::read(self.inner.as_ref(), query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Category>> {
+        self.inner.as_ref().read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Category>> + Send + 'a>> {
+        IReadonlyRepository::read_where(self.inner.as_ref(), clause, options)
     }
 }
 

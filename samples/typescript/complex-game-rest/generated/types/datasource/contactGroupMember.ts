@@ -1,6 +1,6 @@
 // schema-version: 1.0
 /** Type ContactGroupMember. */
-export const contactGroupMember = (init: Partial<ContactGroupMember>): ContactGroupMember => ({ ...init } as ContactGroupMember);
+export const contactGroupMember = (init: Partial<ContactGroupMember>): ContactGroupMember => Object.assign(new ContactGroupMember(), init);
 export class ContactGroupMember {
   id!: number;
   uuid: string = crypto.randomUUID();

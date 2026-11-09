@@ -5,7 +5,7 @@ namespace Backend.Types.Datasource;
 public class Base
 {
     public long Id { get; set; }
-    public string Uuid { get; set; } = Guid.NewGuid().ToString();
+    public System.Guid Uuid { get; set; } = Guid.NewGuid();
     public System.DateTime Created { get; set; } = DateTime.UtcNow;
     public System.DateTime Updated { get; set; } = DateTime.UtcNow;
     public byte[] Version { get; set; } = new byte[] { 0 };

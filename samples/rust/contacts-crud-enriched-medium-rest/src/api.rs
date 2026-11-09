@@ -304,7 +304,7 @@ fn stamp(mut contact: Contact, clock: &Clock) -> Contact {
     } else {
         contact.notes.unwrap_or_default()
     });
-    if contact.uuid.is_empty() {
+    if contact.uuid.is_nil() {
         contact.uuid = clock.uuid();
     }
     if contact.created == DateTime::<Utc>::default() {
@@ -321,7 +321,7 @@ fn stamp(mut contact: Contact, clock: &Clock) -> Contact {
 
 fn stamp_group(mut group: ContactGroup, clock: &Clock) -> ContactGroup {
     let now = date(clock);
-    if group.uuid.is_empty() {
+    if group.uuid.is_nil() {
         group.uuid = clock.uuid();
     }
     if group.created == DateTime::<Utc>::default() {
@@ -339,7 +339,7 @@ fn stamp_address(mut address: Address, clock: &Clock) -> Address {
     if address.country.as_deref().unwrap_or("").is_empty() {
         address.country = Some("US".into());
     }
-    if address.uuid.is_empty() {
+    if address.uuid.is_nil() {
         address.uuid = clock.uuid();
     }
     if address.created == DateTime::<Utc>::default() {
@@ -357,7 +357,7 @@ fn stamp_phone(mut phone: Phone, clock: &Clock) -> Phone {
     if phone.label.as_deref().unwrap_or("").is_empty() {
         phone.label = Some("Main".into());
     }
-    if phone.uuid.is_empty() {
+    if phone.uuid.is_nil() {
         phone.uuid = clock.uuid();
     }
     if phone.created == DateTime::<Utc>::default() {

@@ -1,6 +1,6 @@
 // schema-version: 1.0
 /** Type GameState. */
-export const gameState = (init: Partial<GameState>): GameState => ({ ...init } as GameState);
+export const gameState = (init: Partial<GameState>): GameState => Object.assign(new GameState(), init);
 export class GameState {
   id!: number;
   uuid: string = crypto.randomUUID();
@@ -9,5 +9,5 @@ export class GameState {
   version: string = Buffer.from([0]).toString("base64");
   gameId!: number;
   userId!: number;
-  state!: string;
+  state: string = "";
 }

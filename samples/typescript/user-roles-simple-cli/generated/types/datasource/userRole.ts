@@ -1,0 +1,11 @@
+// schema-version: 1.0
+/** Type UserRole. */
+export const userRole = (init: Partial<UserRole>): UserRole => Object.assign(new UserRole(), init);
+export class UserRole {
+  id!: number;
+  uuid: string = crypto.randomUUID();
+  created!: Date;
+  updated: string = Buffer.from([0]).toString("base64");
+  userId!: number;
+  roleId!: number;
+}

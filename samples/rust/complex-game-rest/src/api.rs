@@ -325,13 +325,13 @@ fn stamp_contact(mut contact: Contact, clock: &Clock) -> Contact {
 }
 
 fn stamp(
-    uuid: &mut String,
+    uuid: &mut datasources::uuid::Uuid,
     created: &mut DateTime<Utc>,
     updated: &mut DateTime<Utc>,
     version: &mut Vec<u8>,
     clock: &Clock,
 ) {
-    if uuid.is_empty() {
+    if uuid.is_nil() {
         *uuid = clock.uuid();
     }
     if *created == DateTime::<Utc>::default() {

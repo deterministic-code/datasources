@@ -1,6 +1,6 @@
 // schema-version: 1.0
 /** Type UserGroup. */
-export const userGroup = (init: Partial<UserGroup>): UserGroup => ({ ...init } as UserGroup);
+export const userGroup = (init: Partial<UserGroup>): UserGroup => Object.assign(new UserGroup(), init);
 export class UserGroup {
   id!: number;
   uuid: string = crypto.randomUUID();

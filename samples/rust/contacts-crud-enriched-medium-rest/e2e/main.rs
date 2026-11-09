@@ -4,12 +4,20 @@ use contacts_crud_enriched_medium_rest::{
 use datasources::{default, DatasourceError, Operator, Result, Where};
 use std::collections::HashMap;
 
+fn uuid(text: &str) -> datasources::uuid::Uuid {
+    text.parse().expect("uuid")
+}
+
+fn decimal(text: &str) -> datasources::rust_decimal::Decimal {
+    text.parse().expect("decimal")
+}
+
 fn ada() -> Contact {
     Contact {
         first_name: "Ada".into(),
         last_name: "Lovelace".into(),
         contact_source_name: "Manual".into(),
-        uuid: "00000000-0000-0000-0000-000000000001".into(),
+        uuid: uuid("00000000-0000-0000-0000-000000000001"),
         version: vec![0],
         notes: Some("poet".into()),
         email: Some("ada@example.com".into()),
@@ -53,7 +61,7 @@ fn alan() -> Contact {
         first_name: "Alan".into(),
         last_name: "Turing".into(),
         contact_source_name: "Manual".into(),
-        uuid: "00000000-0000-0000-0000-000000000002".into(),
+        uuid: uuid("00000000-0000-0000-0000-000000000002"),
         version: vec![0],
         addresses: vec![Address {
             address_type_name: "Home".into(),
@@ -219,7 +227,7 @@ async fn main() -> Result<()> {
             first_name: "Outlier".into(),
             last_name: "Types".into(),
             contact_source_name: "Manual".into(),
-            uuid: "00000000-0000-0000-0000-000000000003".into(),
+            uuid: uuid("00000000-0000-0000-0000-000000000003"),
             version: vec![0],
             addresses: vec![Address {
                 address_type_name: "Home".into(),
@@ -252,8 +260,8 @@ async fn main() -> Result<()> {
                 latitude: Some(51),
                 label_note: Some("side".into()),
                 floor: Some(2),
-                score: Some("10.5".into()),
-                external_id: Some("550e8400-e29b-41d4-a716-446655440000".into()),
+                score: Some(decimal("10.5")),
+                external_id: Some(uuid("550e8400-e29b-41d4-a716-446655440000")),
                 is_verified: Some(true),
                 verified_at: Some(
                     datasources::chrono::DateTime::parse_from_rfc3339("2020-01-02T03:04:05.000Z")
@@ -273,7 +281,7 @@ async fn main() -> Result<()> {
     if valued.addresses[0].latitude != Some(51)
         || valued.addresses[0].label_note.as_deref() != Some("side")
         || valued.addresses[0].floor != Some(2)
-        || valued.addresses[0].score.as_deref() != Some("10.5")
+        || valued.addresses[0].score != Some(decimal("10.5"))
         || valued.addresses[0].is_verified != Some(true)
     {
         return Err(DatasourceError::message("outlier value"));
@@ -294,7 +302,7 @@ async fn main() -> Result<()> {
                 latitude: Some(0),
                 label_note: Some(String::new()),
                 floor: Some(0),
-                score: Some("0".into()),
+                score: Some(decimal("0")),
                 is_verified: Some(false),
                 verified_at: None,
                 stamp: None,

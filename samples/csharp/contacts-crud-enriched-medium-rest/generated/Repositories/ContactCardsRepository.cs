@@ -1,0 +1,27 @@
+using Datasources;
+
+public sealed class ContactCardsRepository : CRUDRepository<Backend.Types.View.ContactCard>
+{
+    public ContactCardsRepository(IConnection connection) : base(connection, Options()) { }
+
+    public static IReadonlyRepository<Backend.Types.View.ContactCard> CreateReadonly(IConnection connection) =>
+        new ReadonlyRepository<Backend.Types.View.ContactCard>(connection, Options());
+
+    static CRUDRepositoryOptions<Backend.Types.View.ContactCard> Options() => new()
+    {
+        Entity = "ContactCard",
+        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactCard"] = "contact_cards" }),
+        PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+        {
+            ["DisplayName"] = "display_name",
+        }),
+        Ids = [],
+        ReadProperties = ["DisplayName"],
+        CreateProperties = ["DisplayName"],
+        UpdateProperties = ["DisplayName"],
+        Schema = new(new Dictionary<string, SchemaColumn>
+        {
+            ["DisplayName"] = new("string", false, false),
+        }),
+    };
+}

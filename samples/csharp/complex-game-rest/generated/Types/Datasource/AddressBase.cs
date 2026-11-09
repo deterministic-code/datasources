@@ -7,8 +7,8 @@ public class AddressBase : Base
     public long? Latitude { get; set; }
     public string? LabelNote { get; set; }
     public uint? Floor { get; set; }
-    public string? Score { get; set; }
-    public string? ExternalId { get; set; }
+    public decimal? Score { get; set; }
+    public System.Guid? ExternalId { get; set; }
     public bool? IsVerified { get; set; }
     public System.DateTime? VerifiedAt { get; set; }
     public byte[]? Stamp { get; set; }
