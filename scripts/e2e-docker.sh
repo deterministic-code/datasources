@@ -23,13 +23,13 @@ quick_starts/contacts_cli/csharp
 quick_starts/contacts_cli/rust
 "
 
-local=
+use_local=
 if [ "${1:-}" = --local ]; then
-  local=1
+  use_local=1
   shift
 fi
 if [ "${1:-}" = --quickstarts ]; then
-  local=
+  use_local=
   shift
   # shellcheck disable=SC2086
   set -- $quickstarts
@@ -71,31 +71,142 @@ if [ -n "$rust" ]; then build_image datasources-e2e-rust e2e-rust.Dockerfile; fi
 
 mkdir -p "${HOME}/.cache/datasources-npm" "${HOME}/.cache/datasources-nuget" "${HOME}/.cache/datasources-cargo"
 
-run() {
-  dir=$1
-  cd "$repo/$dir"
-  trap 'docker compose down -v --remove-orphans -t 0' EXIT
-  docker compose build app
-  docker compose up -d --wait mysql postgres
-  if [ -n "$local" ]; then
+if [ -n "$use_local" ]; then
+  parallel=${E2E_PARALLEL:-1}
+else
+  parallel=${E2E_PARALLEL:-3}
+fi
+
+status_dir=$(mktemp -d "${TMPDIR:-/tmp}/e2e-docker.XXXXXX")
+running=""
+projects=""
+token=0
+
+cleanup() {
+  status=$?
+  trap - EXIT
+  set +e
+  for entry in $projects; do
+    rest=${entry#*:}
+    project=${rest%%:*}
+    dir=${rest#*:}
+    (
+      cd "$repo/$dir" || exit 0
+      COMPOSE_PROJECT_NAME=$project docker compose down -v --remove-orphans -t 0
+    )
+  done
+  for entry in $running; do
+    rest=${entry#*:}
+    pid=${rest%%:*}
+    kill "$pid" 2>/dev/null
+  done
+  wait
+  rm -rf "$status_dir"
+  exit "$status"
+}
+trap cleanup EXIT
+
+reap() {
+  kept=""
+  n=0
+  rust_n=0
+  for entry in $running; do
+    token_n=${entry%%:*}
+    rest=${entry#*:}
+    pid=${rest%%:*}
+    kind=${rest#*:}
+    if [ -f "$status_dir/$token_n" ]; then
+      wait "$pid"
+      kept_projects=""
+      for project_entry in $projects; do
+        if [ "${project_entry%%:*}" != "$token_n" ]; then
+          kept_projects="$kept_projects $project_entry"
+        fi
+      done
+      projects=$kept_projects
+    else
+      kept="$kept $entry"
+      n=$((n + 1))
+      if [ "$kind" = rust ]; then
+        rust_n=$((rust_n + 1))
+      fi
+    fi
+  done
+  running=$kept
+}
+
+await_slot() {
+  waiting=$1
+  while :; do
+    reap
+    case "$waiting" in
+      samples/rust/*|quick_starts/contacts_cli/rust)
+        [ "$rust_n" -eq 0 ] && [ "$n" -lt "$parallel" ] && return
+        ;;
+      *)
+        [ "$n" -lt "$parallel" ] && return
+        ;;
+    esac
+    sleep 1
+  done
+}
+
+await_idle() {
+  while :; do
+    reap
+    [ "$n" -eq 0 ] && return
+    sleep 1
+  done
+}
+
+run_scripts() {
+  if [ -n "$use_local" ]; then
     docker compose run --rm --no-deps \
       -e DATASOURCES_REPO=/datasources \
       -v "$repo:/datasources" \
       -v /datasources/cli/node_modules \
-      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh sqlite.sh --local'
-    docker compose run --rm --no-deps \
-      -e DATASOURCES_REPO=/datasources \
-      -v "$repo:/datasources" \
-      -v /datasources/cli/node_modules \
-      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh mysql-postgres.sh --local'
+      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh sqlite.sh --local && sh mysql-postgres.sh --local'
   else
-    docker compose run --rm --no-deps app sh sqlite.sh
-    docker compose run --rm --no-deps app sh mysql-postgres.sh
+    docker compose run --rm --no-deps app sh -c 'sh sqlite.sh && sh mysql-postgres.sh'
   fi
 }
 
 for dir in "$@"; do
-  printf 'e2e-docker: %s %s\n' "$(date +%H:%M:%S)" "start $dir"
-  run "$dir" 2>&1 | e2e_watch
-  printf 'e2e-docker: %s %s\n' "$(date +%H:%M:%S)" "done $dir"
+  await_slot "$dir"
+  token=$((token + 1))
+  project="e2e-$(printf '%s' "$dir" | tr '/_' '-')"
+  projects="$projects $token:$project:$dir"
+  kind=other
+  case "$dir" in
+    samples/rust/*|quick_starts/contacts_cli/rust) kind=rust ;;
+  esac
+  (
+    trap - EXIT
+    code=0
+    (
+      trap - EXIT
+      cd "$repo/$dir"
+      export COMPOSE_PROJECT_NAME=$project
+      trap 'status=$?; trap - EXIT; docker compose down -v --remove-orphans -t 0 || true; exit "$status"' EXIT
+      start=$(date +%s)
+      printf 'e2e-docker: %s start %s\n' "$(date +%H:%M:%S)" "$dir"
+      code=0
+      {
+        docker compose build app || exit $?
+        docker compose up -d --wait mysql postgres || exit $?
+        run_scripts || exit $?
+      } 2>&1 | while IFS= read -r line || [ -n "$line" ]; do
+        printf '%s\n' "$dir: $line"
+      done | e2e_watch || code=$?
+      if [ "$code" -eq 0 ]; then
+        printf 'e2e-docker: %s done %s %ss\n' "$(date +%H:%M:%S)" "$dir" "$(($(date +%s) - start))"
+      fi
+      exit "$code"
+    ) || code=$?
+    printf '%s\n' "$code" > "$status_dir/$token"
+    exit "$code"
+  ) &
+  running="$running $token:$!:$kind"
 done
+
+await_idle
