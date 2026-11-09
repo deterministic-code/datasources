@@ -129,17 +129,20 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
         let schema = via.schema();
         let key_name = schema.dictionary_key();
         let value_columns = schema.dictionary_value_columns(&enrichment.related_key, key_name);
+        let scalar = schema.columns.contains_key(schema.dictionary_value());
         let rows = related
             .into_iter()
             .filter_map(|item| {
-                let key = item
-                    .cell(key_name)
-                    .or_else(|| item.cell("key"))
-                    .or_else(|| item.cell("Key"))?;
+                let key = item.cell(key_name)?;
                 let mut row = Row::new();
                 row.insert(key_name.to_string(), key);
                 if let Some(select) = enrichment.related_property.as_deref() {
                     row.insert(select.to_string(), item.cell(select)?);
+                } else if scalar {
+                    let column = schema.dictionary_value();
+                    if let Some(cell) = item.cell(column) {
+                        row.insert(column.to_string(), cell);
+                    }
                 } else {
                     for name in &value_columns {
                         if let Some(cell) = item.cell(name) {

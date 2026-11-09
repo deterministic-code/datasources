@@ -7,6 +7,7 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::value::Value;
 use async_trait::async_trait;
 use futures_core::Stream;
@@ -16,6 +17,7 @@ use std::sync::{Arc, Mutex};
 
 pub struct MockRepository {
     pub items: Mutex<Vec<Row>>,
+    pub schema: Schema,
     read_single_error: Mutex<Option<String>>,
     get_error: Mutex<Option<String>>,
     add_error: Mutex<Option<String>>,
@@ -27,6 +29,7 @@ impl MockRepository {
     pub fn new() -> Self {
         Self {
             items: Mutex::new(Vec::new()),
+            schema: Schema::default(),
             read_single_error: Mutex::new(None),
             get_error: Mutex::new(None),
             add_error: Mutex::new(None),
@@ -64,7 +67,11 @@ impl MockRepository {
     }
 }
 
-impl IRepository for MockRepository {}
+impl IRepository for MockRepository {
+    fn schema(&self) -> &Schema {
+        &self.schema
+    }
+}
 
 #[async_trait]
 impl IReadonlyRepository for MockRepository {

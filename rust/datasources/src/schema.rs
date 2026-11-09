@@ -67,6 +67,16 @@ impl Schema {
         }
     }
 
+    pub fn dictionary_value(&self) -> &str {
+        if self.columns.contains_key("Value") {
+            "Value"
+        } else if self.columns.contains_key("value") {
+            "value"
+        } else {
+            "Value"
+        }
+    }
+
     pub fn dictionary_value_columns(&self, related_key: &str, map_key: &str) -> Vec<String> {
         self.columns
             .iter()
@@ -100,6 +110,12 @@ mod tests {
         ]));
         assert_eq!(schema.ids(), vec!["Key".to_string()]);
         assert_eq!(schema.dictionary_key(), "Key");
+        assert_eq!(schema.dictionary_value(), "Value");
+        assert_eq!(
+            Schema::new(HashMap::from([("value".into(), SchemaColumn::new("string"))])).dictionary_value(),
+            "value"
+        );
+        assert_eq!(Schema::default().dictionary_value(), "Value");
         assert_eq!(
             schema.dictionary_value_columns("ParentId", "Key"),
             vec!["Name".to_string()]

@@ -10,6 +10,8 @@ public sealed class Schema
         Columns.ToDictionary(pair => pair.Key, pair => pair.Value.Type, StringComparer.Ordinal);
     public string DictionaryKey =>
         Columns.ContainsKey("Key") ? "Key" : Columns.ContainsKey("key") ? "key" : "Key";
+    public string DictionaryValue =>
+        Columns.ContainsKey("Value") ? "Value" : Columns.ContainsKey("value") ? "value" : "Value";
     public IReadOnlyList<string> DictionaryValueColumns(string relatedKey, string mapKey) =>
         [.. Columns
             .Where(pair => !pair.Value.IsId && pair.Key != relatedKey && pair.Key != mapKey)

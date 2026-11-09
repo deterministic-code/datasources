@@ -5,6 +5,7 @@ import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Row } from "./Row.ts";
+import { Schema } from "./Schema.ts";
 import { identityKey } from "./identity.ts";
 import { Operator, Where } from "./statements/index.ts";
 
@@ -141,10 +142,12 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
 
   private copyValue = (
     row: Props,
-    schema: { dictionaryValueColumns: (relatedKey: string, mapKey: string) => string[] },
+    schema: Schema,
     enrichment: Enrichment,
     mapKey: string,
   ): Scalar | object => {
+    const column = schema.dictionaryValue();
+    if (column in schema.columns) return row[column] ?? null;
     const copy: Props = {};
     for (const name of schema.dictionaryValueColumns(enrichment.relatedKey, mapKey))
       copy[name] = row[name];

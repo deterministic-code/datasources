@@ -116,6 +116,10 @@ impl IRepository for ReviewsRepository {
     fn entity_type(&self) -> TypeId {
         IRepository::entity_type(self.inner.as_ref())
     }
+
+    fn schema(&self) -> &Schema {
+        self.inner.schema()
+    }
 }
 
 #[async_trait]
