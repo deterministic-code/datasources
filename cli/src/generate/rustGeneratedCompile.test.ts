@@ -273,6 +273,7 @@ describe("generated rust compiles", () => {
       fields:
         - key:
             type: string
+            references: setting.key
         - value:
             type: string
 `,

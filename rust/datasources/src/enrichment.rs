@@ -1,5 +1,8 @@
 use crate::association::Association;
+use crate::datasource_error::DatasourceError;
 use crate::enrichment_property_type::EnrichmentPropertyType;
+use crate::result::Result;
+use crate::schema::Schema;
 
 #[derive(Clone)]
 pub struct Enrichment {
@@ -9,6 +12,7 @@ pub struct Enrichment {
     pub related_property: Option<String>,
     pub r#type: EnrichmentPropertyType,
     pub association: Option<Association>,
+    pub dictionary_key: Option<String>,
 }
 
 impl Enrichment {
@@ -26,6 +30,7 @@ impl Enrichment {
             related_property,
             r#type,
             association: None,
+            dictionary_key: None,
         }
     }
 
@@ -33,5 +38,26 @@ impl Enrichment {
         self.r#type = EnrichmentPropertyType::List;
         self.association = Some(association);
         self
+    }
+
+    pub fn with_dictionary_key(mut self, name: impl Into<String>) -> Self {
+        self.dictionary_key = Some(name.into());
+        self
+    }
+
+    pub fn map_key(&self) -> Result<&str> {
+        self.dictionary_key.as_deref().ok_or_else(|| {
+            DatasourceError::message(format!("{} requires dictionary_key", self.destination_property))
+        })
+    }
+
+    pub fn value_columns(&self, schema: &Schema) -> Result<Vec<String>> {
+        let map_key = self.map_key()?;
+        Ok(schema
+            .columns
+            .iter()
+            .filter(|(name, column)| !column.is_id && *name != &self.related_key && *name != map_key)
+            .map(|(name, _)| name.clone())
+            .collect())
     }
 }

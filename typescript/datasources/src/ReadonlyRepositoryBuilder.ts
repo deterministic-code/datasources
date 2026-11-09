@@ -10,6 +10,7 @@ import type { IMapper } from "./mappers/IMapper.ts";
 import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
+import { idsFromSchema } from "./identity.ts";
 import { Schema } from "./Schema.ts";
 
 export class ReadonlyRepositoryBuilder<T = Cells> {
@@ -32,7 +33,7 @@ export class ReadonlyRepositoryBuilder<T = Cells> {
     const names = options.readProperties ?? (options.type ? fieldNamesOf(options.type) : []);
     if (objectConverter instanceof MetaDataRowTypeConverter) {
       objectConverter.referenceColumns = propertyMappings;
-      objectConverter.ids = options.schema?.ids().length ? options.schema.ids() : this.ids(options);
+      objectConverter.ids = idsFromSchema(options.schema).length ? idsFromSchema(options.schema) : this.ids(options);
       objectConverter.references.clear();
       if (options.type) {
         const instance = new options.type() as T & Record<string, T>;

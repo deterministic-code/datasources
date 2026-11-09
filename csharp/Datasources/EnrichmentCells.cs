@@ -88,12 +88,10 @@ static class EnrichmentCells
     {
         if (enrichment.RelatedProperty is { } select)
             return Get(item, select);
-        if (schema.Columns.ContainsKey(schema.DictionaryValue))
-            return Get(item, schema.DictionaryValue);
-        var names = schema.DictionaryValueColumns(enrichment.RelatedKey, schema.DictionaryKey);
+        var names = ValueColumns(schema, enrichment);
         var dest = NewMapValue(map) ?? (object?)item;
         foreach (var name in names)
-            Set(dest, name, Get(item, name));
+            Copy(dest, name, Get(item, name));
         return dest;
     }
 
@@ -101,7 +99,7 @@ static class EnrichmentCells
         where TChild : new()
     {
         if (Get(parent, enrichment.DestinationProperty) is not IDictionary map) return [];
-        var mapKey = schema.DictionaryKey;
+        var mapKey = MapKey(enrichment);
         var rows = new List<TChild>();
         foreach (DictionaryEntry entry in map)
         {
@@ -111,9 +109,8 @@ static class EnrichmentCells
             if (enrichment.RelatedProperty is { } select)
                 Set(row, select, entry.Value);
             else if (entry.Value is not null)
-                foreach (var name in schema.DictionaryValueColumns(enrichment.RelatedKey, mapKey))
-                    if (Get(entry.Value, name) is { } value)
-                        Set(row, name, value);
+                foreach (var name in ValueColumns(schema, enrichment))
+                    Copy(row, name, Get(entry.Value, name));
             rows.Add(row);
         }
         return [.. rows.OrderBy(row => Get(row, mapKey)?.ToString() ?? "", StringComparer.Ordinal)];
@@ -126,7 +123,19 @@ static class EnrichmentCells
         return TrySet(current, by, value) || TrySet(current, "Id", value) || TrySet(current, "id", value);
     }
 
-    static bool TrySet(object obj, string name, object value)
+    static void Copy(object? dest, string name, object? value)
+    {
+        if (dest is IDictionary dict)
+        {
+            dict[name] = value;
+            return;
+        }
+        if (dest is null || value is null)
+            return;
+        TrySet(dest, name, value);
+    }
+
+    static bool TrySet(object obj, string name, object? value)
     {
         var prop = obj.GetType().GetProperty(name);
         if (prop is null) return false;
@@ -151,4 +160,12 @@ static class EnrichmentCells
     static PropertyInfo Prop<TItem>(TItem obj, string name) =>
         obj!.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
+
+    internal static string MapKey(Enrichment enrichment) =>
+        enrichment.DictionaryKey ?? throw new DatasourceException($"{enrichment.DestinationProperty} requires \"DictionaryKey\"");
+
+    static IEnumerable<string> ValueColumns(Schema schema, Enrichment enrichment) =>
+        schema.Columns
+            .Where(pair => !pair.Value.IsId && pair.Key != enrichment.RelatedKey && pair.Key != MapKey(enrichment))
+            .Select(pair => pair.Key);
 }

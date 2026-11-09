@@ -49,7 +49,7 @@ export class {{className}} extends CRUDRepository<{{typeName}}> {
     this.{{field}} = new {{className}}(connection);
 {{/children}}
 {{#enrichments}}
-    {{#linked}}this.addLinked({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, association: { parent: "{{parentFk}}", related: "{{relatedFk}}" }, type: "{{^object}}{{^dictionary}}list{{/dictionary}}{{/object}}{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}" }, this.{{via}}, this.{{link}});{{/linked}}{{^linked}}this.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, this.{{via}});{{/linked}}
+    {{#linked}}this.addLinked({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, association: { parent: "{{parentFk}}", related: "{{relatedFk}}" }, type: "{{^object}}{{^dictionary}}list{{/dictionary}}{{/object}}{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}" }, this.{{via}}, this.{{link}});{{/linked}}{{^linked}}this.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}{{#dictionaryKey}}, dictionaryKey: "{{dictionaryKey}}"{{/dictionaryKey}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, this.{{via}});{{/linked}}
 {{/enrichments}}
   }
 {{#setup}}
@@ -59,7 +59,7 @@ export class {{className}} extends CRUDRepository<{{typeName}}> {
     const {{field}} = new {{className}}(connection);
 {{/children}}
 {{#enrichments}}
-    repo.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, {{via}});
+    repo.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}{{#dictionaryKey}}, dictionaryKey: "{{dictionaryKey}}"{{/dictionaryKey}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, {{via}});
 {{/enrichments}}
     return repo;
   }

@@ -165,7 +165,7 @@ try {
   contactsRepo.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, addressesRepo);
   contactsRepo.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, phonesRepo);
   contactsRepo.addEnriched(
-    { destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", type: "dictionary" },
+    { destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", dictionaryKey: "key", type: "dictionary" },
     settingsRepo,
   );
   let createMs = 0;
@@ -247,7 +247,7 @@ try {
   hashsetRepo.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, addressesRepo, hashset);
   hashsetRepo.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, phonesRepo, hashset);
   hashsetRepo.addEnriched(
-    { destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", type: "dictionary" },
+    { destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", dictionaryKey: "key", type: "dictionary" },
     settingsRepo,
     hashset,
   );

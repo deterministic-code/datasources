@@ -1,4 +1,4 @@
-import type { Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, dictionaryValueColumns, type Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
@@ -159,7 +159,7 @@ const mapPayload = (
   if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
   if (enrichment?.type !== "dictionary" || typeof value !== "object") return [];
   const columns = schema ?? new Schema({});
-  const keyName = columns.dictionaryKey();
+  const keyName = dictionaryMapKey(enrichment);
   return Object.entries(value as Record<string, Scalar | object>)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, cell]) => {
@@ -167,7 +167,7 @@ const mapPayload = (
         return { [keyName]: key, [enrichment.relatedProperty]: cell };
       const row: Props = { [keyName]: key };
       if (cell !== null && typeof cell === "object" && !Array.isArray(cell))
-        for (const name of columns.dictionaryValueColumns(enrichment.relatedKey, keyName))
+        for (const name of dictionaryValueColumns(columns, enrichment))
           row[name] = (cell as Props)[name];
       return row;
     });

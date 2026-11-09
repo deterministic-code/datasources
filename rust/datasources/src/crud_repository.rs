@@ -93,7 +93,7 @@ impl<T: Entity> CRUDRepository<T> {
         update_properties: Option<Vec<String>>,
     ) -> Result<Self> {
         let id = if built.ids.is_empty() {
-            built.schema.ids()
+            crate::identity::ids_from_schema(&built.schema)
         } else {
             built.ids.clone()
         };

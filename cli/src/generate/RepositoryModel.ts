@@ -15,6 +15,7 @@ export type PlannedEnrichment = {
   source: string;
   relatedKey: string;
   relatedProperty?: string;
+  dictionaryKey?: string;
   kind: "list" | "object" | "linked" | "dictionary";
   via: string;
   viaType: string;

@@ -209,9 +209,11 @@ types:
         - key:
             type: string
             size: 64
+            references: contact_settings.key
         - value:
             type: string
             size: unlimited
+            references: contact_settings.value
   - locale_preferences:
       tags:
         - view_type
@@ -246,6 +248,7 @@ types:
         - key:
             type: string
             size: 64
+            references: contact_preferences.key
         - value:
             type: locale_preferences
   - card_labels:

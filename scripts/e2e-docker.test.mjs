@@ -114,6 +114,8 @@ test("--local installs the CLI once per sample and still runs both scripts", () 
     .split("\n")
     .filter((line) => line.includes("compose run"));
   assert.equal(runs.length, 1);
+  assert.match(runs[0], /\/datasources\/cli\/node_modules/);
+  assert.match(runs[0], /npm run prepare --prefix/);
   assert.match(runs[0], /sqlite\.sh --local && sh mysql-postgres\.sh --local/);
 });
 

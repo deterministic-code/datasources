@@ -412,7 +412,7 @@ mod tests {
         updated: chrono::DateTime<chrono::Utc>,
         version: Vec<u8>,
         contact_id: i32,
-        key: String,
+        name: String,
         value: String,
     }
 
@@ -421,7 +421,7 @@ mod tests {
     #[derive(Clone, Debug, Default, PartialEq, Facet)]
     struct PrefRow {
         id: i32,
-        key: String,
+        name: String,
         locale: String,
         timezone: String,
     }
@@ -448,13 +448,14 @@ mod tests {
                 "contact_id",
                 Some("value".into()),
                 crate::EnrichmentPropertyType::Dictionary,
-            ),
+            )
+            .with_dictionary_key("name"),
             &house,
             &setting_schema(),
         )
         .unwrap();
         assert_eq!(settings.len(), 1);
-        assert_eq!(settings[0].key, "theme");
+        assert_eq!(settings[0].name, "theme");
         assert_eq!(settings[0].value, "dark");
         let prefs = crate::create_enrichment_strategy::children::<House, Pref>(
             &crate::Enrichment::new(
@@ -463,7 +464,8 @@ mod tests {
                 "contact_id",
                 None,
                 crate::EnrichmentPropertyType::Dictionary,
-            ),
+            )
+            .with_dictionary_key("name"),
             &house,
             &pref_schema(),
         )
@@ -477,16 +479,17 @@ mod tests {
                 "contact_id",
                 None,
                 crate::EnrichmentPropertyType::Dictionary,
-            ),
+            )
+            .with_dictionary_key("name"),
             &house,
             &pref_schema(),
         )
         .unwrap();
-        assert_eq!(prefs_rows[0].key, "home");
+        assert_eq!(prefs_rows[0].name, "home");
         assert_eq!(prefs_rows[0].locale, "en-GB");
         assert_eq!(prefs_rows[0].id, 0);
         let stamped = set_cell_on_struct(&settings[0], "contact_id", Value::Int(1)).unwrap();
-        assert_eq!(stamped.key, "theme");
+        assert_eq!(stamped.name, "theme");
         assert_eq!(stamped.contact_id, 1);
     }
 
@@ -500,14 +503,14 @@ mod tests {
                 },
             ),
             ("contact_id".into(), crate::schema::SchemaColumn::new("integer")),
-            ("key".into(), crate::schema::SchemaColumn::new("string")),
+            ("name".into(), crate::schema::SchemaColumn::new("string")),
             ("value".into(), crate::schema::SchemaColumn::new("string")),
         ]))
     }
 
     fn pref_schema() -> crate::schema::Schema {
         crate::schema::Schema::new(std::collections::HashMap::from([
-            ("key".into(), crate::schema::SchemaColumn::new("string")),
+            ("name".into(), crate::schema::SchemaColumn::new("string")),
             ("locale".into(), crate::schema::SchemaColumn::new("string")),
             ("timezone".into(), crate::schema::SchemaColumn::new("string")),
         ]))
@@ -613,13 +616,13 @@ mod tests {
                 },
             ),
             ("parent_id".into(), crate::schema::SchemaColumn::new("integer")),
-            ("key".into(), crate::schema::SchemaColumn::new("string")),
+            ("name".into(), crate::schema::SchemaColumn::new("string")),
             ("note".into(), crate::schema::SchemaColumn::new("string")),
             ("value".into(), crate::schema::SchemaColumn::new("string")),
         ]));
         let mut row = Row::new();
         row.insert("parent_id".into(), Value::Int(1));
-        row.insert("key".into(), Value::from("theme"));
+        row.insert("name".into(), Value::from("theme"));
         row.insert("note".into(), Value::from("side"));
         row.insert("value".into(), Value::from("dark"));
         repo.items.lock().expect("mock").push(row);
@@ -635,9 +638,10 @@ mod tests {
                     "settings",
                     "id",
                     "parent_id",
-                    None,
+                    Some("value".into()),
                     crate::EnrichmentPropertyType::Dictionary,
-                ),
+                )
+                .with_dictionary_key("name"),
                 &mut parents,
                 None,
             )

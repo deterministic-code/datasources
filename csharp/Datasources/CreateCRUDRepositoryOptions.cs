@@ -15,7 +15,7 @@ public static class CreateCRUDRepositoryOptions
         var read = CreateReadonlyRepositoryMappingOptions.FromType<T>(type, types);
         return new()
         {
-            Ids = read.Schema?.Ids is { Count: > 0 } ids ? ids : NamedId(type),
+            Ids = Identity.Ids(read.Schema) is { Count: > 0 } ids ? ids : NamedId(type),
             Entity = read.Entity,
             Schema = read.Schema,
             RowTypeConverters = read.RowTypeConverters

@@ -53,7 +53,7 @@ try
     }, "bulk_create_contact", "bulk_update_contact", "bulk_delete_contact");
     contactsRepo.AddEnriched(new("addresses", "id", "contactId", Type: EnrichmentPropertyType.List), addressesRepo);
     contactsRepo.AddEnriched(new("phones", "id", "contactId", Type: EnrichmentPropertyType.List), phonesRepo);
-    contactsRepo.AddEnriched(new("settings", "id", "contactId", "value", EnrichmentPropertyType.Dictionary), settingsRepo);
+    contactsRepo.AddEnriched(new("settings", "id", "contactId", "value", EnrichmentPropertyType.Dictionary, DictionaryKey: "key"), settingsRepo);
     var counts = new
     {
         contacts = 0,
@@ -120,7 +120,7 @@ try
     var hashset = new HashsetOptimizedReadonlyEnrichmentStrategy<Contact>();
     hashsetRepo.AddEnriched(new("addresses", "id", "contactId", Type: EnrichmentPropertyType.List), addressesRepo, hashset);
     hashsetRepo.AddEnriched(new("phones", "id", "contactId", Type: EnrichmentPropertyType.List), phonesRepo, hashset);
-    hashsetRepo.AddEnriched(new("settings", "id", "contactId", "value", EnrichmentPropertyType.Dictionary), settingsRepo, hashset);
+    hashsetRepo.AddEnriched(new("settings", "id", "contactId", "value", EnrichmentPropertyType.Dictionary, DictionaryKey: "key"), settingsRepo, hashset);
     var joinRepo = new CRUDRepository<Row>(connection, new()
     {
         Entity = "Contact",

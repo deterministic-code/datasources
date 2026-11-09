@@ -6,4 +6,5 @@ public sealed record Enrichment(
     string RelatedKey,
     string? RelatedProperty = null,
     EnrichmentPropertyType Type = EnrichmentPropertyType.Object,
-    Association? Association = null);
+    Association? Association = null,
+    string? DictionaryKey = null);
