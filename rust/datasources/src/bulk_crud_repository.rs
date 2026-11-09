@@ -14,7 +14,6 @@ use crate::statement::Statement;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
-use crate::datasource_error::DatasourceError;
 use crate::result::Result;
 use crate::row::Row;
 use crate::single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy;
@@ -56,10 +55,6 @@ impl BulkCRUDRepository {
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
         let use_transaction = write.use_transaction();
         let crud = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection), options.clone())?);
-        let ids = crud.id_names();
-        let id = ids.first().ok_or_else(|| DatasourceError::message("missing primary key"))?;
-        let _ = crud.column(id);
-        let _ = crud.enrichment_into("");
         strategy.set_repo(Arc::clone(&crud) as Arc<dyn ICRUDRepository>);
         strategy.attach(crud.command(), options, connection);
         Ok(Self {
@@ -68,28 +63,6 @@ impl BulkCRUDRepository {
             use_transaction,
             write,
         })
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn memory(items: Vec<Row>) -> Self {
-        Self::memory_with(items, None)
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
-        let resolved = write
-            .clone()
-            .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
-        let use_transaction = resolved.use_transaction();
-        let crud = Arc::new(CRUDRepository::<Row>::memory_with(items, write));
-        let strategy = Arc::new(SingleCommandIBulkWriteStrategy::new());
-        strategy.set_repo(Arc::clone(&crud) as Arc<dyn ICRUDRepository>);
-        Self {
-            crud,
-            strategy,
-            use_transaction,
-            write: resolved,
-        }
     }
 
     pub fn add_enriched<TRelated: Entity>(

@@ -3,6 +3,9 @@ import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { Operator, Where } from "./statements/index.ts";
 
+const linkKey = (value: Scalar | object | undefined): Scalar =>
+  value === undefined || value === null || typeof value === "object" ? null : value;
+
 type Props = Record<string, Scalar | object>;
 
 const get = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
@@ -42,6 +45,20 @@ export abstract class DeleteEnrichmentStrategy<T> {
       ? undefined
       : new Where(new Operator.Equals(enrichment.relatedKey, key));
   };
+
+  static linkKey = linkKey;
+
+  static linkWhere = (
+    association: NonNullable<Enrichment["association"]>,
+    parentKey: Scalar,
+    relatedKey: Scalar,
+  ): Where =>
+    new Where(
+      new Operator.And(
+        new Operator.Equals(association.parent, parentKey),
+        new Operator.Equals(association.related, relatedKey),
+      ),
+    );
 
   static loadLinks = async <TChild extends object>(
     writer: ICRUDRepository<TChild>,

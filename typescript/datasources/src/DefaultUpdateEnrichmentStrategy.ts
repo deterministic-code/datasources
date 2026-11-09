@@ -28,9 +28,8 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
     const keep = new Set(wanted.map((id) => String(id)));
     for (const row of existing) {
       const id = this.getCell(row, association.related);
-      if (this.presentCell(id) && keep.has(String(id))) continue;
-      if (!this.presentCell(id)) continue;
-      await writer.delete(row, this.linkWhere(association, parentKey, id));
+      if (id !== undefined && id !== null && keep.has(String(id))) continue;
+      await writer.delete(row, DeleteEnrichmentStrategy.linkWhere(association, parentKey, DeleteEnrichmentStrategy.linkKey(id)));
     }
     for (const id of wanted) {
       if (existing.some((row) => String(this.getCell(row, association.related) ?? "") === String(id))) continue;

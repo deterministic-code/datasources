@@ -1,4 +1,4 @@
-use crate::create_enrichment_strategy::{set, CreateEnrichmentStrategy};
+use crate::create_enrichment_strategy::{dict_key, set, CreateEnrichmentStrategy};
 use crate::datasource_error::DatasourceError;
 use crate::default_write_enrichment_strategy::{related_ids, required};
 use crate::enrichment::Enrichment;
@@ -73,11 +73,4 @@ pub(crate) async fn create_links<T: Entity, TLink: Entity>(
         writer.create(row).await?;
     }
     Ok(())
-}
-
-fn dict_key<TChild: Entity>(child: &TChild, key_name: &str) -> String {
-    child
-        .cell(key_name)
-        .map(|value| value.wire_text())
-        .unwrap_or_default()
 }

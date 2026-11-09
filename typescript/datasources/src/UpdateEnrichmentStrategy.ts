@@ -1,11 +1,9 @@
-import { dictionaryMapKey, dictionaryValueColumns, type Enrichment } from "./Enrichment.ts";
+import { mapPayload, type Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Value.ts";
 import { defaultId } from "./createCRUDRepositoryOptions.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { Operator, Where } from "./statements/index.ts";
-import { Schema } from "./Schema.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -43,9 +41,6 @@ export abstract class UpdateEnrichmentStrategy<T> {
   protected namesOf = <TChild extends object>(writer: ICRUDRepository<TChild>, item: TChild): readonly string[] =>
     writer.ids.length > 0 ? writer.ids : defaultId(undefined, Object.keys(item as object));
 
-  protected linkWhere = (association: NonNullable<Enrichment["association"]>, parentKey: Scalar, relatedKey: Scalar): Where =>
-    new Where(new Operator.And(new Operator.Equals(association.parent, parentKey), new Operator.Equals(association.related, relatedKey)));
-
   protected relatedIds = <TParent>(parent: TParent, enrichment: Enrichment): Scalar[] => {
     const ids: Scalar[] = [];
     const seen = new Set<string>();
@@ -66,21 +61,3 @@ export abstract class UpdateEnrichmentStrategy<T> {
     return key;
   };
 }
-
-const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment, schema?: Schema): object[] => {
-  if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
-  if (enrichment?.type !== "dictionary" || value === null || typeof value !== "object") return [];
-  const columns = schema ?? new Schema({});
-  const keyName = dictionaryMapKey(enrichment);
-  return Object.entries(value as Record<string, Scalar | object>)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, cell]) => {
-      if (enrichment.relatedProperty)
-        return { [keyName]: key, [enrichment.relatedProperty]: cell };
-      const row: Props = { [keyName]: key };
-      if (cell !== null && typeof cell === "object" && !Array.isArray(cell))
-        for (const name of dictionaryValueColumns(columns, enrichment))
-          row[name] = (cell as Props)[name];
-      return row;
-    });
-};

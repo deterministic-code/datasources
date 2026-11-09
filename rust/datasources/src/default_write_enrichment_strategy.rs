@@ -1,5 +1,5 @@
 use crate::cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
-use crate::create_enrichment_strategy::CreateEnrichmentStrategy;
+use crate::create_enrichment_strategy::{missing, CreateEnrichmentStrategy};
 use crate::datasource_error::DatasourceError;
 use crate::default_create_enrichment_strategy::DefaultCreateEnrichmentStrategy;
 use crate::default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
@@ -350,38 +350,6 @@ pub(crate) fn required<T: Entity>(parent: &T, name: &str, into: &str) -> Result<
         .ok_or_else(|| DatasourceError::message(format!("{into} requires \"{name}\"")))
 }
 
-fn missing(value: &Value) -> bool {
-    matches!(value, Value::Null | Value::Int(0))
-        || matches!(value, Value::Text(text) if text.is_empty())
-}
-
-#[allow(dead_code)]
-fn assigned(value: &Value) -> bool {
-    match value {
-        Value::Null | Value::Int(0) => false,
-        Value::Text(text) if text.is_empty() => false,
-        _ => true,
-    }
-}
-
-#[allow(dead_code)]
-pub(crate) fn row_key(row: &Row, ids: &[String]) -> Option<String> {
-    if ids.is_empty()
-        || ids.iter().any(|name| match row.get(name) {
-            Some(value) => !assigned(value),
-            None => true,
-        })
-    {
-        return None;
-    }
-    Some(
-        ids.iter()
-            .map(|name| row.get(name).map(Value::wire_text).unwrap_or_default())
-            .collect::<Vec<_>>()
-            .join("\u{1f}"),
-    )
-}
-
 pub fn decode_rows(value: Option<&Value>) -> Vec<Row> {
     match value {
         Some(Value::Text(text)) if !text.is_empty() => text.split('|').map(decode_row).collect(),
@@ -416,11 +384,6 @@ pub fn encode_rows(rows: &[Row]) -> Value {
             .collect::<Vec<_>>()
             .join("|"),
     )
-}
-
-#[allow(dead_code)]
-pub(crate) fn encode_row(row: &Row) -> Value {
-    Value::Text(encode_row_text(row))
 }
 
 fn unescape(text: &str) -> String {

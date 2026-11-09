@@ -1,4 +1,6 @@
-use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
+use crate::delete_enrichment_strategy::{
+    children_where, link_where, load, predicate, DeleteEnrichmentStrategy,
+};
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
@@ -46,8 +48,10 @@ pub(crate) async fn delete_children<T: Entity, TChild: Entity>(
         .filter_map(|child| TChild::object_converter().reverse_convert(child).ok())
         .collect();
     delete_nested.delete_nested(&mut rows).await?;
+    let clause = children_where(writer, enrichment, parent);
+    let by_parent = predicate(&clause);
     for child in existing {
-        writer.delete(child, None).await?;
+        writer.delete(child, by_parent).await?;
     }
     Ok(())
 }
@@ -75,10 +79,9 @@ pub(crate) async fn delete_linked<T: Entity, TLink: Entity>(
         .try_collect::<Vec<_>>()
         .await?;
     for row in existing {
-        if row.cell(&association.related).is_none() {
-            continue;
-        }
-        writer.delete(row, None).await?;
+        let related = row.cell(&association.related).unwrap_or(Value::Null);
+        let clause = link_where(&association, &parent_key, &related);
+        writer.delete(row, Some(&clause)).await?;
     }
     Ok(())
 }
