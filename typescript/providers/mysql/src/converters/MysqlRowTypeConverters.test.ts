@@ -7,6 +7,7 @@ describe("MysqlRowTypeConverters", () => {
     expect(Object.keys(new MysqlDriver().rowTypeConverters)).toEqual(Object.keys(MysqlRowTypeConverters));
   });
 
+
   it("reverses booleans, dates, and bytes", () => {
     const when = new Date("2024-01-02T00:00:00.000Z");
     expect(reverse(true)).toBe(1);

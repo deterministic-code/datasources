@@ -32,3 +32,15 @@ types.yaml:
               - stamp:
                   type: binary
                   is_nullable: true
+      - contact_settings_map:
+          fields:
+            changed:
+              - key:
+                  references: contact_settings.key
+              - value:
+                  references: contact_settings.value
+      - contact_preferences_map:
+          fields:
+            changed:
+              - key:
+                  references: contact_preferences.key

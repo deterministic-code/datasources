@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
+import { RowTypeConverter, Schema } from "@deterministic-code/datasources";
 import { PostgresDriver } from "../PostgresDriver.ts";
 import { reverse, PostgresRowTypeConverters } from "./PostgresRowTypeConverters.ts";
+
+const floorSchema = () => new Schema({ floor: { type: "unsignedinteger", nullable: true, hasDefault: false } });
 
 describe("PostgresRowTypeConverters", () => {
   it("registers default types", () => {
     expect(Object.keys(new PostgresDriver().rowTypeConverters)).toEqual(Object.keys(PostgresRowTypeConverters));
+  });
+
+  it("converts BIGINT text floor through unsignedinteger", () => {
+    const types = floorSchema().types();
+    expect(RowTypeConverter.from({ integer: PostgresRowTypeConverters.integer }, types).convert({ floor: "2" })).toEqual({
+      floor: "2",
+    });
+    expect(RowTypeConverter.from(PostgresRowTypeConverters, types).convert({ floor: "2" })).toEqual({ floor: 2 });
   });
 
   it("reverses booleans, dates, and bytes", () => {

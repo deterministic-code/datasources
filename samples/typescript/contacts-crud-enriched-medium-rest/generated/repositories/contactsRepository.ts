@@ -36,8 +36,8 @@ export class ContactsRepository extends CRUDRepository<Contact> {
     this.contactSource = new ContactSourcesRepository(connection);
     this.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, this.address);
     this.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, this.phone);
-    this.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", type: "dictionary" }, this.contactSettings);
-    this.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", type: "dictionary" }, this.contactPreferences);
+    this.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", dictionaryKey: "key", type: "dictionary" }, this.contactSettings);
+    this.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", dictionaryKey: "key", type: "dictionary" }, this.contactPreferences);
     this.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, this.contactSource);
     this.addEnriched({ destinationProperty: "description", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "description", type: "object" }, this.contactSource);
   }
@@ -50,8 +50,8 @@ export class ContactsRepository extends CRUDRepository<Contact> {
     const contactSource = new ContactSourcesRepository(connection);
     repo.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, address);
     repo.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, phone);
-    repo.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", type: "dictionary" }, contactSettings);
-    repo.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", type: "dictionary" }, contactPreferences);
+    repo.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", dictionaryKey: "key", type: "dictionary" }, contactSettings);
+    repo.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", dictionaryKey: "key", type: "dictionary" }, contactPreferences);
     repo.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, contactSource);
     repo.addEnriched({ destinationProperty: "description", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "description", type: "object" }, contactSource);
     return repo;
