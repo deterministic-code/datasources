@@ -157,7 +157,6 @@ types:
   - address_base:
       tags:
         - datasource_type
-        - readonly_lookup
       inherits: base
       fields:
         - contact_id:
