@@ -97,6 +97,7 @@ export const SKILL_ONLY = {
   rules: [
     "Types, repositories, SQL, and seed rows come from `types.yaml`, `datasource.yaml` when it exists, and `datasource_seeds.yaml` when it exists. After you change any of those files, run `npx @deterministic-code/datasources-cli version`, then `npx @deterministic-code/datasources-cli generate all --dialect csharp|typescript|rust`. `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop. Seed row keys, field names, and which `idN` values the next migration inserts are in generation.md.",
     "Do not create, edit, or delete generator output (a directory named `generated`, Rust `src/generated.rs`, or the SQL migrations `generate all` just wrote). If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml`, `datasource.yaml`, or `datasource_seeds.yaml` and run `generate all` again. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.",
+    "A read that joins tables, or one endpoint in place of several calls, is one SelectStatement with joins. Fold the flat rows with NestedToObjectEnrichmentStrategy in TypeScript and C#. Do not group those rows by hand. The recipe is in select-statement.md.",
   ],
   sections: {
     "generation.md": `## After the spec changes
@@ -153,6 +154,70 @@ Copy \`hooks/block-generated.mjs\` from the same directory as this file to \`.cu
   }
 }
 \`\`\`
+
+## Spec tags and dialect files
+
+A tag named \`readonly\` does nothing. \`readonly_lookup\` is the tag that takes effect: no optimistic-concurrency column, and the generated class is read-only. A table that is not a readonly lookup still gets a full CRUD class plus \`createReadonly()\`.
+
+\`datasource.sqlite.yaml\` replaces \`datasource.yaml\` for the sqlite generate. It does not merge. Every \`mapping\` that runtime needs has to be in that file too. A missing one fails with \`no such table\`.
+
+Run \`version\`, then \`generate all\`.
+`,
+    "select-statement.md": `## Join read
+
+A request to add a read method that joins tables, or to serve one endpoint instead of several calls, is one SelectStatement with joins. Fold the flat join rows into nested objects with NestedToObjectEnrichmentStrategy in TypeScript and C#. Do not group the rows by hand.
+
+Entity names map to tables. Property names map to plain column names. A field is a path (\`Game.id\`, \`GameParent.name\`). Spell the property the way that language spells it (\`Game.gameParentId\` in TypeScript, \`Game.GameParentId\` in C#). The parallel aliases list names the result columns. A field that contains \`AS\` is rejected (\`must be a path\`). An unaliased column uses the last path segment, or an owner prefix when that name is already taken.
+
+Open the connection with \`await ds.createConnection()\` in TypeScript, \`CreateConnection()\` in C#, and \`ds.bind_connection(None)\` in Rust. A view type with no table has no generated repository, so construct the ReadonlyRepository yourself. That view needs an \`is_id: true\` field or generate fails (\`must have is_id: true\`).
+
+TypeScript is the reference.
+
+\`\`\`typescript
+const ENTITIES = [["Game", "games"], ["GameParent", "game_parents"], ["PuzzleGame", "puzzle_games"],
+                  ["Resource", "resources"], ["GameCategory", "game_categories"], ["Category", "categories"]]
+const PROPERTIES = [["gameParentId", "game_parent_id"], ["gameId", "game_id"], ["imageId", "image_id"],
+                    ["categoryId", "category_id"], ["isDeleted", "is_deleted"], ["isEnabled", "is_enabled"]]
+
+const joined = new SelectStatement({
+  table: "Game",
+  fields: ["Game.id", "Game.name", "GameParent.name", "Resource.location", "GameCategory.categoryId", "Category.name"],
+  aliases: ["id", "name", "parentName", "imageLocation", "categoryId", "categoryName"],
+  joins: [
+    Join.inner("GameParent", "GameParent.id", "Game.gameParentId"),
+    Join.left("GameCategory", "GameCategory.gameId", "Game.id"),
+    Join.left("Category", "Category.id", "GameCategory.categoryId"),
+  ],
+  orderBy: [OrderBy.asc("Game.id"), OrderBy.asc("GameCategory.categoryId")],
+})
+
+class GameSummariesService extends ReadonlyRepository<GameSummary> {
+  constructor(connection: IConnection) {
+    super(connection, { type: GameSummary, entity: "Game",
+      entityMapper: new DictionaryMapper(ENTITIES), propertyMappings: new DictionaryMapper(PROPERTIES) })
+    this.addEnriched(
+      { destinationProperty: "categories", sourceProperty: "id", relatedKey: "categoryId", type: "list" }, this,
+      new NestedToObjectEnrichmentStrategy<GameSummary & { imageId: number | null }>({ key: "id", fields: {
+        id: "id", name: "name", parentName: "parentName", thumbnailLocation: "imageLocation",
+        categories: { key: "categoryId", fields: { id: "categoryId", name: "categoryName" } } } }))
+  }
+  override read() { return super.read(joined) }
+}
+\`\`\`
+
+Add post-filtering or fill-ins inside that \`read\`. TypeMap field-name keys are the aliases. Extra mapped columns that are not on the view type need a cast, as in \`GameSummary & { imageId: number | null }\`.
+
+C# is the same shape. Use \`Aliases = [...]\`, \`new Join(JoinKind.Left, table, left, right)\` or \`Join.Left\`, \`new NestedToObjectEnrichmentStrategy<T>(new TypeMap { Key, Fields })\`, and \`OrderBy = [OrderBy.Asc(...)]\`. A generated view type lacks extra join columns (\`gameDeleted\`, \`imageId\`). Use a private subclass as the repository row type, and hold that repository inside the service.
+
+Rust uses the same statement (\`aliases: &[Some("id"), ...]\`, \`OrderBy::asc\`). NestedToObjectEnrichmentStrategy returns a nested group as one text string (\`categoryId=17,categoryName=Mountains\`), so group the rows by hand in Rust.
+
+Property mappings stay plain column names. The mapper qualifies \`GameParent.name\` as \`game_parents.name\`. Mapping \`gameId\` to \`games.id\` makes every path that uses \`gameId\` resolve to \`games\`, which produced \`JOIN puzzle_games ON games.id = games.id\` and silently wrong data.
+
+A where on a joined column names the parameter \`$games.is_deleted\`, and sqlite fails with \`near ".": syntax error\`. Filter that column in code.
+
+A join matches two columns. A computed key such as \`name + '_thumbnail'\` cannot be joined. Read it with a second query and fill the value in code.
+
+Print the SQL with \`repo.addMiddleware({ beforeCommand: (t) => console.log(t), afterCommand: () => {} })\`. Both functions are required. Compare the new endpoint with the existing one row by row. Categories have to be non-empty; an empty list hides a broken nesting. A scratch script with top-level await under tsx needs the \`.mts\` extension.
 `,
   },
 };
@@ -195,7 +260,7 @@ description: >-
   Where and other statements from the documented examples. Use when the user
   mentions datasources, repository generation, types.yaml, datasource.yaml,
   datasource_seeds, mapper, type converter, command, reader, AddEnriched,
-  AddLinked, Where, or SelectStatement.
+  AddLinked, Where, SelectStatement, or a read method that joins tables.
 ---
 
 ${BANNER}# Datasources

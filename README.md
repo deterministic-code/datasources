@@ -637,7 +637,8 @@ Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-
 new SelectStatement(new()
 {
     Table = "Contact",
-    Fields = ["Contact.FirstName AS FirstName", "ContactType.Name AS ContactTypeName"],
+    Fields = ["Contact.FirstName", "ContactType.Name"],
+    Aliases = ["FirstName", "ContactTypeName"],
     Joins = [Join.Inner("ContactType", "Contact.ContactTypeId", "ContactType.Id")],
 });
 ```
@@ -703,6 +704,85 @@ Response updated = await ds.Users.Update(created);
 Response deleted = await ds.Users.Delete(created);
 ```
 
+### Create datasource seeds
+
+**Prompt**
+
+```
+Add `datasource_seeds.yaml` that seeds `gender` with Male as `id1` and Female as `id2`. Snapshot the spec, then generate for typescript.
+```
+
+**Expected**
+
+```yaml
+version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+      - id2:
+          name: Female
+```
+
+```sh
+npx @deterministic-code/datasources-cli version
+npx @deterministic-code/datasources-cli generate all --dialect typescript
+```
+
+### Add a read method that joins tables
+
+**Prompt**
+
+```
+Add a read method that joins Game, GameParent, GameCategory, and Category into one GameSummary, with categories nested on the game. One endpoint instead of several calls.
+```
+
+**Expected**
+
+One `SelectStatement` with joins. Fold the flat rows with `NestedToObjectEnrichmentStrategy`. Do not group the rows by hand. Fields are paths. Aliases are the parallel list. A field that contains `AS` is rejected.
+
+```typescript
+const ENTITIES = [["Game", "games"], ["GameParent", "game_parents"], ["PuzzleGame", "puzzle_games"],
+                  ["Resource", "resources"], ["GameCategory", "game_categories"], ["Category", "categories"]]
+const PROPERTIES = [["gameParentId", "game_parent_id"], ["gameId", "game_id"], ["imageId", "image_id"],
+                    ["categoryId", "category_id"], ["isDeleted", "is_deleted"], ["isEnabled", "is_enabled"]]
+
+const joined = new SelectStatement({
+  table: "Game",
+  fields: ["Game.id", "Game.name", "GameParent.name", "Resource.location", "GameCategory.categoryId", "Category.name"],
+  aliases: ["id", "name", "parentName", "imageLocation", "categoryId", "categoryName"],
+  joins: [
+    Join.inner("GameParent", "GameParent.id", "Game.gameParentId"),
+    Join.left("GameCategory", "GameCategory.gameId", "Game.id"),
+    Join.left("Category", "Category.id", "GameCategory.categoryId"),
+  ],
+  orderBy: [OrderBy.asc("Game.id"), OrderBy.asc("GameCategory.categoryId")],
+})
+
+class GameSummariesService extends ReadonlyRepository<GameSummary> {
+  constructor(connection: IConnection) {
+    super(connection, { type: GameSummary, entity: "Game",
+      entityMapper: new DictionaryMapper(ENTITIES), propertyMappings: new DictionaryMapper(PROPERTIES) })
+    this.addEnriched(
+      { destinationProperty: "categories", sourceProperty: "id", relatedKey: "categoryId", type: "list" }, this,
+      new NestedToObjectEnrichmentStrategy<GameSummary & { imageId: number | null }>({ key: "id", fields: {
+        id: "id", name: "name", parentName: "parentName", thumbnailLocation: "imageLocation",
+        categories: { key: "categoryId", fields: { id: "categoryId", name: "categoryName" } } } }))
+  }
+  override read() { return super.read(joined) }
+}
+```
+
+Open the connection with `await ds.createConnection()` in TypeScript, `CreateConnection()` in C#, and `ds.bind_connection(None)` in Rust.
+
+C# is the same shape: `Aliases = [...]`, `new Join(JoinKind.Left, ...)`, `new NestedToObjectEnrichmentStrategy<T>(new TypeMap { Key, Fields })`, and `OrderBy = [OrderBy.Asc(...)]`. Extra join columns that the generated view lacks go on a private subclass used as the row type.
+
+Rust uses the same statement (`aliases: &[Some("id"), ...]`, `OrderBy::asc`). `NestedToObjectEnrichmentStrategy` returns a nested group as one text string, so group the rows by hand in Rust.
+
+Property mappings stay plain column names. Mapping `gameId` to `games.id` qualifies every path that uses it and can emit `JOIN ... ON games.id = games.id`. A where on a joined column names the parameter `$games.is_deleted`, and sqlite fails with `near "."`. Filter that column in code. A join matches two columns, so a computed key such as `name + '_thumbnail'` is a second read filled in code. A view with no table has no generated repository; build the `ReadonlyRepository` yourself, and the view needs `is_id: true`.
+
+Print the SQL with `repo.addMiddleware({ beforeCommand: (t) => console.log(t), afterCommand: () => {} })`. Both functions are required. Compare the new endpoint with the existing one row by row, and check that categories are non-empty. A scratch script with top-level await under tsx needs the `.mts` extension.
+
 ## Features
 
 Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repositories above them.
@@ -755,6 +835,10 @@ types:
 ```
 
 `generate all` writes the `User` type, the `Users` / `users` / `users()` repository, and SQL.
+
+Tag a type `readonly_lookup` when the generated repository is read-only. Create, update, and delete stay off that class. Rows for a `datasource_type` with that tag come from `datasource_seeds.yaml`, not from repository writes.
+
+A `view_type` that does not inherit a base type (`inherits` is missing, or is `dictionary`) is not a table. Generate emits no SQL and no repository for it. A view that inherits a datasource type overlays that parent table.
 
 ##### C#
 
@@ -1050,6 +1134,29 @@ const loaded = await ds.users.readSingle();
 created.username = "ada-v2";
 const updated = await ds.users.update(created);
 const deleted = await ds.users.delete(created);
+```
+
+### Seeds
+
+Lookup rows live in `datasource_seeds.yaml`, beside `types.yaml` (default `deterministic/datasource_seeds.yaml`). The key under `seeds` is the type name. Each row key is `id` plus a number (`id1`, `id2`). That number is the inserted primary key. The cells are that type's field names. Leave `id` out of the row. A cell is a string, number, boolean, or null.
+
+```yaml
+version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+      - id2:
+          name: Female
+```
+
+`gender` stays the type name when the stored table is `genders`. A mapped column stays the field name here (`email` stored as `email_address` is still `email`). A foreign key is the other row's number (`owner_id: 1` for that type's `id1`). An integer id is that number. A string id is those digits. A uuid id and a field named `uuid` are filled from the type name and the number; leave `uuid` out of the row.
+
+Once any `version-*/diff.yaml` exists, `generate all` reads seed rows from those snapshots. Run `version` after editing the file. The next migration inserts each `idN` that was not in an earlier snapshot. An `idN` already snapshotted stays as inserted: editing its cells or deleting the key leaves the row.
+
+```sh
+npx @deterministic-code/datasources-cli version
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 <!-- Generated from docs/DriverSummary.yaml. Edit that file and run npm run docs:drivers. -->

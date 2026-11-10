@@ -482,3 +482,11 @@ Copy `hooks/block-generated.mjs` from the same directory as this file to `.curso
   }
 }
 ```
+
+## Spec tags and dialect files
+
+A tag named `readonly` does nothing. `readonly_lookup` is the tag that takes effect: no optimistic-concurrency column, and the generated class is read-only. A table that is not a readonly lookup still gets a full CRUD class plus `createReadonly()`.
+
+`datasource.sqlite.yaml` replaces `datasource.yaml` for the sqlite generate. It does not merge. Every `mapping` that runtime needs has to be in that file too. A missing one fails with `no such table`.
+
+Run `version`, then `generate all`.
