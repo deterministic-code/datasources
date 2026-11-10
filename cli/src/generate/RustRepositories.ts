@@ -140,11 +140,17 @@ class RustRepositories extends RepositoryGenerator {
   }
 
   private typeMods(spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown>[] {
+    const authored = new Map(spec.types.map((type) => [type.name, type]));
     const datasourceNames = new Set(datasourceTypesOf(spec).map((type) => type.name));
+    const viewRow = (name: string): boolean => {
+      const type = authored.get(name);
+      const parent = authored.get(type?.inherits ?? "");
+      return parent?.tags.includes("view_type") === true;
+    };
     const types = [
       ...datasourceTypesOf(spec).map((type) => ({ name: type.name, kind: "datasource" as TypeKind })),
       ...authoredViewTypesOf(spec)
-        .filter((type) => !datasourceNames.has(type.name))
+        .filter((type) => !datasourceNames.has(type.name) || viewRow(type.name))
         .map((type) => ({ name: type.name, kind: "view" as TypeKind })),
     ];
     const stems = types.map((type) => ({
@@ -157,15 +163,18 @@ class RustRepositories extends RepositoryGenerator {
       ...new Map(
         stems.map((item) => {
           const collide = counts.get(item.stem)! > 1;
-          const ident = this.ident(collide ? `${item.kind}_${item.stem}` : item.stem);
+          const preferView = collide && viewRow(item.name);
+          const prefixKind = collide && (!preferView || item.kind === "datasource");
+          const ident = this.ident(prefixKind ? `${item.kind}_${item.stem}` : item.stem);
+          const kind = prefixKind ? item.kind : undefined;
           return [
             `${item.kind}/${item.stem}`,
             {
               stem: item.stem,
               ident,
               path: `${caseDirectories(this.paths.typesDir(item.kind), casing)}/${item.stem}.rs`,
-              glob: collide ? undefined : {},
-              kind: collide ? item.kind : undefined,
+              glob: kind === undefined ? {} : undefined,
+              kind,
             },
           ];
         }),

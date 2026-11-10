@@ -1190,6 +1190,165 @@ types:
     expect(textOf(singularTables, "AddressTypesRepository.cs")).toMatch(/\["AddressType"\] = "address_type"/);
   });
 
+  it("keeps inherited view fields on a dual-tagged child", async () => {
+    const snake = (name: string): string => name.replaceAll(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    const sorted = (names: string[]): string[] => [...new Set(names)].sort();
+    const rustFields = (text: string): string[] => [...text.matchAll(/^\s+pub (\w+): /gm)].map((match) => match[1]!);
+    const tsFields = (text: string): string[] =>
+      [...text.matchAll(/^\s+(\w+)[!?]?: /gm)].map((match) => snake(match[1]!));
+    const csFields = (text: string): string[] => [...text.matchAll(/(\w+) \{ get;/g)].map((match) => snake(match[1]!));
+    const csEffective = (
+      entries: { kind: string; filename: string; contents?: string }[],
+      filename: string,
+    ): string[] => {
+      const text = textOf(entries, filename);
+      const parent = text.match(/class \w+ : (\S+)/)?.[1];
+      const fields = csFields(text);
+      if (parent === undefined) return fields;
+      const leaf = parent.split(".").at(-1)!;
+      const next = parent.includes(".Datasource.") ? `Datasource/${leaf}.cs` : `View/${leaf}.cs`;
+      return [...csEffective(entries, next), ...fields];
+    };
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - games_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - game_settings:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - game_id:
+            references: games_base.id
+        - name:
+            type: string
+        - value:
+            type: string
+  - game_settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: game_settings.name
+        - value:
+            type: string
+            references: game_settings.value
+  - categories:
+      tags: [datasource_type, view_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - games_categories:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - game_id:
+            references: games_base.id
+        - category_id:
+            references: categories.id
+  - games:
+      tags: [view_type]
+      inherits: games_base
+      fields:
+        - settings:
+            type: game_settings_map{}
+            references: game_settings.game_id
+        - categories:
+            type: categories[]
+            references: games_categories.game_id
+  - template_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - resource_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - puzzle_game:
+      tags: [datasource_type, view_type]
+      inherits: games
+      fields:
+        - template_id:
+            references: template_base.id
+        - image_id:
+            references: resource_base.id
+            is_nullable: true
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+    };
+    const named = (dialect: Dialect) => ({
+      dialect,
+      reader: memoryReader(files),
+      settings: { "backend.datasources": "sqlite" },
+      env: { INSTALLED_PROVIDERS: "sqlite" },
+    });
+    const required = ["id", "name", "settings", "categories", "template_id", "image_id"];
+    const dialects = ["csharp", "typescript", "rust"] as const;
+    const fieldsOf = {
+      csharp: (types: { kind: string; filename: string; contents?: string }[]) =>
+        sorted(csEffective(types, "View/PuzzleGame.cs")),
+      typescript: (types: { kind: string; filename: string; contents?: string }[]) =>
+        sorted(tsFields(textOf(types, "types/view/puzzleGame.ts"))),
+      rust: (types: { kind: string; filename: string; contents?: string }[]) =>
+        sorted(rustFields(textOf(types, "types/view/puzzleGame.rs"))),
+    };
+    let shared: string[] | undefined;
+    for (const dialect of dialects) {
+      const types = await deterministic.generateTypes(named(dialect));
+      const repos = await deterministic.generateRepositories(named(dialect));
+      const fields = fieldsOf[dialect](types);
+      expect(fields).toEqual(expect.arrayContaining(required));
+      shared = shared ?? fields;
+      expect(fields).toEqual(shared);
+      if (dialect === "csharp") {
+        expect(sorted(csEffective(types, "View/Game.cs"))).toEqual(expect.arrayContaining(["id", "name", "settings", "categories"]));
+        expect(textOf(repos, "PuzzleGamesRepository.cs")).toContain("CRUDRepository<Backend.Types.View.PuzzleGame>");
+      }
+      if (dialect === "typescript") {
+        expect(sorted(tsFields(textOf(types, "types/view/game.ts")))).toEqual(
+          expect.arrayContaining(["id", "name", "settings", "categories"]),
+        );
+        expect(textOf(repos, "puzzleGamesRepository.ts")).toContain('from "../types/view/puzzleGame"');
+      }
+      if (dialect === "rust") {
+        expect(sorted(rustFields(textOf(types, "types/view/game.rs")))).toEqual(
+          expect.arrayContaining(["id", "name", "settings", "categories"]),
+        );
+        expect(types.some((entry) => entry.filename.endsWith("types/view/category.rs"))).toBe(false);
+        expect(textOf(repos, "puzzleGamesRepository.rs")).toContain("use super::super::PuzzleGame");
+        const crate = repos.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "mod.rs");
+        expect(crate?.contents).toContain("types/view/puzzleGame.rs");
+        expect(crate?.contents).toContain("pub use puzzleGame::*;");
+        expect(crate?.contents).toContain("types/datasource/puzzleGame.rs");
+        expect(crate?.contents).toContain("pub mod datasource {");
+        expect(crate?.contents).toContain("pub use super::datasource_puzzleGame::*;");
+      }
+    }
+  });
+
   it("cases child fields from settings", async () => {
     const csharp = await deterministic.generateRepositories(request("csharp", {
       "backend.datasources": "sqlite",
