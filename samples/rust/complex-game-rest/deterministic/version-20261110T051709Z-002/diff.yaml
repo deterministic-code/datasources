@@ -1,0 +1,31 @@
+contacts-crud-enriched-medium-rest-types.yaml:
+  types:
+    changed:
+      - contact_settings_map:
+          fields:
+            changed:
+              - key:
+                  references: contact_settings.key
+              - value:
+                  references: contact_settings.value
+      - contact_preferences_map:
+          fields:
+            changed:
+              - key:
+                  references: contact_preferences.key
+datasource_seeds.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    seeds:
+      - contact_source:
+          - id1:
+              name: Manual
+      - address_type:
+          - id1:
+              name: Home
+          - id2:
+              name: Work
+      - phone_type:
+          - id1:
+              name: Mobile

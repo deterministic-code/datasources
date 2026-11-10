@@ -258,6 +258,56 @@ types:
     expect(up).toMatch(/user_bases/i);
   });
 
+  it("writes sqlite seed inserts from combined datasource_seeds includes", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const store = mem({
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - phone_type:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+`,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+      [join(input, "datasource_seeds.yaml")]: `version: 1.0.0
+includes:
+  - file: more.yaml
+seeds:
+  - phone_type:
+      - id1:
+          name: Mobile
+`,
+      [join(input, "more.yaml")]: `version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+`,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    });
+    expect(
+      await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-auto-migrate-up"], deps(store.fs), cwd),
+    ).toBe(0);
+    const up = store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")];
+    expect(up).toMatch(/INSERT INTO "genders"/);
+    expect(up).toMatch(/Male/);
+    expect(up).toMatch(/INSERT INTO "phone_types"/);
+    expect(up).toMatch(/Mobile/);
+  });
+
   it("generates the complex-game spec after resolving file includes", async () => {
     const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/complex-game-rest-shared/deterministic");
     const loaded = await loadSpec(nodeFs, dir);

@@ -630,6 +630,66 @@ seeds:
     assert.match(down, /DELETE FROM "genders" WHERE "id" = 1/);
   });
 
+  it("combines seed file includes from frozen diffs", async () => {
+    const types = `types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - phone_type:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+`;
+    const seeds = `version: 1.0.0
+includes:
+  - file: more.yaml
+seeds:
+  - phone_type:
+      - id1:
+          name: Mobile
+`;
+    const more = `version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+`;
+    const first = "version-20261016T000000Z-001/diff.yaml";
+    const second = "version-20261016T000000Z-002/diff.yaml";
+    const entries = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": types,
+          "datasource.yaml": DEFAULT_DATASOURCE_YAML,
+          "datasource_seeds.yaml": seeds,
+          "more.yaml": more,
+          [first]: stringify({ "types.yaml": { added: true, content: parse(types) } }),
+          [second]: stringify({
+            "datasource_seeds.yaml": { added: true, content: parse(seeds) },
+            "more.yaml": { added: true, content: parse(more) },
+          }),
+        }),
+        settings: { "version.diffs": `${first}\n${second}` },
+      },
+      ["sqlite"],
+    );
+    const up2 = entries.find((entry) => entry.filename === "sqlite/migrations/0002_up.sql");
+    const sql = up2 != null && "contents" in up2 ? String(up2.contents) : up2?.content ?? "";
+    assert.match(sql, /INSERT INTO "genders"/);
+    assert.match(sql, /Male/);
+    assert.match(sql, /INSERT INTO "phone_types"/);
+    assert.match(sql, /Mobile/);
+  });
+
   it("throws when a root datasource.yaml drifted from the frozen diffs", async () => {
     const path = "version-20261016T000000Z-001/diff.yaml";
     const diff = stringify({

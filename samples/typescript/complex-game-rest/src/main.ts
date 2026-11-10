@@ -1,21 +1,16 @@
 import "../generated/repositories/repositoryRegistry.ts";
 import "./datasources-register.ts";
-import { Datasource } from "@deterministic-code/datasources";
-import { AddressTypesRepository } from "../generated/repositories/addressTypesRepository.ts";
+import { Datasource, Operator, Where } from "@deterministic-code/datasources";
 import { CategoriesRepository } from "../generated/repositories/categoriesRepository.ts";
 import { ContactSourcesRepository } from "../generated/repositories/contactSourcesRepository.ts";
 import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
 import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
 import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
 import { GroupsRepository } from "../generated/repositories/groupsRepository.ts";
-import { PhoneTypesRepository } from "../generated/repositories/phoneTypesRepository.ts";
 import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
 import { RolesRepository } from "../generated/repositories/rolesRepository.ts";
 import { UsersRepository } from "../generated/repositories/usersRepository.ts";
-import type { AddressType } from "../generated/types/datasource/addressType.ts";
-import type { ContactSource } from "../generated/types/datasource/contactSource.ts";
 import type { Group } from "../generated/types/datasource/group.ts";
-import type { PhoneType } from "../generated/types/datasource/phoneType.ts";
 import type { Role } from "../generated/types/datasource/role.ts";
 import { Api } from "./api.ts";
 import { toJson } from "./jsonObject.ts";
@@ -36,11 +31,8 @@ const groups = new GroupsRepository(connection);
 const sources = new ContactSourcesRepository(connection);
 const role = await roles.create({ name: "player", description: "plays" } as Role);
 const group = await groups.create({ name: "guild", description: "guild" } as Group);
-await sources.create({ name: "Manual" } as ContactSource);
-const addressTypes = new AddressTypesRepository(connection);
-await addressTypes.create({ name: "Home" } as AddressType);
-await addressTypes.create({ name: "Work" } as AddressType);
-await new PhoneTypesRepository(connection).create({ name: "Mobile" } as PhoneType);
+const source = await sources.readSingle(new Where(new Operator.Equals("name", "Manual")));
+if (source == null) throw new Error("source");
 
 const user = await call(api, "POST", "/users", {
   username: "ada",
@@ -101,7 +93,7 @@ await call(api, "PUT", `/game_states?id=${stateId}`, { gameId, userId, state: "b
 const contact = await call(api, "POST", "/contacts", {
   firstName: "Ada",
   lastName: "Lovelace",
-  contactSourceName: "Manual",
+  contactSourceName: source.name,
   userId,
   addresses: [
     { addressTypeName: "Home", line1: "12 Analytical Engine", city: "London", country: "GB" },
@@ -119,7 +111,7 @@ const phone = contactRow(created).phones[0];
 await call(api, "PUT", `/contacts?id=${contactId}`, {
   firstName: "Ada Byron",
   lastName: "Lovelace",
-  contactSourceName: "Manual",
+  contactSourceName: source.name,
   userId,
   addresses: [
     {

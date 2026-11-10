@@ -18,11 +18,8 @@ var groups = new GroupsRepository(connection);
 var sources = new ContactSourcesRepository(connection);
 var role = await roles.Create(new Role { Name = "player", Description = "plays" });
 var group = await groups.Create(new Group { Name = "guild", Description = "guild" });
-await sources.Create(new ContactSource { Name = "Manual" });
-var addressTypes = new AddressTypesRepository(connection);
-await addressTypes.Create(new AddressType { Name = "Home" });
-await addressTypes.Create(new AddressType { Name = "Work" });
-await new PhoneTypesRepository(connection).Create(new PhoneType { Name = "Mobile" });
+var source = await sources.ReadSingle(new Where(new Datasources.Operator.Equals("Name", "Manual")))
+    ?? throw new InvalidOperationException("source");
 
 var user = await Call(api, "POST", "/users", Json(new
 {
@@ -90,7 +87,7 @@ var contact = await Call(api, "POST", "/contacts", Json(new
 {
     firstName = "Ada",
     lastName = "Lovelace",
-    contactSourceName = "Manual",
+    contactSourceName = source.Name,
     userId = userId.ToString(),
     addresses = new object[]
     {
@@ -110,7 +107,7 @@ await Call(api, "PUT", $"/contacts?id={contactId}", Json(new
 {
     firstName = "Ada Byron",
     lastName = "Lovelace",
-    contactSourceName = "Manual",
+    contactSourceName = source.Name,
     userId = userId.ToString(),
     addresses = new object[]
     {

@@ -305,6 +305,18 @@ seeds:
           name: Female
 ```
 
+`includes: - file:` pulls in another seed document. Every included `seeds` list combines with this file (includes first, this document last). There is no `types: { filter }` on seeds.
+
+```yaml
+version: 1.0.0
+includes:
+  - file: genders.yaml
+seeds:
+  - phone_type:
+      - id1:
+          name: Mobile
+```
+
 `gender` stays the type name when the stored table is `genders`. A mapped column stays the field name here (`email` stored as `email_address` is still `email`). A foreign key is the other row's number (`owner_id: 1` for that type's `id1`). An integer id is that number. A string id is those digits. A uuid id and a field named `uuid` are filled from the type name and the number; leave `uuid` out of the row.
 
 Once any `version-*/diff.yaml` exists, `generate all` reads seed rows from those snapshots. Run `version` after editing the file. The next migration inserts each `idN` that was not in an earlier snapshot. An `idN` already snapshotted stays as inserted: editing its cells or deleting the key leaves the row.

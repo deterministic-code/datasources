@@ -1,8 +1,7 @@
 use complex_game_rest::{
-    register, AddressType, Api, Category, Contact, ContactSource, Game, GameState, Group, PhoneType,
-    Repositories, Review, Role, User,
+    register, Api, Category, Contact, Game, GameState, Group, Repositories, Review, Role, User,
 };
-use datasources::{default, DatasourceError, Result};
+use datasources::{default, DatasourceError, Operator, Result, Where};
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -14,10 +13,11 @@ async fn main() -> Result<()> {
     let api = Api::open(Arc::clone(&connection), complex_game_rest::clock::Clock::new())?;
     let role = ds.roles().create(Role { name: "player".into(), description: "plays".into(), ..Default::default() }).await?;
     let group = ds.groups().create(Group { name: "guild".into(), description: "guild".into(), ..Default::default() }).await?;
-    ds.contact_sources().create(ContactSource { name: "Manual".into(), ..Default::default() }).await?;
-    ds.address_types().create(AddressType { name: "Home".into(), ..Default::default() }).await?;
-    ds.address_types().create(AddressType { name: "Work".into(), ..Default::default() }).await?;
-    ds.phone_types().create(PhoneType { name: "Mobile".into(), ..Default::default() }).await?;
+    let source = ds
+        .contact_sources()
+        .read_single_where(&Where::new(Operator::equals("name", "Manual")), None)
+        .await?
+        .ok_or_else(|| DatasourceError::message("source"))?;
 
     let user = call(&api, "POST", "/users", Some(json(&[
         ("username", Value::String("ada".into())),
@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
     let contact = call(&api, "POST", "/contacts", Some(json(&[
         ("first_name", Value::String("Ada".into())),
         ("last_name", Value::String("Lovelace".into())),
-        ("contact_source_name", Value::String("Manual".into())),
+        ("contact_source_name", Value::String(source.name.clone())),
         ("user_id", Value::String(user_id.to_string())),
         ("addresses", array(&[
             object(&[
@@ -142,7 +142,7 @@ async fn main() -> Result<()> {
     call(&api, "PUT", &format!("/contacts?id={contact_id}"), Some(json(&[
         ("first_name", Value::String("Ada Byron".into())),
         ("last_name", Value::String("Lovelace".into())),
-        ("contact_source_name", Value::String("Manual".into())),
+        ("contact_source_name", Value::String(source.name.clone())),
         ("user_id", Value::String(user_id.to_string())),
         ("addresses", array(&[
             object(&[
