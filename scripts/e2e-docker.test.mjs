@@ -119,6 +119,22 @@ test("--local installs the CLI once per sample and still runs both scripts", () 
   assert.match(runs[0], /sqlite\.sh --local && sh mysql-postgres\.sh --local/);
 });
 
+test("csharp compose isolates global packages per project", () => {
+  const root = join(scripts, "..");
+  const files = [
+    "samples/csharp/contacts-simple-cli/compose.yml",
+    "samples/csharp/contacts-crud-enriched-medium-rest/compose.yml",
+    "samples/csharp/complex-game-rest/compose.yml",
+    "samples/csharp/user-roles-simple-cli/compose.yml",
+    "quick_starts/contacts_cli/csharp/compose.yml",
+  ];
+  for (const file of files) {
+    const text = readFileSync(join(root, file), "utf8");
+    assert.match(text, /NUGET_PACKAGES: \/nuget\/packages\/\$\{COMPOSE_PROJECT_NAME/);
+    assert.equal(text.includes("NUGET_PACKAGES: /nuget\n"), false, file);
+  }
+});
+
 test("a failing sample exits non-zero", () => {
   const { result } = runDriver(["typescript"], {
     fail: "e2e-samples-typescript-contacts-simple-cli",
