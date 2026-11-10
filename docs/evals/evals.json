@@ -63,11 +63,11 @@
     {
       "id": "select-a-contact-and-its-type",
       "prompt": "Write a SelectStatement for Contact.FirstName and ContactType.Name, inner-joining Contact to ContactType on Contact.ContactTypeId = ContactType.Id.",
-      "expected_output": "SelectStatement Table Contact, Fields Contact.FirstName AS FirstName and ContactType.Name AS ContactTypeName, Join.Inner ContactType on Contact.ContactTypeId and ContactType.Id. No table or column names.",
+      "expected_output": "SelectStatement Table Contact, Fields Contact.FirstName and ContactType.Name, Aliases FirstName and ContactTypeName, Join.Inner ContactType on Contact.ContactTypeId and ContactType.Id. No AS inside a field. No table or column names.",
       "files": [],
       "assertions": [
         { "id": "entity-table", "text": "SelectStatement table is Contact" },
-        { "id": "entity-fields", "text": "Fields are Contact.FirstName and ContactType.Name with PascalCase aliases" },
+        { "id": "entity-fields", "text": "Fields are the paths Contact.FirstName and ContactType.Name, and Aliases are FirstName and ContactTypeName. No field contains AS" },
         { "id": "entity-join", "text": "Inner join ContactType on Contact.ContactTypeId and ContactType.Id" },
         { "id": "no-datasource-names", "text": "Does not put table or column names in the statement" }
       ]
@@ -97,6 +97,20 @@
         { "id": "version-command", "text": "Runs npx @deterministic-code/datasources-cli version" },
         { "id": "generate-command", "text": "Runs npx @deterministic-code/datasources-cli generate all --dialect typescript" },
         { "id": "no-handwritten-sql", "text": "Does not write INSERT SQL or edit a migration file" }
+      ]
+    },
+    {
+      "id": "add-a-read-method-that-joins-tables",
+      "prompt": "Add a read method that joins Game, GameParent, GameCategory, and Category into one GameSummary, with categories nested on the game. One endpoint instead of several calls.",
+      "expected_output": "One SelectStatement on Game with joins and a parallel aliases list. Fields are paths and do not contain AS. NestedToObjectEnrichmentStrategy folds categories by id. Property mappings are plain column names. TypeScript and C# do not group rows by hand. Rust groups by hand.",
+      "files": [],
+      "assertions": [
+        { "id": "one-select", "text": "Builds one SelectStatement on Game with joins to GameParent, GameCategory, and Category" },
+        { "id": "path-aliases", "text": "Fields are paths such as Game.id and GameParent.name, and aliases are a parallel list. No field contains AS" },
+        { "id": "flat-to-nested", "text": "Folds the flat rows with NestedToObjectEnrichmentStrategy keyed on id, with categories as a nested list" },
+        { "id": "no-hand-group", "text": "Does not group the join rows by hand in TypeScript or C#" },
+        { "id": "plain-columns", "text": "Property mappings are plain column names such as game_parent_id and game_id" },
+        { "id": "read-passes-statement", "text": "The read method passes that statement to the repository read" }
       ]
     }
   ]

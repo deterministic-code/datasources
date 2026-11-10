@@ -213,7 +213,8 @@ Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-
 new SelectStatement(new()
 {
     Table = "Contact",
-    Fields = ["Contact.FirstName AS FirstName", "ContactType.Name AS ContactTypeName"],
+    Fields = ["Contact.FirstName", "ContactType.Name"],
+    Aliases = ["FirstName", "ContactTypeName"],
     Joins = [Join.Inner("ContactType", "Contact.ContactTypeId", "ContactType.Id")],
 });
 ```
@@ -299,3 +300,55 @@ seeds:
 npx @deterministic-code/datasources-cli version
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
+
+## Add a read method that joins tables
+
+::: skill-prompt
+Add a read method that joins Game, GameParent, GameCategory, and Category into one GameSummary, with categories nested on the game. One endpoint instead of several calls.
+:::
+
+**Expected**
+
+One `SelectStatement` with joins. Fold the flat rows with `NestedToObjectEnrichmentStrategy`. Do not group the rows by hand. Fields are paths. Aliases are the parallel list. A field that contains `AS` is rejected.
+
+```typescript
+const ENTITIES = [["Game", "games"], ["GameParent", "game_parents"], ["PuzzleGame", "puzzle_games"],
+                  ["Resource", "resources"], ["GameCategory", "game_categories"], ["Category", "categories"]]
+const PROPERTIES = [["gameParentId", "game_parent_id"], ["gameId", "game_id"], ["imageId", "image_id"],
+                    ["categoryId", "category_id"], ["isDeleted", "is_deleted"], ["isEnabled", "is_enabled"]]
+
+const joined = new SelectStatement({
+  table: "Game",
+  fields: ["Game.id", "Game.name", "GameParent.name", "Resource.location", "GameCategory.categoryId", "Category.name"],
+  aliases: ["id", "name", "parentName", "imageLocation", "categoryId", "categoryName"],
+  joins: [
+    Join.inner("GameParent", "GameParent.id", "Game.gameParentId"),
+    Join.left("GameCategory", "GameCategory.gameId", "Game.id"),
+    Join.left("Category", "Category.id", "GameCategory.categoryId"),
+  ],
+  orderBy: [OrderBy.asc("Game.id"), OrderBy.asc("GameCategory.categoryId")],
+})
+
+class GameSummariesService extends ReadonlyRepository<GameSummary> {
+  constructor(connection: IConnection) {
+    super(connection, { type: GameSummary, entity: "Game",
+      entityMapper: new DictionaryMapper(ENTITIES), propertyMappings: new DictionaryMapper(PROPERTIES) })
+    this.addEnriched(
+      { destinationProperty: "categories", sourceProperty: "id", relatedKey: "categoryId", type: "list" }, this,
+      new NestedToObjectEnrichmentStrategy<GameSummary & { imageId: number | null }>({ key: "id", fields: {
+        id: "id", name: "name", parentName: "parentName", thumbnailLocation: "imageLocation",
+        categories: { key: "categoryId", fields: { id: "categoryId", name: "categoryName" } } } }))
+  }
+  override read() { return super.read(joined) }
+}
+```
+
+Open the connection with `await ds.createConnection()` in TypeScript, `CreateConnection()` in C#, and `ds.bind_connection(None)` in Rust.
+
+C# is the same shape: `Aliases = [...]`, `new Join(JoinKind.Left, ...)`, `new NestedToObjectEnrichmentStrategy<T>(new TypeMap { Key, Fields })`, and `OrderBy = [OrderBy.Asc(...)]`. Extra join columns that the generated view lacks go on a private subclass used as the row type.
+
+Rust uses the same statement (`aliases: &[Some("id"), ...]`, `OrderBy::asc`). `NestedToObjectEnrichmentStrategy` returns a nested group as one text string, so group the rows by hand in Rust.
+
+Property mappings stay plain column names. Mapping `gameId` to `games.id` qualifies every path that uses it and can emit `JOIN ... ON games.id = games.id`. A where on a joined column names the parameter `$games.is_deleted`, and sqlite fails with `near "."`. Filter that column in code. A join matches two columns, so a computed key such as `name + '_thumbnail'` is a second read filled in code. A view with no table has no generated repository; build the `ReadonlyRepository` yourself, and the view needs `is_id: true`.
+
+Print the SQL with `repo.addMiddleware({ beforeCommand: (t) => console.log(t), afterCommand: () => {} })`. Both functions are required. Compare the new endpoint with the existing one row by row, and check that categories are non-empty. A scratch script with top-level await under tsx needs the `.mts` extension.

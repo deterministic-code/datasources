@@ -1553,3 +1553,59 @@ const limited = new SelectStatement({ table: "users", fields: ["id"], limit: 10 
 ```
 SELECT id FROM users LIMIT 10
 ```
+
+### Join read
+
+A request to add a read method that joins tables, or to serve one endpoint instead of several calls, is one SelectStatement with joins. Fold the flat join rows into nested objects with NestedToObjectEnrichmentStrategy in TypeScript and C#. Do not group the rows by hand.
+
+Entity names map to tables. Property names map to plain column names. A field is a path (`Game.id`, `GameParent.name`). Spell the property the way that language spells it (`Game.gameParentId` in TypeScript, `Game.GameParentId` in C#). The parallel aliases list names the result columns. A field that contains `AS` is rejected (`must be a path`). An unaliased column uses the last path segment, or an owner prefix when that name is already taken.
+
+Open the connection with `await ds.createConnection()` in TypeScript, `CreateConnection()` in C#, and `ds.bind_connection(None)` in Rust. A view type with no table has no generated repository, so construct the ReadonlyRepository yourself. That view needs an `is_id: true` field or generate fails (`must have is_id: true`).
+
+TypeScript is the reference.
+
+```typescript
+const ENTITIES = [["Game", "games"], ["GameParent", "game_parents"], ["PuzzleGame", "puzzle_games"],
+                  ["Resource", "resources"], ["GameCategory", "game_categories"], ["Category", "categories"]]
+const PROPERTIES = [["gameParentId", "game_parent_id"], ["gameId", "game_id"], ["imageId", "image_id"],
+                    ["categoryId", "category_id"], ["isDeleted", "is_deleted"], ["isEnabled", "is_enabled"]]
+
+const joined = new SelectStatement({
+  table: "Game",
+  fields: ["Game.id", "Game.name", "GameParent.name", "Resource.location", "GameCategory.categoryId", "Category.name"],
+  aliases: ["id", "name", "parentName", "imageLocation", "categoryId", "categoryName"],
+  joins: [
+    Join.inner("GameParent", "GameParent.id", "Game.gameParentId"),
+    Join.left("GameCategory", "GameCategory.gameId", "Game.id"),
+    Join.left("Category", "Category.id", "GameCategory.categoryId"),
+  ],
+  orderBy: [OrderBy.asc("Game.id"), OrderBy.asc("GameCategory.categoryId")],
+})
+
+class GameSummariesService extends ReadonlyRepository<GameSummary> {
+  constructor(connection: IConnection) {
+    super(connection, { type: GameSummary, entity: "Game",
+      entityMapper: new DictionaryMapper(ENTITIES), propertyMappings: new DictionaryMapper(PROPERTIES) })
+    this.addEnriched(
+      { destinationProperty: "categories", sourceProperty: "id", relatedKey: "categoryId", type: "list" }, this,
+      new NestedToObjectEnrichmentStrategy<GameSummary & { imageId: number | null }>({ key: "id", fields: {
+        id: "id", name: "name", parentName: "parentName", thumbnailLocation: "imageLocation",
+        categories: { key: "categoryId", fields: { id: "categoryId", name: "categoryName" } } } }))
+  }
+  override read() { return super.read(joined) }
+}
+```
+
+Add post-filtering or fill-ins inside that `read`. TypeMap field-name keys are the aliases. Extra mapped columns that are not on the view type need a cast, as in `GameSummary & { imageId: number | null }`.
+
+C# is the same shape. Use `Aliases = [...]`, `new Join(JoinKind.Left, table, left, right)` or `Join.Left`, `new NestedToObjectEnrichmentStrategy<T>(new TypeMap { Key, Fields })`, and `OrderBy = [OrderBy.Asc(...)]`. A generated view type lacks extra join columns (`gameDeleted`, `imageId`). Use a private subclass as the repository row type, and hold that repository inside the service.
+
+Rust uses the same statement (`aliases: &[Some("id"), ...]`, `OrderBy::asc`). NestedToObjectEnrichmentStrategy returns a nested group as one text string (`categoryId=17,categoryName=Mountains`), so group the rows by hand in Rust.
+
+Property mappings stay plain column names. The mapper qualifies `GameParent.name` as `game_parents.name`. Mapping `gameId` to `games.id` makes every path that uses `gameId` resolve to `games`, which produced `JOIN puzzle_games ON games.id = games.id` and silently wrong data.
+
+A where on a joined column names the parameter `$games.is_deleted`, and sqlite fails with `near ".": syntax error`. Filter that column in code.
+
+A join matches two columns. A computed key such as `name + '_thumbnail'` cannot be joined. Read it with a second query and fill the value in code.
+
+Print the SQL with `repo.addMiddleware({ beforeCommand: (t) => console.log(t), afterCommand: () => {} })`. Both functions are required. Compare the new endpoint with the existing one row by row. Categories have to be non-empty; an empty list hides a broken nesting. A scratch script with top-level await under tsx needs the `.mts` extension.

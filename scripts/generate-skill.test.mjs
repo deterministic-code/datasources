@@ -54,6 +54,17 @@ test("skill query headings match evals.json", () => {
   assert.equal(ids.length, headings.length);
 });
 
+test("a join read is one select folded by the nested mapper", () => {
+  assert.match(files["SKILL.md"], /NestedToObjectEnrichmentStrategy/);
+  assert.match(files["SKILL.md"], /select-statement\.md/);
+  assert.match(files["select-statement.md"], /## Join read|### Join read/);
+  assert.match(files["select-statement.md"], /must be a path/);
+  assert.match(files["select-statement.md"], /game_parent_id/);
+  assert.match(files["select-statement.md"], /bind_connection\(None\)/);
+  assert.match(files["generation.md"], /readonly_lookup/);
+  assert.match(files["generation.md"], /datasource\.sqlite\.yaml/);
+});
+
 test("skill-only text is appended outside the docs", () => {
   assert.match(files["SKILL.md"], /datasources-cli version/);
   assert.match(files["SKILL.md"], /generate all --dialect csharp\|typescript\|rust/);
