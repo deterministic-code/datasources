@@ -154,6 +154,61 @@ types:
     expect(loaded.files["types.yaml"]).toMatch(/username:/);
   });
 
+  it("folds file includes into datasource_seeds.yaml", async () => {
+    const dir = "app";
+    const loaded = await loadSpec(
+      mem(["types.yaml", "datasource_seeds.yaml", "more.yaml"], {
+        [join(dir, "types.yaml")]: "version: 1.0.0\ntypes: []\n",
+        [join(dir, "datasource_seeds.yaml")]: `version: 1.0.0
+includes:
+  - file: more.yaml
+seeds:
+  - note:
+      - id1:
+          body: n
+`,
+        [join(dir, "more.yaml")]: `version: 1.0.0
+seeds:
+  - user:
+      - id1:
+          email: a
+`,
+      }),
+      dir,
+    );
+    expect(loaded.files["datasource_seeds.yaml"]).toMatch(/user:/);
+    expect(loaded.files["datasource_seeds.yaml"]).toMatch(/note:/);
+    expect(loaded.files["datasource_seeds.yaml"]).not.toMatch(/file:/);
+    expect(loaded.files["datasource_seeds.yaml"].indexOf("user:")).toBeLessThan(
+      loaded.files["datasource_seeds.yaml"].indexOf("note:"),
+    );
+  });
+
+  it("folds a child seed file that only has a remote include", async () => {
+    const dir = "app";
+    const loaded = await loadSpec(
+      mem(["types.yaml", "datasource_seeds.yaml", "more.yaml"], {
+        [join(dir, "types.yaml")]: "version: 1.0.0\ntypes: []\n",
+        [join(dir, "datasource_seeds.yaml")]: `version: 1.0.0
+includes:
+  - file: more.yaml
+seeds: []
+`,
+        [join(dir, "more.yaml")]: `version: 1.0.0
+includes:
+  - id: saved
+seeds:
+  - user:
+      - id1:
+          email: a
+`,
+      }),
+      dir,
+    );
+    expect(loaded.files["datasource_seeds.yaml"]).toMatch(/user:/);
+    expect(loaded.files["datasource_seeds.yaml"]).not.toMatch(/file:/);
+  });
+
   it("skips a version directory without a diff", async () => {
     const dir = "app";
     const loaded = await loadSpec(

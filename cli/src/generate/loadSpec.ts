@@ -43,6 +43,13 @@ export const loadSpec = async (
   files["datasource.yaml"] ??= defaultDatasourceYaml;
   files["datasource.yaml.authored"] = files["datasource.yaml"];
   files["datasource.yaml"] = await resolveIncludes(fs, join(dir, "datasource.yaml"), files["datasource.yaml"]);
+  if (files["datasource_seeds.yaml"] !== undefined) {
+    files["datasource_seeds.yaml"] = await resolveIncludes(
+      fs,
+      join(dir, "datasource_seeds.yaml"),
+      files["datasource_seeds.yaml"],
+    );
+  }
   const diffs = names.filter((name) => versionDir.test(name)).sort();
   const versionFiles: string[] = [];
   for (const name of diffs) {
