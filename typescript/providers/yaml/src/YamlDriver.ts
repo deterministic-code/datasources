@@ -1,5 +1,6 @@
 import {
   columnType as identityColumnType,
+  emptyDefaultValueConverter,
   StubTransaction,
   type Value,
   type DatasourceOptions,
@@ -15,6 +16,7 @@ import { YamlConnection } from "./connection.ts";
 export class YamlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Value, Value>> = {};
   columnType = identityColumnType;
+  defaultValueConverter = emptyDefaultValueConverter;
   connection = (options?: DatasourceOptions): IConnection =>
     YamlConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

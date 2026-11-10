@@ -80,7 +80,7 @@ public class MysqlTests
         Assert.Equal("DECIMAL(18,4)", driver.ColumnType("decimal"));
         Assert.Equal("DOUBLE", driver.ColumnType("float"));
         Assert.Equal("BLOB", driver.ColumnType("binary"));
-        Assert.Equal("(X'ab')", driver.DefaultValueConverter!.Convert("binary", "Hex('ab')"));
+        Assert.Equal("(X'ab')", driver.DefaultValueConverter.Convert("binary", "Hex('ab')"));
         Assert.Equal("Hex('ab')", driver.DefaultValueConverter.ReverseConvert("binary", "(X'ab')"));
         Assert.Equal("Hex('ab')", driver.DefaultValueConverter.ReverseConvert("binary", "X'ab'"));
         Assert.Throws<InvalidOperationException>(() => driver.DefaultValueConverter.ReverseConvert("binary", "X'ab')"));

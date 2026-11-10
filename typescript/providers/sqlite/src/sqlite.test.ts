@@ -10,6 +10,7 @@ import {
   type Value,
   type Cells,
   columnType,
+  emptyDefaultValueConverter,
   type IDriver,
   RowTypeConverter,
   CreateTableStatement,
@@ -236,6 +237,7 @@ describe("Sqlite datasource", () => {
         new SqliteTransaction(c as SqliteConnection, isolation),
       rowTypeConverters: SqliteRowTypeConverters,
       columnType,
+      defaultValueConverter: emptyDefaultValueConverter,
     });
     const ds = new Datasource("sqlite", of());
     expect(ds.provider).toBe("sqlite");

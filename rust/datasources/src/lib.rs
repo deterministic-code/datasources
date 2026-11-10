@@ -122,7 +122,8 @@ pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
 pub use converters::{
     Casing,
-    ChangeCasingConverter, FieldSize, Mapping, MetaDataRowTypeConverter, PluralizerConverter,
+    ChangeCasingConverter, DefaultValueConverter, EmptyDefaultValueConverter,
+    EMPTY_DEFAULT_VALUE_CONVERTER, FieldSize, Mapping, MetaDataRowTypeConverter, PluralizerConverter,
     RegexConverter, ReplaceConverter, RowTypeConverter, SpecField,
     ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter,
 };

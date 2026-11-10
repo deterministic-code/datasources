@@ -65,6 +65,16 @@ impl DefaultValueConverter {
     }
 }
 
+impl datasources::DefaultValueConverter for DefaultValueConverter {
+    fn convert(&self, spec_type: &str, text: &str) -> Result<Option<String>> {
+        DefaultValueConverter::convert(self, spec_type, text)
+    }
+
+    fn reverse_convert(&self, spec_type: &str, native: &str) -> Result<String> {
+        DefaultValueConverter::reverse_convert(self, spec_type, native)
+    }
+}
+
 fn parse(spec_type: &str, value: Option<&str>) -> (String, Option<String>) {
     let Some(v) = value else {
         return ("None".into(), None);

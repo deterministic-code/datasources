@@ -4,7 +4,7 @@ export type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
 export type { IDriver } from "./IDriver.ts";
-export { columnType } from "./IDriver.ts";
+export { columnType, emptyDefaultValueConverter } from "./IDriver.ts";
 export type { Information } from "./Information.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory } from "./DatasourceFactory.ts";
@@ -240,6 +240,8 @@ export {
   type SpecField,
 } from "./converters/SpecField.ts";
 export type { IMapping } from "./converters/IMapping.ts";
+export type { IDefaultValueConverter } from "./converters/IDefaultValueConverter.ts";
+export { EmptyDefaultValueConverter } from "./converters/EmptyDefaultValueConverter.ts";
 export { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 export { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 export { ToLowerCaseConverter } from "./converters/ToLowerCaseConverter.ts";

@@ -56,7 +56,7 @@ public sealed class SqlServerDriver : IDriver
     internal static string NativeSpec(string spec) =>
         spec == "payload" ? ProcedurePayloadType : Types.Convert(spec);
     public IMapping<string, string>? TypeConverter => Types;
-    internal DefaultValueConverter DefaultValueConverter => Defaults;
+    public IDefaultValueConverter DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         ["SQL Server driver."],

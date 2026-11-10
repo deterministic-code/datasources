@@ -87,13 +87,13 @@ typeConverter?: IMapping<string, string> | null
 
 ##### defaultValueConverter
 
-Spec default token (`UtcNow`, `NewId`, …) to native SQL. SQL drivers set this. Other drivers omit it.
+Spec default token (`UtcNow`, `NewId`, …) to native SQL. Required. The default is `emptyDefaultValueConverter` (`convert` returns `null`; `reverseConvert` throws). SQL drivers set a dialect converter. TypeScript assigns the exported `emptyDefaultValueConverter` unless the driver overrides it.
 
 ```typescript
-defaultValueConverter?: DefaultValueConverter | null
+defaultValueConverter: IDefaultValueConverter
 ```
 
-**Returns** `DefaultValueConverter | null | undefined`
+**Returns** `IDefaultValueConverter`
 
 ##### information
 
@@ -193,13 +193,13 @@ IMapping<string, string>? TypeConverter
 
 ##### DefaultValueConverter
 
-Spec default token (`UtcNow`, `NewId`, …) to native SQL. The default returns `null`. SQL drivers set this.
+Spec default token (`UtcNow`, `NewId`, …) to native SQL. Required. The default is `EmptyDefaultValueConverter.Instance` (`Convert` returns `null`; `ReverseConvert` throws). SQL drivers override with a dialect converter.
 
 ```csharp
-DefaultValueConverter? DefaultValueConverter
+IDefaultValueConverter DefaultValueConverter
 ```
 
-**Returns** `DefaultValueConverter?`
+**Returns** `IDefaultValueConverter`
 
 ##### Information
 
@@ -298,13 +298,13 @@ fn type_converter(&self) -> Option<&dyn Mapping<String, String>>
 
 ##### default_value_converter()
 
-Spec default token (`UtcNow`, `NewId`, …) to native SQL. The default returns `None`. SQL drivers set this.
+Spec default token (`UtcNow`, `NewId`, …) to native SQL. Required. The default is `EMPTY_DEFAULT_VALUE_CONVERTER` (`convert` returns `Ok(None)`; `reverse_convert` returns an error). SQL drivers override with a dialect converter.
 
 ```rust
-fn default_value_converter(&self) -> Option<&DefaultValueConverter>
+fn default_value_converter(&self) -> &dyn DefaultValueConverter
 ```
 
-**Returns** `Option<&DefaultValueConverter>`
+**Returns** `&dyn DefaultValueConverter`
 
 ##### information()
 
@@ -339,7 +339,7 @@ The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`
 
 {{ColumnType|columnType|column_type}} maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
-{{TypeConverter|typeConverter|type_converter}} is an {{IMapping|IMapping|Mapping}} from a spec type name (`integer`, `string`) to a native column type. SQL drivers set a {{DeterministicTypeConverter|DeterministicTypeConverter|DeterministicTypeConverter}}. A sized field uses the type definition (`size`), not a generator flag. Concurrency is a {{Where|where|Where}} on the update or delete. {{DefaultValueConverter|defaultValueConverter|default_value_converter}} maps a spec default token (`UtcNow`, `NewId`) to a native SQL expression. Other drivers leave them unset.
+{{TypeConverter|typeConverter|type_converter}} is an {{IMapping|IMapping|Mapping}} from a spec type name (`integer`, `string`) to a native column type. SQL drivers set a {{DeterministicTypeConverter|DeterministicTypeConverter|DeterministicTypeConverter}}. A sized field uses the type definition (`size`), not a generator flag. Concurrency is a {{Where|where|Where}} on the update or delete. {{DefaultValueConverter|defaultValueConverter|default_value_converter}} maps a spec default token (`UtcNow`, `NewId`) to a native SQL expression. The default is the empty converter. SQL drivers override it. Other drivers inherit the empty converter.
 
 ::: prose
 ### typescript

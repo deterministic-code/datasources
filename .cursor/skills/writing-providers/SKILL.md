@@ -18,7 +18,7 @@ Read `docs/writing-providers.md` for the interface. Implement these members:
 - `rowTypeConverters` — canonical cell converters (`bool`, `datetime`, `uuid`, `decimal`, `binary`). Empty when cells are already canonical
 - `columnType` — SQL type name for a canonical column type. Default returns the name. C# and Rust inherit that default. TypeScript assigns the exported `columnType`. MySQL, Postgres, and SQLite override it and throw on an unknown name. The statement factory maps statements to general ones, including `SelectInsertedIdStatement` to a `SelectStatement`, and the repository reads that row. SQLite, MySQL, and Postgres keep create-table rendering on their own `CreateTableStatementRenderer`. The factory does not subclass that renderer.
 - `typeConverter` / `TypeConverter` / `type_converter` — `IMapping<string, string>` from spec type name to native SQL type. SQL drivers set a `DeterministicTypeConverter`. Default is unset (`null` / omitted / `None`).
-- `defaultValueConverter` / `DefaultValueConverter` / `default_value_converter` — spec default token to native SQL. SQL drivers set this. Default is unset (`null` / omitted / `None`).
+- `defaultValueConverter` / `DefaultValueConverter` / `default_value_converter` — spec default token to native SQL. Required. Default is the empty converter (`emptyDefaultValueConverter` / `EmptyDefaultValueConverter.Instance` / `EMPTY_DEFAULT_VALUE_CONVERTER`). C# and Rust inherit that default. TypeScript assigns the exported `emptyDefaultValueConverter`. SQL drivers override with a dialect converter.
 - `information` — optional `Information` with `descriptions`, `overrides`, and `changeLogs` string lists. Default is unset (`null` / omitted / `None`).
 
 ## Public surface
