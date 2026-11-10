@@ -119,6 +119,15 @@ test("--local installs the CLI once per sample and still runs both scripts", () 
   assert.match(runs[0], /sqlite\.sh --local && sh mysql-postgres\.sh --local/);
 });
 
+test("contacts CLI quick starts set mysql_native_password like samples", () => {
+  const root = join(scripts, "..");
+  const expected = readFileSync(join(root, "scripts/mysql/init/02-native-password.sql"), "utf8");
+  for (const language of ["typescript", "csharp", "rust"]) {
+    const path = join(root, "quick_starts/contacts_cli", language, "mysql/init/02-native-password.sql");
+    assert.equal(readFileSync(path, "utf8"), expected, path);
+  }
+});
+
 test("csharp compose isolates global packages per project", () => {
   const root = join(scripts, "..");
   const files = [
