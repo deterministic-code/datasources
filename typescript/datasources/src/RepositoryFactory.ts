@@ -10,7 +10,7 @@ import { RepositoryAccess } from "./RepositoryAccess.ts";
 import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
 
 type Named = {
-  create: <T>(connection: IConnection) => ICRUDRepository<T>;
+  create: <T>(connection: IConnection) => IReadonlyRepository<T>;
   createReadonly: <T>(connection: IConnection) => IReadonlyRepository<T>;
 };
 
@@ -41,13 +41,13 @@ export class RepositoryFactory implements ICRUDRepositoryFactory {
   register<T>(
     typeName: string,
     pluralName: string,
-    create: (connection: IConnection) => ICRUDRepository<T>,
+    create: (connection: IConnection) => IReadonlyRepository<T>,
     createReadonly: (connection: IConnection) => IReadonlyRepository<T>,
   ): void;
   register<T>(
     repositoryOrType: IRepository<T> | string,
     pluralName?: string,
-    create?: (connection: IConnection) => ICRUDRepository<T>,
+    create?: (connection: IConnection) => IReadonlyRepository<T>,
     createReadonly?: (connection: IConnection) => IReadonlyRepository<T>,
   ): void {
     if (typeof repositoryOrType !== "string") {
@@ -68,7 +68,7 @@ export class RepositoryFactory implements ICRUDRepositoryFactory {
     if (typeof typeOrName !== "string")
       return this.#get(this.#crudByType, typeOrName) as ICRUDRepository<T>;
     this.applyBound();
-    return this.#lookup(typeOrName).create(connection as IConnection);
+    return this.#lookup(typeOrName).create(connection as IConnection) as ICRUDRepository<T>;
   }
 
   createReadonly = <T>(name: string, connection: IConnection): IReadonlyRepository<T> => {

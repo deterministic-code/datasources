@@ -40,6 +40,7 @@ class CSharpRepositories extends RepositoryGenerator {
       typeName: model.typeName,
       className: this.repositoryClass(model.specName, casing),
       view: model.typeHome === "view" ? {} : undefined,
+      readonly: model.readonly ? {} : undefined,
       children,
       enrichments,
       setup: children.length === 0 && enrichments.length === 0 ? undefined : {},

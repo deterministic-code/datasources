@@ -16,7 +16,7 @@ fn binders() -> &'static Mutex<Vec<Binder>> {
 }
 
 struct Named {
-    create: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn Any + Send + Sync> + Send + Sync>,
+    create: Arc<dyn Fn(Arc<dyn Connection>) -> Result<Arc<dyn Any + Send + Sync>> + Send + Sync>,
     create_readonly: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn Any + Send + Sync> + Send + Sync>,
 }
 
@@ -90,14 +90,14 @@ impl RepositoryFactory {
         &self,
         type_name: impl Into<String>,
         plural_name: impl Into<String>,
-        create: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository<T>> + Send + Sync + 'static,
+        create: impl Fn(Arc<dyn Connection>) -> Result<Arc<dyn ICRUDRepository<T>>> + Send + Sync + 'static,
         create_readonly: impl Fn(Arc<dyn Connection>) -> Arc<dyn IReadonlyRepository<T>>
             + Send
             + Sync
             + 'static,
     ) {
         let named = Named {
-            create: Arc::new(move |connection| Arc::new(create(connection))),
+            create: Arc::new(move |connection| Ok(Arc::new(create(connection)?))),
             create_readonly: Arc::new(move |connection| Arc::new(create_readonly(connection))),
         };
         let mut maps = self.lock();
@@ -127,7 +127,7 @@ impl RepositoryFactory {
             let maps = self.lock();
             maps.named.get(name).map(|named| Arc::clone(&named.create))
         };
-        let stored = (create.ok_or_else(|| missing_named(name))?)(connection);
+        let stored = (create.ok_or_else(|| missing_named(name))?)(connection)?;
         stored
             .downcast::<Arc<dyn ICRUDRepository<T>>>()
             .map(|repo| (*repo).clone())
@@ -268,7 +268,7 @@ mod tests {
         factory.register_named(
             "Contact",
             "contacts",
-            |_| Arc::new(StubRepository::new("crud")),
+            |_| Ok(Arc::new(StubRepository::new("crud"))),
             |_| as_readonly(Arc::new(StubRepository::new("read"))),
         );
         let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
@@ -293,7 +293,7 @@ mod tests {
                 "contacts",
                 {
                     let crud = Arc::clone(&crud);
-                    move |_| Arc::clone(&crud) as Arc<dyn ICRUDRepository>
+                    move |_| Ok(Arc::clone(&crud) as Arc<dyn ICRUDRepository>)
                 },
                 {
                     let read = Arc::clone(&read);
@@ -321,7 +321,7 @@ mod tests {
                 "contacts",
                 {
                     let crud = Arc::clone(&crud);
-                    move |_| Arc::clone(&crud) as Arc<dyn ICRUDRepository>
+                    move |_| Ok(Arc::clone(&crud) as Arc<dyn ICRUDRepository>)
                 },
                 {
                     let read = Arc::clone(&read);

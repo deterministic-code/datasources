@@ -32,6 +32,7 @@ class TypeScriptRepositories extends RepositoryGenerator {
     return {
       typeName: model.typeName,
       className: this.repositoryClass(model.specName, casing),
+      readonly: model.readonly ? {} : undefined,
       typeImport: this.typeImport(model, casing),
       children,
       enrichments,

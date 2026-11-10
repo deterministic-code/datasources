@@ -455,7 +455,13 @@ describe("generate-sql collection fields", () => {
     const sql = "contents" in up ? String(up.contents) : up.content;
     assert.match(sql, /CREATE TABLE "contact_settings"/);
     assert.match(sql, /CREATE TABLE "contact_preferences"/);
+    assert.match(sql, /CREATE TABLE "contacts"/);
     assert.doesNotMatch(sql, /CREATE TABLE "card_labels"/);
+    assert.doesNotMatch(sql, /CREATE TABLE "locale_preferences"/);
+    assert.doesNotMatch(sql, /CREATE TABLE "contact_settings_map"/);
+    assert.doesNotMatch(sql, /CREATE TABLE "contact_preferences_map"/);
+    assert.doesNotMatch(sql, /CREATE TABLE "phone_attribute_map"/);
+    assert.doesNotMatch(sql, /CREATE TABLE "contact_view"/);
     const settings = sql.match(
       /CREATE TABLE "contact_settings" \(([\s\S]*?)\);/,
     )?.[1];

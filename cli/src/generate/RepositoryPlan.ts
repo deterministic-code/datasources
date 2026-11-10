@@ -2,7 +2,12 @@ import { CreateTableStatement } from "@deterministic-code/datasources";
 import { createCasing } from "@deterministic-code/datasources-code-generators/sql/common/default-casing";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { Paths } from "@deterministic-code/generators-common/paths";
-import { identityColumns, isCollectionField, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
+import {
+  identityColumns,
+  isCollectionField,
+  isReadonlyLookup,
+  persistedColumnFields,
+} from "@deterministic-code/generators-common/spec-types";
 import { writeInclusionOf } from "@deterministic-code/datasources-code-generators/sql/common/write-inclusion";
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Dialect } from "./GenerateRequest.ts";
@@ -68,6 +73,12 @@ export const planRepositories = (
     if (abstractParent(table)) return true;
     if (repoType === undefined) throw new Error(`${table.name}: no matching type in types.yaml`);
     if (repoType.inherits === "dictionary") return true;
+    if (
+      repoType.tags.includes("view_type") &&
+      !repoType.tags.includes("datasource_type") &&
+      (repoType.inherits === undefined || repoType.inherits === "dictionary")
+    )
+      return true;
     const asView = types.get(table.name);
     return asView?.tags.includes("view_type") === true && asView.inherits !== undefined && included.has(asView.inherits);
   };
@@ -93,7 +104,13 @@ export const planRepositories = (
     const names = new Set(schema.filter((column) => !skipColumns.has(column.from)).map((column) => column.from));
     const columns = persistedColumnFields(shape).filter((field) => names.has(property(field.name)));
     const ids = identityColumns(shape, table);
-    const inherited = expanded.get(authored!.inherits ?? "") ?? types.get(authored!.inherits ?? "");
+    const tableType = types.get(table.name);
+    const parent = authored!.inherits === undefined ? undefined : types.get(authored!.inherits);
+    const readonly =
+      isReadonlyLookup(authored!) ||
+      (parent !== undefined && isReadonlyLookup(parent)) ||
+      (tableType !== undefined && isReadonlyLookup(tableType));
+    const inherited = expanded.get(authored!.inherits ?? "") ?? parent;
     const sqlColumn = (fieldName: string): string =>
       CreateTableStatement.columnName(overlays.get(fieldName)?.mapping ?? fieldName, naming.naming);
     const yamlFields = [
@@ -136,8 +153,9 @@ export const planRepositories = (
           .filter((field) => writeInclusionOf(field, ids, overlays.get(field.name)).includeInUpdate)
           .map((field) => property(field.name)),
         schema,
-        optimisticConcurrency: concurrencyToken(table, shape, property),
+        optimisticConcurrency: readonly ? undefined : concurrencyToken(table, shape, property),
         enrichments,
+        readonly,
       },
     ];
   });

@@ -369,7 +369,13 @@ public class GenerateSqlTests
         var sql = entries.Single(e => e.Filename.EndsWith("0001_initial_up.sql")).Content;
         Assert.Matches("CREATE TABLE \"contact_settings\"", sql);
         Assert.Matches("CREATE TABLE \"contact_preferences\"", sql);
+        Assert.Matches("CREATE TABLE \"contacts\"", sql);
         Assert.DoesNotMatch("CREATE TABLE \"card_labels\"", sql);
+        Assert.DoesNotMatch("CREATE TABLE \"locale_preferences\"", sql);
+        Assert.DoesNotMatch("CREATE TABLE \"contact_settings_map\"", sql);
+        Assert.DoesNotMatch("CREATE TABLE \"contact_preferences_map\"", sql);
+        Assert.DoesNotMatch("CREATE TABLE \"phone_attribute_map\"", sql);
+        Assert.DoesNotMatch("CREATE TABLE \"contact_view\"", sql);
         var settings = System.Text.RegularExpressions.Regex.Match(sql, @"CREATE TABLE ""contact_settings"" \(([\s\S]*?)\);").Groups[1].Value;
         Assert.Matches("\"contact_id\"", settings);
         Assert.Matches("\"key\"", settings);

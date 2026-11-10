@@ -628,6 +628,14 @@ types: []
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactsRepository.cs")).toContain("CreateReadonly");
+    expect(textOf(csharp, "ContactsRepository.cs")).toContain("CRUDRepository<Backend.Types.View.Contact>");
+    expect(textOf(csharp, "ContactSourcesRepository.cs")).toContain("ReadonlyRepository<");
+    expect(textOf(typescript, "contactSourcesRepository.ts")).toContain("extends ReadonlyRepository<ContactSource>");
+    expect(textOf(typescript, "contactSourcesRepository.ts")).not.toContain("extends CRUDRepository<ContactSource>");
+    expect(textOf(typescript, "contactsRepository.ts")).toContain("extends CRUDRepository<Contact>");
+    expect(textOf(rust, "contactSourcesRepository.rs")).toContain("Arc<ReadonlyRepository<ContactSource>>");
+    expect(textOf(rust, "contactSourcesRepository.rs")).not.toContain("Arc<CRUDRepository<ContactSource>>");
+    expect(textOf(rust, "contactsRepository.rs")).toContain("Arc<CRUDRepository<Contact>>");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/view/contact"');
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("use super::super::Contact");
@@ -1013,7 +1021,7 @@ types:
     expect(addressType).not.toContain("addressType");
     expect(addressType).not.toMatch(/from "[^"]+\.ts"/);
     expect(addressType.slice(addressType.indexOf("createReadonly"))).not.toContain("ids:");
-    expect(addressType.slice(0, addressType.indexOf("createReadonly"))).toContain("ids:");
+    expect(addressType).toContain("extends ReadonlyRepository<AddressType>");
     expect(addressType).toContain("new DictionaryMapper([])");
     for (const list of addressType.match(/new DictionaryMapper\((\[(?:[^[\]]|\[[^[\]]*\])*\])\)/g) ?? []) {
       const pairs = new Function(`return ${list.slice("new DictionaryMapper(".length, -1)}`)() as [string, string][];
@@ -1050,6 +1058,10 @@ types:
   it("uses one repository name and singular entities", async () => {
     const csharp = await deterministic.generateRepositories(request("csharp"));
     expect(textOf(csharp, "AddressTypesRepository.cs")).toContain("public sealed class AddressTypesRepository");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).toContain("ReadonlyRepository<Backend.Types.Datasource.AddressType>");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("CRUDRepository<Backend.Types.Datasource.AddressType>");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("CreateProperties");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("UpdateProperties");
     expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("class AddressTypeRepository ");
     expect(textOf(csharp, "AddressesRepository.cs")).toContain("public sealed class AddressesRepository");
     expect(textOf(csharp, "AddressesRepository.cs")).toContain('Entity = "Address"');
@@ -1946,6 +1958,38 @@ types:
     expect(names).not.toContain("card_labels");
     expect(names).not.toContain("contact_preferences_map");
     expect(names).not.toContain("contact_settings_map");
+  });
+
+  it("does not emit a repository for a view_type that does not inherit a base type", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - locale_preferences:
+      tags: [view_type]
+      fields:
+        - locale:
+            type: string
+  - note:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - title:
+            type: string
+  - note_card:
+      tags: [view_type]
+      inherits: note
+      fields: []
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({ "backend.datasources": "sqlite" });
+    const models = planRepositories(spec, "csharp", { "backend.datasources": "sqlite" });
+    expect(models.map((model) => model.specName)).not.toContain("locale_preferences");
+    expect(models.map((model) => model.specName)).toContain("note_card");
+    expect(models.find((model) => model.specName === "note_card")?.readonly).toBe(false);
   });
 
   it("keeps an explicit datasource.yaml filter", async () => {
