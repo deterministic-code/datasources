@@ -3,7 +3,10 @@ import { isDeepStrictEqual } from "node:util";
 import { parse, stringify } from "yaml";
 import type { IStatement } from "@deterministic-code/datasources";
 import type { SeedRow } from "@deterministic-code/deterministic-generators-common/parser";
-import { resolveIncludes as foldIncludes } from "@deterministic-code/deterministic-generators-common/includes";
+import {
+  resolveIncludes as foldIncludes,
+  resolveSeedIncludes as foldSeedIncludes,
+} from "@deterministic-code/deterministic-generators-common/includes";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { DeterministicParser, VersionSnapshot } from "@deterministic-code/deterministic-generators-common/parser";
@@ -87,15 +90,18 @@ const expand = async (files: Record<string, string>, name: string): Promise<stri
   const includes = Array.isArray(parsed.includes) ? parsed.includes : [];
   const fileIncludes = includes.filter((entry) => typeof entry.file === "string" && entry.file.length > 0);
   if (fileIncludes.length === 0) return text;
-  const { yaml } = await foldIncludes(
+  const seeds = name === "datasource_seeds.yaml";
+  const fold = seeds ? foldSeedIncludes : foldIncludes;
+  const empty = seeds ? "version: 1.0.0\nseeds: []\n" : "types: []\n";
+  const { yaml } = await fold(
     stringify({ ...parsed, includes: fileIncludes }),
     async (include, ctx) => {
       const root = ctx.baseDir ?? "";
       const file = include.file ?? "";
-      if (file.length === 0) return { text: "types: []\n", key: `${root}#`, ctx: { baseDir: root } };
+      if (file.length === 0) return { text: empty, key: `${root}#`, ctx: { baseDir: root } };
       const child = join(root, file);
       const key = files[child] !== undefined ? child : (file.split("/").pop() ?? file);
-      return { text: files[key] ?? "types: []\n", key, ctx: { baseDir: dirname(child) } };
+      return { text: files[key] ?? empty, key, ctx: { baseDir: dirname(child) } };
     },
     { baseDir: dirname(name) },
   );
@@ -109,6 +115,9 @@ const filesOf = async (snapshot: VersionSnapshot): Promise<Record<string, string
   files["datasource.yaml"] ??= defaultDatasourceYaml;
   if (files["types.yaml"] !== undefined) files["types.yaml"] = await expand(files, "types.yaml");
   files["datasource.yaml"] = await expand(files, "datasource.yaml");
+  if (files["datasource_seeds.yaml"] !== undefined) {
+    files["datasource_seeds.yaml"] = await expand(files, "datasource_seeds.yaml");
+  }
   return files;
 };
 
