@@ -24,12 +24,12 @@ test("watcher exits on the first warning line and does not read the rest", () =>
   assert.doesNotMatch(result.stdout, /AFTER/);
 });
 
-test("0 Warning(s), 0 Error(s), npm env-config warn, npm deprecated, git integrity skip, NU1902, and cargo future-incompat do not fail", () => {
+test("0 Warning(s), 0 Error(s), npm env-config warn, npm deprecated, git integrity skip, npm warn exec, NU1902, and cargo future-incompat do not fail", () => {
   const result = spawnSync(
     "sh",
     [
       "-c",
-      `. "${helper}"; printf '%s\\n' '    0 Warning(s)' '    0 Error(s)' 'npm warn Unknown env config "devdir"' 'npm warn deprecated glob@10.5.0: Old versions of glob are not supported' 'npm warn skipping integrity check for git dependency ssh://git@github.com/deterministic-code/generators-common.git' "MigrateMysql.csproj : warning NU1902: Package 'MySqlConnector' 2.4.0 has a known moderate severity vulnerability" 'warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1' | e2e_watch`,
+      `. "${helper}"; printf '%s\\n' '    0 Warning(s)' '    0 Error(s)' 'npm warn Unknown env config "devdir"' 'npm warn deprecated glob@10.5.0: Old versions of glob are not supported' 'npm warn skipping integrity check for git dependency ssh://git@github.com/deterministic-code/generators-common.git' 'npm warn exec The following package was not found and will be installed: @deterministic-code/datasources-cli@0.1.56' "MigrateMysql.csproj : warning NU1902: Package 'MySqlConnector' 2.4.0 has a known moderate severity vulnerability" 'warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1' | e2e_watch`,
     ],
     { encoding: "utf8" },
   );
