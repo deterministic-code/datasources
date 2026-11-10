@@ -16,9 +16,9 @@ import { sqlFlagsOf } from "./sqlFlags.ts";
 import { deterministic } from "./DeterministicProvider.ts";
 import type { Dialect } from "./GenerateRequest.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
-import { csharpRepositories } from "./CSharpRepositories.ts";
-import { rustRepositories } from "./RustRepositories.ts";
-import { typescriptRepositories } from "./TypeScriptRepositories.ts";
+import { csharpRepositoryGenerators } from "./CSharpRepositoryGenerators.ts";
+import { rustRepositoryGenerators } from "./RustRepositoryGenerators.ts";
+import { typescriptRepositoryGenerators } from "./TypeScriptRepositoryGenerators.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { deleteStale, writeEntries } from "./writeEntries.ts";
@@ -1744,17 +1744,17 @@ types:
     );
     expect(rustPlan.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "keyed")?.dictionaryKey).toBe("slot");
     expect(
-      csharpRepositories.generate(models, { "backend.datasources": "sqlite" }, spec).some(
+      csharpRepositoryGenerators.generate(models, { "backend.datasources": "sqlite" }, spec).some(
         (entry) => entry.kind === "content" && entry.contents?.includes('DictionaryKey: "AttributeName"'),
       ),
     ).toBe(true);
     expect(
-      typescriptRepositories.generate(typescriptPlan, { "backend.datasources": "sqlite", "languages.typescript.casing.fields": "camel" }, spec).some(
+      typescriptRepositoryGenerators.generate(typescriptPlan, { "backend.datasources": "sqlite", "languages.typescript.casing.fields": "camel" }, spec).some(
         (entry) => entry.kind === "content" && entry.contents?.includes('dictionaryKey: "attributeName"'),
       ),
     ).toBe(true);
     expect(
-      rustRepositories.generate(rustPlan, { "backend.datasources": "sqlite" }, spec).some(
+      rustRepositoryGenerators.generate(rustPlan, { "backend.datasources": "sqlite" }, spec).some(
         (entry) => entry.kind === "content" && entry.contents?.includes('.with_dictionary_key("attribute_name")'),
       ),
     ).toBe(true);
@@ -1865,9 +1865,9 @@ types: []
       }),
     ).parse({});
     const models = planRepositories(spec, "rust", {});
-    const rust = rustRepositories.generate(models, {}, spec);
-    const typescript = typescriptRepositories.generate(models, {}, spec);
-    const csharp = csharpRepositories.generate(planRepositories(spec, "csharp", {}), {}, spec);
+    const rust = rustRepositoryGenerators.generate(models, {}, spec);
+    const typescript = typescriptRepositoryGenerators.generate(models, {}, spec);
+    const csharp = csharpRepositoryGenerators.generate(planRepositories(spec, "csharp", {}), {}, spec);
     const rustText = textOf(rust, "itemsRepository.rs");
     const tsText = textOf(typescript, "itemsRepository.ts");
     const csharpText = textOf(csharp, "ItemsRepository.cs");

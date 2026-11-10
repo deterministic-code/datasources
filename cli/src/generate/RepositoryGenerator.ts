@@ -17,9 +17,9 @@ import {
 } from "./RepositoryModel.ts";
 
 const languages: Record<string, () => Promise<IRepositoryGenerator>> = {
-  csharp: () => import("./CSharpRepositories.ts").then((mod) => mod.csharpRepositories),
-  rust: () => import("./RustRepositories.ts").then((mod) => mod.rustRepositories),
-  typescript: () => import("./TypeScriptRepositories.ts").then((mod) => mod.typescriptRepositories),
+  csharp: () => import("./CSharpRepositoryGenerators.ts").then((mod) => mod.csharpRepositoryGenerators),
+  rust: () => import("./RustRepositoryGenerators.ts").then((mod) => mod.rustRepositoryGenerators),
+  typescript: () => import("./TypeScriptRepositoryGenerators.ts").then((mod) => mod.typescriptRepositoryGenerators),
 };
 
 export const languageOf = async (dialect: string): Promise<IRepositoryGenerator> => {

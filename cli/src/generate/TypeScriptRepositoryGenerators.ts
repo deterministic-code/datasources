@@ -10,7 +10,7 @@ import type { RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/typescript.ts";
 
-class TypeScriptRepositories extends RepositoryGenerator {
+class TypeScriptRepositoryGenerators extends RepositoryGenerator {
   readonly types = { datasource, views };
 
   generate(models: RepositoryModel[], settings: Record<string, string>, _spec: IDeterministic): GenerateEntry[] {
@@ -71,4 +71,4 @@ class TypeScriptRepositories extends RepositoryGenerator {
   }
 }
 
-export const typescriptRepositories = new TypeScriptRepositories();
+export const typescriptRepositoryGenerators = new TypeScriptRepositoryGenerators();

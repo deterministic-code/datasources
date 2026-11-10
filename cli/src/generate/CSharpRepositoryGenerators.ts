@@ -8,7 +8,7 @@ import type { RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/csharp.ts";
 
-class CSharpRepositories extends RepositoryGenerator {
+class CSharpRepositoryGenerators extends RepositoryGenerator {
   readonly types = { datasource, views };
 
   typesPrefix = (): string => "";
@@ -54,4 +54,4 @@ class CSharpRepositories extends RepositoryGenerator {
   }
 }
 
-export const csharpRepositories = new CSharpRepositories();
+export const csharpRepositoryGenerators = new CSharpRepositoryGenerators();
