@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, emptyDefaultValueConverter, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
 import { bindParameters, toPostgres } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
@@ -278,6 +278,7 @@ describe("Postgres datasource", () => {
         new PostgresTransaction(c as PostgresConnection, isolation),
       rowTypeConverters: PostgresRowTypeConverters,
       columnType,
+      defaultValueConverter: emptyDefaultValueConverter,
     });
     const ds = new Datasource("postgres", of());
     expect(ds.provider).toBe("postgres");

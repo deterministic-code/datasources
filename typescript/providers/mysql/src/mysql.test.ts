@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, InsertStatement, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, InsertStatement, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, emptyDefaultValueConverter, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
 import { bindParameters } from "./bind.ts";
 import { IsolationSql } from "./IsolationSql.ts";
 import { MysqlCommand } from "./command.ts";
@@ -310,6 +310,7 @@ describe("Mysql datasource", () => {
         new MysqlTransaction(c as MysqlConnection, isolation),
       rowTypeConverters: MysqlRowTypeConverters,
       columnType,
+      defaultValueConverter: emptyDefaultValueConverter,
     });
     const ds = new Datasource("mysql", of());
     expect(ds.provider).toBe("mysql");

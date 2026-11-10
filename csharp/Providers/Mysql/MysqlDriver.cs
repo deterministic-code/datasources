@@ -55,7 +55,7 @@ public sealed class MysqlDriver : IDriver
     internal static string NativeSpec(string spec) =>
         spec == "payload" ? ProcedurePayloadType : Types.Convert(spec);
     public IMapping<string, string>? TypeConverter => Types;
-    internal Defaults DefaultValueConverter => DefaultsMap;
+    public IDefaultValueConverter DefaultValueConverter => DefaultsMap;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         [
@@ -153,7 +153,7 @@ public sealed class MysqlDriver : IDriver
         }
     }
 
-    internal sealed class Defaults
+    internal sealed class Defaults : IDefaultValueConverter
     {
         const string EmptyUuid = "00000000-0000-0000-0000-000000000000";
         static readonly Regex CallForm = new(@"^([A-Za-z]+)\('(.*)'\)$", RegexOptions.Compiled);

@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace Datasources.SqlServer;
 
-internal sealed class DefaultValueConverter
+internal sealed class DefaultValueConverter : IDefaultValueConverter
 {
     internal const string EmptyUuid = "00000000-0000-0000-0000-000000000000";
     static readonly Regex CallForm = new(@"^([A-Za-z]+)\('(.*)'\)$", RegexOptions.Compiled);
@@ -22,7 +22,7 @@ internal sealed class DefaultValueConverter
     public DefaultValueConverter(DefaultValueOptions options) =>
         dictionary = DictionaryOf(options);
 
-    internal string? Convert(string specType, string text)
+    public string? Convert(string specType, string text)
     {
         var parsed = Parse(specType, text);
         if (parsed.Token == "None") return null;
@@ -36,7 +36,7 @@ internal sealed class DefaultValueConverter
         return expr == "" ? null : expr;
     }
 
-    internal string ReverseConvert(string specType, string native)
+    public string ReverseConvert(string specType, string native)
     {
         if (!dictionary.TryGetValue(specType, out var entries))
             throw new InvalidOperationException($"Unknown spec field type: {specType}");

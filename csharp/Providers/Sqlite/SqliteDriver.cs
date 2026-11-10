@@ -53,7 +53,7 @@ public sealed class SqliteDriver : IDriver
                 : column.Default.Value;
     internal static string UtcNow() => Defaults.Convert("datetime", "UtcNow") ?? "";
     public IMapping<string, string>? TypeConverter => Types;
-    internal DefaultValueConverter DefaultValueConverter => Defaults;
+    public IDefaultValueConverter DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         [

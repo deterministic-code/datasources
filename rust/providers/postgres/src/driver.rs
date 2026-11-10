@@ -170,6 +170,10 @@ impl Driver for PostgresDriver {
         Some(&*sql_generate::TYPES)
     }
 
+    fn default_value_converter(&self) -> &dyn datasources::DefaultValueConverter {
+        Self::defaults()
+    }
+
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {
         Some(&STATEMENTS)
     }

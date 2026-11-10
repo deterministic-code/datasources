@@ -1,4 +1,6 @@
 mod change_casing_converter;
+mod default_value_converter;
+mod empty_default_value_converter;
 mod mapping;
 mod metadata_row_type_converter;
 mod pluralizer_converter;
@@ -11,6 +13,10 @@ mod to_upper_case_converter;
 mod type_converter;
 
 pub use change_casing_converter::{Casing, ChangeCasingConverter};
+pub use default_value_converter::DefaultValueConverter;
+pub use empty_default_value_converter::{
+    EmptyDefaultValueConverter, EMPTY_DEFAULT_VALUE_CONVERTER,
+};
 pub use mapping::Mapping;
 pub use metadata_row_type_converter::{MetaDataRowTypeConverter, SchemaObject};
 pub(crate) use metadata_row_type_converter::{

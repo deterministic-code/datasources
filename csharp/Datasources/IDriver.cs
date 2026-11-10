@@ -8,6 +8,7 @@ public interface IDriver
     IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
     string ColumnType(string name) => name;
     IMapping<string, string>? TypeConverter => null;
+    IDefaultValueConverter DefaultValueConverter => EmptyDefaultValueConverter.Instance;
     StatementTextRenderer? StatementRenderer => null;
     Information? Information => null;
 }
