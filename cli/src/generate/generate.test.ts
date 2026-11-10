@@ -16,9 +16,9 @@ import { sqlFlagsOf } from "./sqlFlags.ts";
 import { deterministic } from "./DeterministicProvider.ts";
 import type { Dialect } from "./GenerateRequest.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
-import { csharpRepositories } from "./CSharpRepositories.ts";
-import { rustRepositories } from "./RustRepositories.ts";
-import { typescriptRepositories } from "./TypeScriptRepositories.ts";
+import { csharpRepositoryGenerators } from "./CSharpRepositoryGenerators.ts";
+import { rustRepositoryGenerators } from "./RustRepositoryGenerators.ts";
+import { typescriptRepositoryGenerators } from "./TypeScriptRepositoryGenerators.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { deleteStale, writeEntries } from "./writeEntries.ts";
@@ -628,6 +628,14 @@ types: []
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactsRepository.cs")).toContain("CreateReadonly");
+    expect(textOf(csharp, "ContactsRepository.cs")).toContain("CRUDRepository<Backend.Types.View.Contact>");
+    expect(textOf(csharp, "ContactSourcesRepository.cs")).toContain("ReadonlyRepository<");
+    expect(textOf(typescript, "contactSourcesRepository.ts")).toContain("extends ReadonlyRepository<ContactSource>");
+    expect(textOf(typescript, "contactSourcesRepository.ts")).not.toContain("extends CRUDRepository<ContactSource>");
+    expect(textOf(typescript, "contactsRepository.ts")).toContain("extends CRUDRepository<Contact>");
+    expect(textOf(rust, "contactSourcesRepository.rs")).toContain("Arc<ReadonlyRepository<ContactSource>>");
+    expect(textOf(rust, "contactSourcesRepository.rs")).not.toContain("Arc<CRUDRepository<ContactSource>>");
+    expect(textOf(rust, "contactsRepository.rs")).toContain("Arc<CRUDRepository<Contact>>");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/view/contact"');
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("use super::super::Contact");
@@ -1013,7 +1021,7 @@ types:
     expect(addressType).not.toContain("addressType");
     expect(addressType).not.toMatch(/from "[^"]+\.ts"/);
     expect(addressType.slice(addressType.indexOf("createReadonly"))).not.toContain("ids:");
-    expect(addressType.slice(0, addressType.indexOf("createReadonly"))).toContain("ids:");
+    expect(addressType).toContain("extends ReadonlyRepository<AddressType>");
     expect(addressType).toContain("new DictionaryMapper([])");
     for (const list of addressType.match(/new DictionaryMapper\((\[(?:[^[\]]|\[[^[\]]*\])*\])\)/g) ?? []) {
       const pairs = new Function(`return ${list.slice("new DictionaryMapper(".length, -1)}`)() as [string, string][];
@@ -1050,6 +1058,10 @@ types:
   it("uses one repository name and singular entities", async () => {
     const csharp = await deterministic.generateRepositories(request("csharp"));
     expect(textOf(csharp, "AddressTypesRepository.cs")).toContain("public sealed class AddressTypesRepository");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).toContain("ReadonlyRepository<Backend.Types.Datasource.AddressType>");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("CRUDRepository<Backend.Types.Datasource.AddressType>");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("CreateProperties");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("UpdateProperties");
     expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("class AddressTypeRepository ");
     expect(textOf(csharp, "AddressesRepository.cs")).toContain("public sealed class AddressesRepository");
     expect(textOf(csharp, "AddressesRepository.cs")).toContain('Entity = "Address"');
@@ -1732,17 +1744,17 @@ types:
     );
     expect(rustPlan.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "keyed")?.dictionaryKey).toBe("slot");
     expect(
-      csharpRepositories.generate(models, { "backend.datasources": "sqlite" }, spec).some(
+      csharpRepositoryGenerators.generate(models, { "backend.datasources": "sqlite" }, spec).some(
         (entry) => entry.kind === "content" && entry.contents?.includes('DictionaryKey: "AttributeName"'),
       ),
     ).toBe(true);
     expect(
-      typescriptRepositories.generate(typescriptPlan, { "backend.datasources": "sqlite", "languages.typescript.casing.fields": "camel" }, spec).some(
+      typescriptRepositoryGenerators.generate(typescriptPlan, { "backend.datasources": "sqlite", "languages.typescript.casing.fields": "camel" }, spec).some(
         (entry) => entry.kind === "content" && entry.contents?.includes('dictionaryKey: "attributeName"'),
       ),
     ).toBe(true);
     expect(
-      rustRepositories.generate(rustPlan, { "backend.datasources": "sqlite" }, spec).some(
+      rustRepositoryGenerators.generate(rustPlan, { "backend.datasources": "sqlite" }, spec).some(
         (entry) => entry.kind === "content" && entry.contents?.includes('.with_dictionary_key("attribute_name")'),
       ),
     ).toBe(true);
@@ -1853,9 +1865,9 @@ types: []
       }),
     ).parse({});
     const models = planRepositories(spec, "rust", {});
-    const rust = rustRepositories.generate(models, {}, spec);
-    const typescript = typescriptRepositories.generate(models, {}, spec);
-    const csharp = csharpRepositories.generate(planRepositories(spec, "csharp", {}), {}, spec);
+    const rust = rustRepositoryGenerators.generate(models, {}, spec);
+    const typescript = typescriptRepositoryGenerators.generate(models, {}, spec);
+    const csharp = csharpRepositoryGenerators.generate(planRepositories(spec, "csharp", {}), {}, spec);
     const rustText = textOf(rust, "itemsRepository.rs");
     const tsText = textOf(typescript, "itemsRepository.ts");
     const csharpText = textOf(csharp, "ItemsRepository.cs");
@@ -1946,6 +1958,38 @@ types:
     expect(names).not.toContain("card_labels");
     expect(names).not.toContain("contact_preferences_map");
     expect(names).not.toContain("contact_settings_map");
+  });
+
+  it("does not emit a repository for a view_type that does not inherit a base type", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - locale_preferences:
+      tags: [view_type]
+      fields:
+        - locale:
+            type: string
+  - note:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - title:
+            type: string
+  - note_card:
+      tags: [view_type]
+      inherits: note
+      fields: []
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({ "backend.datasources": "sqlite" });
+    const models = planRepositories(spec, "csharp", { "backend.datasources": "sqlite" });
+    expect(models.map((model) => model.specName)).not.toContain("locale_preferences");
+    expect(models.map((model) => model.specName)).toContain("note_card");
+    expect(models.find((model) => model.specName === "note_card")?.readonly).toBe(false);
   });
 
   it("keeps an explicit datasource.yaml filter", async () => {

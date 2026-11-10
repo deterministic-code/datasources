@@ -11,7 +11,7 @@ import { RepositoryGenerator } from "./RepositoryGenerator.ts";
 import { caseDirectories } from "./casing.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
 
-class RustRepositories extends RepositoryGenerator {
+class RustRepositoryGenerators extends RepositoryGenerator {
   readonly types = { datasource, views };
 
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
@@ -48,6 +48,7 @@ class RustRepositories extends RepositoryGenerator {
     return {
       typeName: model.typeName,
       entityType: rowEntity ? "datasources::Row" : model.typeName,
+      readonly: model.readonly ? {} : undefined,
       typed: rowEntity ? undefined : {},
       className: this.repositoryClass(model.specName, casing),
       optimisticClass: optimisticClass(model.typeName),
@@ -84,6 +85,7 @@ class RustRepositories extends RepositoryGenerator {
         typeName: model.typeName,
         entityType: this.isRustEnum(spec, model.specName) ? "datasources::Row" : model.typeName,
         className: this.repositoryClass(model.specName, casing),
+        readonly: model.readonly ? {} : undefined,
         optimisticClass: optimisticClass(model.typeName),
         plural: this.bindName(model.specName, casing, "fields"),
         module: this.ident(this.repositoryFile(model.specName, casing)),
@@ -184,4 +186,4 @@ class RustRepositories extends RepositoryGenerator {
 
 }
 
-export const rustRepositories = new RustRepositories();
+export const rustRepositoryGenerators = new RustRepositoryGenerators();

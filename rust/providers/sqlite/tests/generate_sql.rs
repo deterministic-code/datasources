@@ -488,7 +488,13 @@ types:
     .content;
     assert!(sql.contains("CREATE TABLE \"contact_settings\""));
     assert!(sql.contains("CREATE TABLE \"contact_preferences\""));
+    assert!(sql.contains("CREATE TABLE \"contacts\""));
     assert!(!sql.contains("CREATE TABLE \"card_labels\""));
+    assert!(!sql.contains("CREATE TABLE \"locale_preferences\""));
+    assert!(!sql.contains("CREATE TABLE \"contact_settings_map\""));
+    assert!(!sql.contains("CREATE TABLE \"contact_preferences_map\""));
+    assert!(!sql.contains("CREATE TABLE \"phone_attribute_map\""));
+    assert!(!sql.contains("CREATE TABLE \"contact_view\""));
     let settings = Regex::new(r#"CREATE TABLE "contact_settings" \(([\s\S]*?)\);"#)
         .unwrap()
         .captures(&sql)

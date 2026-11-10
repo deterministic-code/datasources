@@ -1,4 +1,4 @@
-use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
+use datasources::{Datasource, DatasourceError, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
 {{#imports}}use super::super::{{typeName}};
 {{/imports}}use std::sync::Arc;
 
@@ -7,7 +7,7 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "{{typeName}}",
         "{{plural}}",
-        |connection| {{#optimisticConcurrency}}Arc::new(super::{{module}}::{{optimisticClass}}::new(Arc::try_unwrap(super::{{module}}::{{className}}::new(connection).expect("repository").inner).unwrap_or_else(|_| panic!("repository")))) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc::new(super::{{module}}::{{className}}::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}},
+        |{{#readonly}}_connection{{/readonly}}{{^readonly}}connection{{/readonly}}| {{#readonly}}Err(DatasourceError::message("{{typeName}} is a readonly lookup")){{/readonly}}{{^readonly}}Ok({{#optimisticConcurrency}}Arc::new(super::{{module}}::{{optimisticClass}}::new(Arc::try_unwrap(super::{{module}}::{{className}}::new(connection).expect("repository").inner).unwrap_or_else(|_| panic!("repository")))) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc::new(super::{{module}}::{{className}}::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}}){{/readonly}},
         |connection| Arc::new(super::{{module}}::{{className}}::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<{{entityType}}>>,
     );
 {{/models}}

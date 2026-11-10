@@ -1,9 +1,10 @@
 import { {{typeName}} } from "{{typeImport}}";
-import { CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}{{#optimisticConcurrency}}DatasourceError, {{/optimisticConcurrency}}DictionaryMapper, {{#optimisticConcurrency}}eq, {{/optimisticConcurrency}}ReadonlyRepository, Schema, {{#optimisticConcurrency}}Where, {{/optimisticConcurrency}}type IConnection } from "@deterministic-code/datasources";
+import { {{^readonly}}CRUDRepository, {{/readonly}}{{#builder}}CRUDRepositoryBuilder, {{/builder}}{{#optimisticConcurrency}}DatasourceError, {{/optimisticConcurrency}}DictionaryMapper, {{#optimisticConcurrency}}eq, {{/optimisticConcurrency}}ReadonlyRepository, Schema, {{#optimisticConcurrency}}Where, {{/optimisticConcurrency}}type IConnection } from "@deterministic-code/datasources";
 {{#children}}
 import { {{className}} } from "{{repoImport}}";
 {{/children}}
 {{#builder}}
+{{^readonly}}
 const options = (connection: IConnection) =>
   new CRUDRepositoryBuilder<{{typeName}}>()
     .add({ type: {{typeName}}, entity: "{{typeName}}", entityMapper: new DictionaryMapper({{entityPairs}}), propertyMappings: new DictionaryMapper({{mappingPairs}}), ids: [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}], createProperties: [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}], updateProperties: [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}], readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}], schema: new Schema({ {{#schema}}{{#comma}}, {{/comma}}{{name}}: { type: "{{type}}", nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, hasDefault: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}{{#isId}}, isId: true{{/isId}} }{{/schema}} }) })
@@ -12,6 +13,7 @@ const options = (connection: IConnection) =>
 {{/dialects}}
     .for(connection);
 
+{{/readonly}}
 const readonlyOptions = (connection: IConnection) =>
   new CRUDRepositoryBuilder<{{typeName}}>()
     .add({ type: {{typeName}}, entity: "{{typeName}}", entityMapper: new DictionaryMapper({{entityPairs}}), propertyMappings: new DictionaryMapper({{mappingPairs}}), readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}], schema: new Schema({ {{#schema}}{{#comma}}, {{/comma}}{{name}}: { type: "{{type}}", nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, hasDefault: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}{{#isId}}, isId: true{{/isId}} }{{/schema}} }) })
@@ -21,12 +23,12 @@ const readonlyOptions = (connection: IConnection) =>
     .for(connection);
 
 {{/builder}}
-export class {{className}} extends CRUDRepository<{{typeName}}> {
+export class {{className}} extends {{#readonly}}ReadonlyRepository{{/readonly}}{{^readonly}}CRUDRepository{{/readonly}}<{{typeName}}> {
 {{#children}}
   readonly {{field}}: {{className}};
 {{/children}}
   constructor(connection: IConnection) {
-    super(connection, {{#builder}}options(connection){{/builder}}{{^builder}}{ type: {{typeName}}, entity: "{{typeName}}", entityMapper: new DictionaryMapper({{entityPairs}}), propertyMappings: new DictionaryMapper({{mappingPairs}}), ids: [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}], createProperties: [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}], updateProperties: [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}], readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}], schema: new Schema({ {{#schema}}{{#comma}}, {{/comma}}{{name}}: { type: "{{type}}", nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, hasDefault: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}{{#isId}}, isId: true{{/isId}} }{{/schema}} }) }{{/builder}});
+    super(connection, {{#builder}}{{#readonly}}readonlyOptions{{/readonly}}{{^readonly}}options{{/readonly}}(connection){{/builder}}{{^builder}}{ type: {{typeName}}, entity: "{{typeName}}", entityMapper: new DictionaryMapper({{entityPairs}}), propertyMappings: new DictionaryMapper({{mappingPairs}}), {{^readonly}}ids: [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}], createProperties: [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}], updateProperties: [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}], {{/readonly}}readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}], schema: new Schema({ {{#schema}}{{#comma}}, {{/comma}}{{name}}: { type: "{{type}}", nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, hasDefault: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}{{#isId}}, isId: true{{/isId}} }{{/schema}} }) }{{/builder}});
 {{#optimisticConcurrency}}
     const update = this.update;
     const remove = this.delete;
@@ -49,9 +51,13 @@ export class {{className}} extends CRUDRepository<{{typeName}}> {
     this.{{field}} = new {{className}}(connection);
 {{/children}}
 {{#enrichments}}
-    {{#linked}}this.addLinked({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, association: { parent: "{{parentFk}}", related: "{{relatedFk}}" }, type: "{{^object}}{{^dictionary}}list{{/dictionary}}{{/object}}{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}" }, this.{{via}}, this.{{link}});{{/linked}}{{^linked}}this.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}{{#dictionaryKey}}, dictionaryKey: "{{dictionaryKey}}"{{/dictionaryKey}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, this.{{via}});{{/linked}}
+    {{#linked}}{{#readonly}}this.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, type: "list" }, this.{{via}});{{/readonly}}{{^readonly}}this.addLinked({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, association: { parent: "{{parentFk}}", related: "{{relatedFk}}" }, type: "{{^object}}{{^dictionary}}list{{/dictionary}}{{/object}}{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}" }, this.{{via}}, this.{{link}});{{/readonly}}{{/linked}}{{^linked}}this.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}{{#dictionaryKey}}, dictionaryKey: "{{dictionaryKey}}"{{/dictionaryKey}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, this.{{via}});{{/linked}}
 {{/enrichments}}
   }
+{{#readonly}}
+  static createReadonly = (connection: IConnection) => new {{className}}(connection);
+{{/readonly}}
+{{^readonly}}
 {{#setup}}
   static createReadonly(connection: IConnection) {
     const repo = new ReadonlyRepository<{{typeName}}>(connection, {{#builder}}readonlyOptions(connection){{/builder}}{{^builder}}{ type: {{typeName}}, entity: "{{typeName}}", entityMapper: new DictionaryMapper({{entityPairs}}), propertyMappings: new DictionaryMapper({{mappingPairs}}), readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}], schema: new Schema({ {{#schema}}{{#comma}}, {{/comma}}{{name}}: { type: "{{type}}", nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, hasDefault: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}{{#isId}}, isId: true{{/isId}} }{{/schema}} }) }{{/builder}});
@@ -67,4 +73,5 @@ export class {{className}} extends CRUDRepository<{{typeName}}> {
 {{^setup}}
   static createReadonly = (connection: IConnection) => new ReadonlyRepository<{{typeName}}>(connection, {{#builder}}readonlyOptions(connection){{/builder}}{{^builder}}{ type: {{typeName}}, entity: "{{typeName}}", entityMapper: new DictionaryMapper({{entityPairs}}), propertyMappings: new DictionaryMapper({{mappingPairs}}), readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}], schema: new Schema({ {{#schema}}{{#comma}}, {{/comma}}{{name}}: { type: "{{type}}", nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, hasDefault: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}{{#isId}}, isId: true{{/isId}} }{{/schema}} }) }{{/builder}});
 {{/setup}}
+{{/readonly}}
 }

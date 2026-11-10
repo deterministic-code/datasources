@@ -3,7 +3,7 @@ using Datasources;
 using static Datasources.Cmp;
 {{/optimisticConcurrency}}
 
-public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{#optimisticConcurrency}}, ICRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{/optimisticConcurrency}}
+public sealed class {{className}} : {{#readonly}}ReadonlyRepository{{/readonly}}{{^readonly}}CRUDRepository{{/readonly}}<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{#optimisticConcurrency}}, ICRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{/optimisticConcurrency}}
 {
 {{#children}}
     public {{className}} {{field}} { get; }
@@ -16,7 +16,7 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
         {{field}} = new {{className}}(connection);
 {{/children}}
 {{#enrichments}}
-        {{#linked}}AddLinked(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}, Association: new("{{parentFk}}", "{{relatedFk}}")), {{via}}, {{link}});{{/linked}}{{^linked}}AddEnriched(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}{{#dictionary}}, Type: EnrichmentPropertyType.Dictionary{{#dictionaryKey}}, DictionaryKey: "{{dictionaryKey}}"{{/dictionaryKey}}{{/dictionary}}{{#list}}, Type: EnrichmentPropertyType.List{{/list}}), {{via}});{{/linked}}
+        {{#linked}}{{#readonly}}AddEnriched(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}, Type: EnrichmentPropertyType.List), {{via}});{{/readonly}}{{^readonly}}AddLinked(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}, Association: new("{{parentFk}}", "{{relatedFk}}")), {{via}}, {{link}});{{/readonly}}{{/linked}}{{^linked}}AddEnriched(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}{{#dictionary}}, Type: EnrichmentPropertyType.Dictionary{{#dictionaryKey}}, DictionaryKey: "{{dictionaryKey}}"{{/dictionaryKey}}{{/dictionary}}{{#list}}, Type: EnrichmentPropertyType.List{{/list}}), {{via}});{{/linked}}
 {{/enrichments}}
     }
 {{/setup}}
@@ -24,6 +24,11 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
     public {{className}}(IConnection connection) : base(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}}) { }
 {{/setup}}
 
+{{#readonly}}
+    public static IReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> CreateReadonly(IConnection connection) =>
+        new {{className}}(connection);
+{{/readonly}}
+{{^readonly}}
 {{#setup}}
     public static IReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> CreateReadonly(IConnection connection)
     {
@@ -41,6 +46,7 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
     public static IReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}});
 {{/setup}}
+{{/readonly}}
 {{#optimisticConcurrency}}
 
     public new async Task<Response> Update({{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}} item, IWhere? byWhere = null)
@@ -59,7 +65,7 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
 {{/optimisticConcurrency}}
 
 {{^builder}}
-    static CRUDRepositoryOptions<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options() => new()
+    static {{#readonly}}ReadonlyRepositoryMappingOptions{{/readonly}}{{^readonly}}CRUDRepositoryOptions{{/readonly}}<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options() => new()
     {
         Entity = "{{typeName}}",
         EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{typeName}}"] = "{{table}}" }),
@@ -69,10 +75,14 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
             ["{{from}}"] = "{{to}}",
 {{/propertyMappings}}
         }),
+{{^readonly}}
         Ids = [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}],
+{{/readonly}}
         ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
+{{^readonly}}
         CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
         UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+{{/readonly}}
         Schema = new(new Dictionary<string, SchemaColumn>
         {
 {{#schema}}
@@ -82,7 +92,7 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
     };
 {{/builder}}
 {{#builder}}
-    static CRUDRepositoryOptions<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options(IConnection connection) =>
+    static {{#readonly}}ReadonlyRepositoryMappingOptions{{/readonly}}{{^readonly}}CRUDRepositoryOptions{{/readonly}}<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>()
             .Add(new()
             {
@@ -94,10 +104,14 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
                     ["{{from}}"] = "{{to}}",
 {{/propertyMappings}}
                 }),
+{{^readonly}}
                 Ids = [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}],
+{{/readonly}}
                 ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
+{{^readonly}}
                 CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
                 UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+{{/readonly}}
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
 {{#schema}}
@@ -116,10 +130,14 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
                     ["{{from}}"] = "{{to}}",
 {{/propertyMappings}}
                 }),
+{{^readonly}}
                 Ids = [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}],
+{{/readonly}}
                 ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
+{{^readonly}}
                 CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
                 UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+{{/readonly}}
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
 {{#schema}}

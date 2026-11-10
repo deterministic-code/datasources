@@ -37,7 +37,7 @@ fn register(ds: &Arc<dyn Datasource>) {
             options.property_mappings =
                 Some(Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
             options.ids = vec!["Id".into()];
-            crud.create_repository::<Row>(Some(connection), Some(options))
+            Ok(crud.create_repository::<Row>(Some(connection), Some(options)))
         },
         move |connection| {
             let mut options = create_readonly_repository_mapping_options::<User>();
