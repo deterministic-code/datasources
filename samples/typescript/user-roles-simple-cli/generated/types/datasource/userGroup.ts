@@ -4,7 +4,7 @@ export const userGroup = (init: Partial<UserGroup>): UserGroup => Object.assign(
 export class UserGroup {
   id!: number;
   uuid: string = crypto.randomUUID();
-  created!: Date;
+  created: Date = new Date();
   updated: string = Buffer.from([0]).toString("base64");
   userId!: number;
   groupId!: number;

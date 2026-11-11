@@ -15,7 +15,7 @@ impl Default for UserRole {
         Self {
             id: 0,
             uuid: datasources::uuid::Uuid::new_v4(),
-            created: datasources::chrono::DateTime::<datasources::chrono::Utc>::UNIX_EPOCH,
+            created: datasources::chrono::Utc::now(),
             updated: vec![0],
             user_id: 0,
             role_id: 0,

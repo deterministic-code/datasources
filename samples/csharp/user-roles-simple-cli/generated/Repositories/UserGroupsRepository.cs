@@ -28,7 +28,7 @@ public sealed class UserGroupsRepository : CRUDRepository<Backend.Types.Datasour
         {
             ["Id"] = new("integer", false, false, true),
             ["Uuid"] = new("uuid", false, true),
-            ["Created"] = new("datetime", false, false),
+            ["Created"] = new("datetime", false, true),
             ["Updated"] = new("binary", false, true),
             ["UserId"] = new("integer", false, false),
             ["GroupId"] = new("integer", false, false),

@@ -33,7 +33,7 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     )));
     print!(
         "{}",
-        program::run(command.as_ref(), &args, program::hash, true).await?
+        program::run(command.as_ref(), &args, &program::hash, true).await?
     );
     ds.close().await?;
     Ok(())

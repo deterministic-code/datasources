@@ -2,6 +2,7 @@ mod datasources_providers;
 mod generated;
 use generated::{Address, Contact, Email, Phone, Repositories};
 use datasources::{default, DatasourceError, Operator, Result, Where};
+use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,6 +35,10 @@ async fn main() -> Result<()> {
                 country_code: "GB".into(),
                 ..Default::default()
             }],
+            attributes: HashMap::from([
+                ("theme".into(), "dark".into()),
+                ("density".into(), "comfortable".into()),
+            ]),
             ..Default::default()
         })
         .await?;
@@ -68,6 +73,7 @@ async fn main() -> Result<()> {
                 country_code: "GB".into(),
                 ..Default::default()
             }],
+            attributes: HashMap::from([("theme".into(), "light".into())]),
             ..Default::default()
         })
         .await?;
@@ -147,6 +153,10 @@ async fn main() -> Result<()> {
                     country_code: "GB".into(),
                     ..Default::default()
                 }],
+                attributes: HashMap::from([
+                    ("theme".into(), "light".into()),
+                    ("locale".into(), "en".into()),
+                ]),
                 ..Default::default()
             }, None)
         .await?;
@@ -159,13 +169,14 @@ async fn main() -> Result<()> {
     let mut ada_phones: Vec<_> = ada_after.phones.iter().map(|phone| phone.number.clone()).collect();
     ada_phones.sort();
     println!(
-        "updated {} {} rows={} emails={} phones={} {}",
+        "updated {} {} rows={} emails={} phones={} {} {}",
         ada_after.id,
         ada_after.given_name,
         ada_saved.rows_affected,
         ada_emails.join(","),
         ada_phones.join(","),
-        ada_after.addresses[0].city
+        ada_after.addresses[0].city,
+        format(&ada_after.attributes)
     );
 
     let alan_saved = contacts_repo
@@ -198,6 +209,10 @@ async fn main() -> Result<()> {
                     country_code: "GB".into(),
                     ..Default::default()
                 }],
+                attributes: HashMap::from([
+                    ("theme".into(), "dark".into()),
+                    ("lab".into(), "hut8".into()),
+                ]),
                 ..Default::default()
             }, None)
         .await?;
@@ -206,13 +221,14 @@ async fn main() -> Result<()> {
         .await?
         .ok_or_else(|| DatasourceError::message("update"))?;
     println!(
-        "updated {} {} rows={} emails={} phones={} {}",
+        "updated {} {} rows={} emails={} phones={} {} {}",
         alan_after.id,
         alan_after.given_name,
         alan_saved.rows_affected,
         alan_after.emails.iter().map(|email| email.address.clone()).collect::<Vec<_>>().join(","),
         alan_after.phones.iter().map(|phone| phone.number.clone()).collect::<Vec<_>>().join(","),
-        alan_after.addresses[0].line_1
+        alan_after.addresses[0].line_1,
+        format(&alan_after.attributes)
     );
 
     let ada_removed = contacts_repo.delete(ada_after, None).await?;
@@ -236,4 +252,13 @@ async fn main() -> Result<()> {
     println!("deleted {} rows={}", alan.id, alan_removed.rows_affected);
     ds.close().await?;
     Ok(())
+}
+
+fn format(attributes: &HashMap<String, String>) -> String {
+    let mut pairs: Vec<_> = attributes
+        .iter()
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect();
+    pairs.sort();
+    pairs.join(",")
 }

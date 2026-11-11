@@ -18,6 +18,8 @@ import {
   type Parameter,
   type TypeMap,
 } from "@deterministic-code/datasources";
+import "../generated/repositories/repositoryRegistry.ts";
+import { UsersRepository } from "../generated/repositories/usersRepository.ts";
 import bcrypt from "bcryptjs";
 import { existsSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -29,7 +31,8 @@ add-user-role <username> <role>
 add-user-group <username> <group>
 enable-user <username>
 disable-user <username>
-list-users-roles-groups`;
+list-users-roles-groups
+update-memberships`;
 
 export const names = new TransformMapper(
   (name: string) => ({ name: "ugly_name", role_id: "bad_role_id" }[name] ?? name),
@@ -105,6 +108,8 @@ export const parse = (args: string[]) =>
       args.length === 2 ? { kind: "disable-user" as const, values: [args[1]!] } : fail("Usage: disable-user <username>"),
     "list-users-roles-groups": () =>
       args.length === 1 ? { kind: "list-users-roles-groups" as const, values: [] as string[] } : fail(`Unknown command: ${args[0]}\n${usage}`),
+    "update-memberships": () =>
+      args.length === 1 ? { kind: "update-memberships" as const, values: [] as string[] } : fail(`Unknown command: ${args[0]}\n${usage}`),
   }[args[0] ?? ""] ?? fail(args[0] ? `Unknown command: ${args[0]}\n${usage}` : usage))();
 
 const fail = (message: string): never => {
@@ -314,9 +319,49 @@ export const run = async (
       return setEnabled(command, first!, false, procedures);
     case "list-users-roles-groups":
       return list(command);
+    case "update-memberships":
+      return updateMemberships(command, hash, procedures);
     default:
       throw new Error("empty command");
   }
+};
+
+const namesOf = (rows: { name: string }[]) =>
+  [...rows].map((row) => row.name).sort().join(",");
+
+const named = async <T>(repo: { readSingle: (where: Where) => Promise<T | undefined> }, field: string, value: string, missing: string) =>
+  (await repo.readSingle(new Where(new Operator.Equals(field, value)))) ?? fail(missing);
+
+const updateMemberships = async (
+  command: ICommand,
+  hash: (password: string) => string,
+  procedures: boolean,
+): Promise<string> => {
+  for (const args of [
+    ["add-role", "owner"],
+    ["add-group", "remote"],
+    ["add-user-role", "ada", "editor"],
+    ["add-user-group", "ada", "staff"],
+    ["add-user-group", "ada", "remote"],
+    ["add-user-role", "alan", "editor"],
+    ["add-user-group", "alan", "staff"],
+  ])
+    await run(command, args, hash, procedures);
+  const users = new UsersRepository(command.connection);
+  const ada = await named(users, "username", "ada", "ada");
+  const alan = await named(users, "username", "alan", "alan");
+  const owner = await named(users.role, "name", "owner", "owner");
+  const admin = await named(users.role, "name", "admin", "admin");
+  const remote = await named(users.group, "name", "remote", "remote");
+  ada.roles = [...ada.roles.filter((role) => role.name === "admin"), owner];
+  ada.groups = ada.groups.filter((group) => group.name === "staff");
+  await users.update(ada);
+  alan.roles = [...alan.roles.filter((role) => role.name === "editor"), admin];
+  alan.groups = [remote];
+  await users.update(alan);
+  const adaAfter = await named(users, "username", "ada", "ada after");
+  const alanAfter = await named(users, "username", "alan", "alan after");
+  return `updated ada roles=${namesOf(adaAfter.roles)} groups=${namesOf(adaAfter.groups)}\nupdated alan roles=${namesOf(alanAfter.roles)} groups=${namesOf(alanAfter.groups)}\n`;
 };
 
 const env = (key: string): string => {

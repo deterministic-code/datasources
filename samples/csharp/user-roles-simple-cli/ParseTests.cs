@@ -13,6 +13,7 @@ public sealed class ParseTests
         Assert.Equal(("enable-user", new[] { "a" }), Program.Parsed(["enable-user", "a"]));
         Assert.Equal(("disable-user", new[] { "a" }), Program.Parsed(["disable-user", "a"]));
         Assert.Equal(("list-users-roles-groups", Array.Empty<string>()), Program.Parsed(["list-users-roles-groups"]));
+        Assert.Equal(("update-memberships", Array.Empty<string>()), Program.Parsed(["update-memberships"]));
     }
 
     [Theory]
@@ -42,5 +43,6 @@ public sealed class ParseTests
         Assert.Throws<InvalidOperationException>(() => Program.Parsed(["enable-user", "a", "extra"]));
         Assert.Throws<InvalidOperationException>(() => Program.Parsed(["disable-user", "a", "extra"]));
         Assert.Throws<InvalidOperationException>(() => Program.Parsed(["list-users-roles-groups", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["update-memberships", "extra"]));
     }
 }

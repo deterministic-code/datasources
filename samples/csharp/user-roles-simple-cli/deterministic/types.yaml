@@ -10,6 +10,7 @@ types:
             default_value: NewId
         - created:
             type: datetime
+            default_value: UtcNow
         - updated:
             type: binary
             default_value: "Hex('00')"
@@ -54,6 +55,7 @@ types:
   - user_group:
       tags:
         - datasource_type
+        - many_to_many
       inherits: base
       fields:
         - user_id:
@@ -63,9 +65,21 @@ types:
   - user_role:
       tags:
         - datasource_type
+        - many_to_many
       inherits: base
       fields:
         - user_id:
             references: user_base.id
         - role_id:
             references: role.id
+  - user:
+      tags:
+        - view_type
+      inherits: user_base
+      fields:
+        - roles:
+            type: role[]
+            references: user_role.user_id
+        - groups:
+            type: group[]
+            references: user_group.user_id

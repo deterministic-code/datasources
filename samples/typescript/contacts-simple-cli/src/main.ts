@@ -10,6 +10,7 @@ const ada = await contactsRepo.create(contact({
   emails: [email({ emailTypeName: "Personal", address: "ada@example.com", displayName: "Ada", isPrimary: true })],
   phones: [phone({ phoneTypeName: "Mobile", number: "555-0100", displayName: "Ada mobile", extention: "", isPrimary: true })],
   addresses: [address({ addressTypeName: "Home", line1: "12 Analytical Engine", city: "London", countryCode: "GB" })],
+  attributes: { theme: "dark", density: "comfortable" },
 }));
 console.log(`created ${ada.id} ${ada.givenName} ${ada.emails[0].address} ${ada.phones[0].number} ${ada.addresses[0].line1}`);
 
@@ -19,6 +20,7 @@ const alan = await contactsRepo.create(contact({
   emails: [email({ emailTypeName: "Work", address: "alan@work.example", displayName: "Alan", isPrimary: true })],
   phones: [phone({ phoneTypeName: "Work", number: "555-0200", displayName: "Alan office", extention: "", isPrimary: true })],
   addresses: [address({ addressTypeName: "Work", line1: "1 Bletchley Park", city: "Bletchley", countryCode: "GB" })],
+  attributes: { theme: "light" },
 }));
 console.log(`created ${alan.id} ${alan.givenName} ${alan.emails[0].address} ${alan.phones[0].number} ${alan.addresses[0].line1}`);
 
@@ -48,11 +50,12 @@ const adaSaved = await contactsRepo.update(contact({
   addresses: [
     address({ id: ada.addresses[0].id, addressTypeName: "Home", line1: ada.addresses[0].line1, city: "Cambridge", countryCode: "GB" }),
   ],
+  attributes: { theme: "light", locale: "en" },
 }));
 const adaAfter = await contactsRepo.readSingle(new Where(new Operator.Equals("id", ada.id)));
 if (adaAfter == null) throw new Error("update");
 console.log(
-  `updated ${adaAfter.id} ${adaAfter.givenName} rows=${adaSaved.rowsAffected} emails=${[...adaAfter.emails].map((row) => row.address).sort().join(",")} phones=${[...adaAfter.phones].map((row) => row.number).sort().join(",")} ${adaAfter.addresses[0].city}`,
+  `updated ${adaAfter.id} ${adaAfter.givenName} rows=${adaSaved.rowsAffected} emails=${[...adaAfter.emails].map((row) => row.address).sort().join(",")} phones=${[...adaAfter.phones].map((row) => row.number).sort().join(",")} ${adaAfter.addresses[0].city} ${format(adaAfter.attributes)}`,
 );
 
 const alanSaved = await contactsRepo.update(contact({
@@ -68,11 +71,12 @@ const alanSaved = await contactsRepo.update(contact({
   addresses: [
     address({ id: alan.addresses[0].id, addressTypeName: "Work", line1: "2 Hut 8", city: alan.addresses[0].city, countryCode: "GB" }),
   ],
+  attributes: { theme: "dark", lab: "hut8" },
 }));
 const alanAfter = await contactsRepo.readSingle(new Where(new Operator.Equals("id", alan.id)));
 if (alanAfter == null) throw new Error("update");
 console.log(
-  `updated ${alanAfter.id} ${alanAfter.givenName} rows=${alanSaved.rowsAffected} emails=${alanAfter.emails.map((row) => row.address).join(",")} phones=${alanAfter.phones.map((row) => row.number).join(",")} ${alanAfter.addresses[0].line1}`,
+  `updated ${alanAfter.id} ${alanAfter.givenName} rows=${alanSaved.rowsAffected} emails=${alanAfter.emails.map((row) => row.address).join(",")} phones=${alanAfter.phones.map((row) => row.number).join(",")} ${alanAfter.addresses[0].line1} ${format(alanAfter.attributes)}`,
 );
 
 const adaRemoved = await contactsRepo.delete(adaAfter);
@@ -82,3 +86,7 @@ console.log(`deleted ${ada.id} rows=${adaRemoved.rowsAffected}`);
 const alanRemoved = await contactsRepo.delete(alanAfter);
 if ((await contactsRepo.readSingle(new Where(new Operator.Equals("id", alan.id)))) != null) throw new Error("delete");
 console.log(`deleted ${alan.id} rows=${alanRemoved.rowsAffected}`);
+
+function format(attributes: Contact["attributes"]) {
+  return Object.keys(attributes).sort().map((key) => `${key}=${attributes[key]}`).join(",");
+}

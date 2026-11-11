@@ -4,7 +4,7 @@ export const group = (init: Partial<Group>): Group => Object.assign(new Group(),
 export class Group {
   id!: number;
   uuid: string = crypto.randomUUID();
-  created!: Date;
+  created: Date = new Date();
   updated: string = Buffer.from([0]).toString("base64");
   name: string = "";
   description: string = "";

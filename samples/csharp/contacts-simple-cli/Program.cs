@@ -19,6 +19,7 @@ var ada = await contactsRepo.Create(new Contact()
     [
         new Address() { AddressTypeName = "Home", Line1 = "12 Analytical Engine", City = "London", CountryCode = "GB" },
     ],
+    Attributes = new Dictionary<string, string> { ["theme"] = "dark", ["density"] = "comfortable" },
 });
 Console.WriteLine(
     $"created {ada.Id} {ada.GivenName} {ada.Emails[0].Address} {ada.Phones[0].Number} {ada.Addresses[0].Line1}");
@@ -39,6 +40,7 @@ var alan = await contactsRepo.Create(new Contact()
     [
         new Address() { AddressTypeName = "Work", Line1 = "1 Bletchley Park", City = "Bletchley", CountryCode = "GB" },
     ],
+    Attributes = new Dictionary<string, string> { ["theme"] = "light" },
 });
 Console.WriteLine(
     $"created {alan.Id} {alan.GivenName} {alan.Emails[0].Address} {alan.Phones[0].Number} {alan.Addresses[0].Line1}");
@@ -97,11 +99,12 @@ var adaSaved = await contactsRepo.Update(new Contact()
             CountryCode = "GB",
         },
     ],
+    Attributes = new Dictionary<string, string> { ["theme"] = "light", ["locale"] = "en" },
 });
 var adaAfter = await contactsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id)))
     ?? throw new InvalidOperationException("update");
 Console.WriteLine(
-    $"updated {adaAfter.Id} {adaAfter.GivenName} rows={adaSaved.RowsAffected} emails={string.Join(",", adaAfter.Emails.OrderBy(email => email.Address).Select(email => email.Address))} phones={string.Join(",", adaAfter.Phones.OrderBy(phone => phone.Number).Select(phone => phone.Number))} {adaAfter.Addresses[0].City}");
+    $"updated {adaAfter.Id} {adaAfter.GivenName} rows={adaSaved.RowsAffected} emails={string.Join(",", adaAfter.Emails.OrderBy(email => email.Address).Select(email => email.Address))} phones={string.Join(",", adaAfter.Phones.OrderBy(phone => phone.Number).Select(phone => phone.Number))} {adaAfter.Addresses[0].City} {Format(adaAfter.Attributes)}");
 
 var alanSaved = await contactsRepo.Update(new Contact()
 {
@@ -142,11 +145,12 @@ var alanSaved = await contactsRepo.Update(new Contact()
             CountryCode = "GB",
         },
     ],
+    Attributes = new Dictionary<string, string> { ["theme"] = "dark", ["lab"] = "hut8" },
 });
 var alanAfter = await contactsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", alan.Id)))
     ?? throw new InvalidOperationException("update");
 Console.WriteLine(
-    $"updated {alanAfter.Id} {alanAfter.GivenName} rows={alanSaved.RowsAffected} emails={string.Join(",", alanAfter.Emails.Select(email => email.Address))} phones={string.Join(",", alanAfter.Phones.Select(phone => phone.Number))} {alanAfter.Addresses[0].Line1}");
+    $"updated {alanAfter.Id} {alanAfter.GivenName} rows={alanSaved.RowsAffected} emails={string.Join(",", alanAfter.Emails.Select(email => email.Address))} phones={string.Join(",", alanAfter.Phones.Select(phone => phone.Number))} {alanAfter.Addresses[0].Line1} {Format(alanAfter.Attributes)}");
 
 var adaRemoved = await contactsRepo.Delete(adaAfter);
 if (await contactsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id))) is not null)
@@ -157,3 +161,6 @@ var alanRemoved = await contactsRepo.Delete(alanAfter);
 if (await contactsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", alan.Id))) is not null)
     throw new InvalidOperationException("delete");
 Console.WriteLine($"deleted {alan.Id} rows={alanRemoved.RowsAffected}");
+
+static string Format(Dictionary<string, string> attributes) =>
+    string.Join(",", attributes.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}={pair.Value}"));

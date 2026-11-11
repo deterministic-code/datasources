@@ -46,7 +46,7 @@ async fn main() {
     ));
     let result = async {
         for step in spec.steps {
-            program::run(command.as_ref(), &step.argv, |_| Ok("hash".into()), false).await?;
+            program::run(command.as_ref(), &step.argv, &|_| Ok("hash".into()), false).await?;
         }
         Ok::<(), datasources::DatasourceError>(())
     }

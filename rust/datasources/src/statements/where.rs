@@ -51,6 +51,10 @@ impl Where {
     {
         Ok(Self::new(rewrite(&self.condition, &column, &value)?))
     }
+
+    pub fn parameters(&self) -> Vec<Parameter> {
+        collect(&self.condition)
+    }
 }
 
 
@@ -66,7 +70,7 @@ impl crate::ICondition for Where {
 
 impl IWhere for Where {
     fn parameters(&self) -> Vec<Parameter> {
-        collect(&self.condition)
+        Where::parameters(self)
     }
 }
 

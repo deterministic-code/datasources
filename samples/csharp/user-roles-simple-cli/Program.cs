@@ -15,6 +15,7 @@ public static class Program
         enable-user <username>
         disable-user <username>
         list-users-roles-groups
+        update-memberships
         """;
 
     public static readonly TransformMapper<string, string> Names = new(
@@ -112,6 +113,7 @@ public static class Program
                 "disable-user" when args.Length == 2 => ("disable-user", [args[1]]),
                 "disable-user" => throw new InvalidOperationException("Usage: disable-user <username>"),
                 "list-users-roles-groups" when args.Length == 1 => ("list-users-roles-groups", []),
+                "update-memberships" when args.Length == 1 => ("update-memberships", []),
                 var verb => throw new InvalidOperationException($"Unknown command: {verb}\n{Usage}")
             };
 
@@ -184,6 +186,7 @@ public static class Program
             "enable-user" => await SetEnabled(command, parsed.Values[0], true, procedures),
             "disable-user" => await SetEnabled(command, parsed.Values[0], false, procedures),
             "list-users-roles-groups" => await List(command),
+            "update-memberships" => await UpdateMemberships(command, hash, procedures),
             _ => throw new InvalidOperationException("empty command")
         };
     }
@@ -257,6 +260,49 @@ public static class Program
             }
             : throw new InvalidOperationException($"{table} '{value}' not found");
     }
+
+    static async Task<string> UpdateMemberships(ICommand command, Func<string, string> hash, bool procedures)
+    {
+        foreach (var args in new string[][]
+        {
+            ["add-role", "owner"],
+            ["add-group", "remote"],
+            ["add-user-role", "ada", "editor"],
+            ["add-user-group", "ada", "staff"],
+            ["add-user-group", "ada", "remote"],
+            ["add-user-role", "alan", "editor"],
+            ["add-user-group", "alan", "staff"],
+        })
+            await Run(command, args, hash, procedures);
+        var users = new UsersRepository(command.Connection);
+        var ada = await users.ReadSingle(new Where(new Datasources.Operator.Equals("Username", "ada")))
+            ?? throw new InvalidOperationException("ada");
+        var alan = await users.ReadSingle(new Where(new Datasources.Operator.Equals("Username", "alan")))
+            ?? throw new InvalidOperationException("alan");
+        var owner = await users.Role.ReadSingle(new Where(new Datasources.Operator.Equals("Name", "owner")))
+            ?? throw new InvalidOperationException("owner");
+        var admin = await users.Role.ReadSingle(new Where(new Datasources.Operator.Equals("Name", "admin")))
+            ?? throw new InvalidOperationException("admin");
+        var remote = await users.Group.ReadSingle(new Where(new Datasources.Operator.Equals("Name", "remote")))
+            ?? throw new InvalidOperationException("remote");
+        ada.Roles = [.. ada.Roles.Where(role => role.Name == "admin"), owner];
+        ada.Groups = [.. ada.Groups.Where(group => group.Name == "staff")];
+        await users.Update(ada);
+        alan.Roles = [.. alan.Roles.Where(role => role.Name == "editor"), admin];
+        alan.Groups = [remote];
+        await users.Update(alan);
+        var adaAfter = await users.ReadSingle(new Where(new Datasources.Operator.Equals("Username", "ada")))
+            ?? throw new InvalidOperationException("ada after");
+        var alanAfter = await users.ReadSingle(new Where(new Datasources.Operator.Equals("Username", "alan")))
+            ?? throw new InvalidOperationException("alan after");
+        return $"updated ada roles={Joined(adaAfter.Roles)} groups={Joined(adaAfter.Groups)}\nupdated alan roles={Joined(alanAfter.Roles)} groups={Joined(alanAfter.Groups)}\n";
+    }
+
+    static string Joined(IEnumerable<Backend.Types.Datasource.Role> rows) =>
+        string.Join(",", rows.Select(row => row.Name).OrderBy(name => name));
+
+    static string Joined(IEnumerable<Backend.Types.Datasource.Group> rows) =>
+        string.Join(",", rows.Select(row => row.Name).OrderBy(name => name));
 
     static async Task<string> List(ICommand command)
     {

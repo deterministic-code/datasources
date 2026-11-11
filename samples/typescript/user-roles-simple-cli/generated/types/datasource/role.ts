@@ -4,7 +4,7 @@ export const role = (init: Partial<Role>): Role => Object.assign(new Role(), ini
 export class Role {
   id!: number;
   uuid: string = crypto.randomUUID();
-  created!: Date;
+  created: Date = new Date();
   updated: string = Buffer.from([0]).toString("base64");
   name: string = "";
   description: string = "";

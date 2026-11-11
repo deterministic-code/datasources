@@ -20,7 +20,7 @@ impl UserGroupsRepository {
     options.schema = Schema::new(HashMap::from([
         ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: true }),
         ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-        ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: false, is_id: false }),
+        ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
         ("updated".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
         ("user_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
         ("group_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
@@ -43,7 +43,7 @@ impl UserGroupsRepository {
         options.schema = Schema::new(HashMap::from([
             ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: true }),
             ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: false, is_id: false }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
             ("updated".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
             ("user_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
             ("group_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
@@ -160,7 +160,7 @@ pub fn user_groups_row_repository(connection: Arc<dyn Connection>) -> Result<CRU
     options.schema = Schema::new(HashMap::from([
         ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: true }),
         ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-        ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: false, is_id: false }),
+        ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
         ("updated".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
         ("user_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
         ("group_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
