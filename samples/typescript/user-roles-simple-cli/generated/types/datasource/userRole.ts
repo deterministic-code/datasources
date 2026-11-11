@@ -4,7 +4,7 @@ export const userRole = (init: Partial<UserRole>): UserRole => Object.assign(new
 export class UserRole {
   id!: number;
   uuid: string = crypto.randomUUID();
-  created!: Date;
+  created: Date = new Date();
   updated: string = Buffer.from([0]).toString("base64");
   userId!: number;
   roleId!: number;

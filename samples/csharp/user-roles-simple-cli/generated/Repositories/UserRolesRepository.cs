@@ -28,7 +28,7 @@ public sealed class UserRolesRepository : CRUDRepository<Backend.Types.Datasourc
         {
             ["Id"] = new("integer", false, false, true),
             ["Uuid"] = new("uuid", false, true),
-            ["Created"] = new("datetime", false, false),
+            ["Created"] = new("datetime", false, true),
             ["Updated"] = new("binary", false, true),
             ["UserId"] = new("integer", false, false),
             ["RoleId"] = new("integer", false, false),

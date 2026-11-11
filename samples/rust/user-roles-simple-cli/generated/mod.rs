@@ -9,11 +9,14 @@ pub mod group;
 pub mod userGroup;
 #[path = "types/datasource/userRole.rs"]
 pub mod userRole;
+#[path = "types/view/user.rs"]
+pub mod user;
 pub use userBase::*;
 pub use role::*;
 pub use group::*;
 pub use userGroup::*;
 pub use userRole::*;
+pub use user::*;
 mod schema_objects;
 pub mod repositories;
 pub use repositories::repositoryRegistry::Repositories;

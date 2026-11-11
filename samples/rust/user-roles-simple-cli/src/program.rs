@@ -1,9 +1,13 @@
 use chrono::Utc;
+use crate::generated::{Group, Role, User};
+#[allow(non_snake_case)]
+use crate::generated::repositories::usersRepository::UsersRepository;
 use datasources::{
     Command, DatasourceError, DefaultStatementTextRenderer, ExecuteStoredProcedureStatement,
-    FlatToNestedMapper, IWhere, InsertStatement, Join, MappedRow, MappedValue, Mapper, Operator,
-    OrderBy, Parameter, Result, SelectStatement, SelectStatementOptions, TransformMapper,
-    TypeMap, TypeMapField, TypeMapGroup, UpdateStatement, Value, Where,
+    FlatToNestedMapper, ICRUDRepository, IReadonlyRepository, InsertStatement, Join,
+    MappedRow, MappedValue, Mapper, Operator, OrderBy, Parameter, Result, SelectStatement,
+    SelectStatementOptions, TransformMapper, TypeMap, TypeMapField, TypeMapGroup, UpdateStatement,
+    Value, Where,
 };
 use futures_util::TryStreamExt;
 use serde::Serialize;
@@ -16,7 +20,8 @@ add-user-role <username> <role>
 add-user-group <username> <group>
 enable-user <username>
 disable-user <username>
-list-users-roles-groups";
+list-users-roles-groups
+update-memberships";
 
 pub fn names() -> TransformMapper<String, String> {
     TransformMapper::new(
@@ -107,6 +112,10 @@ pub fn parse(args: &[String]) -> Result<Parsed> {
             verb: cmd.clone(),
             values: vec![],
         }),
+        [cmd] if cmd == "update-memberships" => Ok(Parsed {
+            verb: cmd.clone(),
+            values: vec![],
+        }),
         [cmd, ..] if cmd == "add-user" => Err(DatasourceError::message(
             "Usage: add-user <username> <password>",
         )),
@@ -134,7 +143,7 @@ pub fn parse(args: &[String]) -> Result<Parsed> {
 pub async fn run(
     command: &dyn Command,
     args: &[String],
-    hash_password: impl Fn(&str) -> Result<String>,
+    hash_password: &impl Fn(&str) -> Result<String>,
     procedures: bool,
 ) -> Result<String> {
     let parsed = parse(args)?;
@@ -238,7 +247,103 @@ pub async fn run(
         "enable-user" => set_enabled(command, &provider, &parsed.values[0], true, procedures).await,
         "disable-user" => set_enabled(command, &provider, &parsed.values[0], false, procedures).await,
         "list-users-roles-groups" => list(command).await,
+        "update-memberships" => update_memberships(command, hash_password, procedures).await,
         _ => Err(DatasourceError::message("empty command")),
+    }
+}
+
+async fn named_user(users: &UsersRepository, username: &str) -> Result<User> {
+    users
+        .read_single_where(&Where::new(Operator::equals("username", username)), None)
+        .await?
+        .ok_or_else(|| DatasourceError::message(username))
+}
+
+async fn update_memberships(
+    command: &dyn Command,
+    hash_password: &impl Fn(&str) -> Result<String>,
+    procedures: bool,
+) -> Result<String> {
+    for args in [
+        ["add-role", "owner"].as_slice(),
+        ["add-group", "remote"].as_slice(),
+        ["add-user-role", "ada", "editor"].as_slice(),
+        ["add-user-group", "ada", "staff"].as_slice(),
+        ["add-user-group", "ada", "remote"].as_slice(),
+        ["add-user-role", "alan", "editor"].as_slice(),
+        ["add-user-group", "alan", "staff"].as_slice(),
+    ] {
+        let owned: Vec<String> = args.iter().map(|value| (*value).to_string()).collect();
+        Box::pin(run(command, &owned, hash_password, procedures)).await?;
+    }
+    let users = UsersRepository::new(command.connection())?;
+    let mut ada = named_user(&users, "ada").await?;
+    let mut alan = named_user(&users, "alan").await?;
+    let owner = users
+        .role
+        .read_single_where(&Where::new(Operator::equals("name", "owner")), None)
+        .await?
+        .ok_or_else(|| DatasourceError::message("owner"))?;
+    let admin = users
+        .role
+        .read_single_where(&Where::new(Operator::equals("name", "admin")), None)
+        .await?
+        .ok_or_else(|| DatasourceError::message("admin"))?;
+    let remote = users
+        .group
+        .read_single_where(&Where::new(Operator::equals("name", "remote")), None)
+        .await?
+        .ok_or_else(|| DatasourceError::message("remote"))?;
+    ada.roles = ada
+        .roles
+        .into_iter()
+        .filter(|role| role.name == "admin")
+        .chain(std::iter::once(owner))
+        .collect();
+    ada.groups = ada
+        .groups
+        .into_iter()
+        .filter(|group| group.name == "staff")
+        .collect();
+    users.update(ada, None).await?;
+    alan.roles = alan
+        .roles
+        .into_iter()
+        .filter(|role| role.name == "editor")
+        .chain(std::iter::once(admin))
+        .collect();
+    alan.groups = vec![remote];
+    users.update(alan, None).await?;
+    let ada_after = named_user(&users, "ada").await?;
+    let alan_after = named_user(&users, "alan").await?;
+    Ok(format!(
+        "updated ada roles={} groups={}\nupdated alan roles={} groups={}\n",
+        joined(&ada_after.roles),
+        joined(&ada_after.groups),
+        joined(&alan_after.roles),
+        joined(&alan_after.groups)
+    ))
+}
+
+fn joined(rows: &[impl Named]) -> String {
+    let mut values: Vec<_> = rows.iter().map(|row| row.name().to_string()).collect();
+    values.sort();
+    values.join(",")
+}
+
+trait Named {
+    fn name(&self) -> &str;
+}
+
+impl Named for Role {
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl Named for Group {
+    fn name(&self) -> &str {
+        &self.name
     }
 }
 

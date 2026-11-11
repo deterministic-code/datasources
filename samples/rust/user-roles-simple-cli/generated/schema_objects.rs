@@ -5,7 +5,7 @@ impl SchemaObject for Group {}
 
 impl SchemaObject for Role {}
 
-impl SchemaObject for UserBase {}
+impl SchemaObject for User {}
 
 impl SchemaObject for UserGroup {}
 

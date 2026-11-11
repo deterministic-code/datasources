@@ -85,6 +85,10 @@ fn parses_commands() {
             .verb,
         "list-users-roles-groups"
     );
+    assert_eq!(
+        program::parse(&[s("update-memberships")]).unwrap().verb,
+        "update-memberships"
+    );
     for verb in [
         "add-user",
         "add-role",
@@ -100,6 +104,7 @@ fn parses_commands() {
     assert!(program::parse(&[]).is_err());
     assert!(program::parse(&[s("add-user"), s("a"), s("b"), s("extra")]).is_err());
     assert!(program::parse(&[s("list-users-roles-groups"), s("extra")]).is_err());
+    assert!(program::parse(&[s("update-memberships"), s("extra")]).is_err());
 }
 
 #[test]

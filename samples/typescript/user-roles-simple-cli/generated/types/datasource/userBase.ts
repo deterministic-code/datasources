@@ -4,7 +4,7 @@ export const userBase = (init: Partial<UserBase>): UserBase => Object.assign(new
 export class UserBase {
   id!: number;
   uuid: string = crypto.randomUUID();
-  created!: Date;
+  created: Date = new Date();
   updated: string = Buffer.from([0]).toString("base64");
   username: string = "";
   password: string = "";

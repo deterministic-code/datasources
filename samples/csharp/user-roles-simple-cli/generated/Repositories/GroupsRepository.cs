@@ -29,7 +29,7 @@ public sealed class GroupsRepository : CRUDRepository<Backend.Types.Datasource.G
         {
             ["Id"] = new("integer", false, false, true),
             ["Uuid"] = new("uuid", false, true),
-            ["Created"] = new("datetime", false, false),
+            ["Created"] = new("datetime", false, true),
             ["Updated"] = new("binary", false, true),
             ["Name"] = new("string", false, false),
             ["Description"] = new("string", false, true),

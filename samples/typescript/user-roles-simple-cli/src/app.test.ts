@@ -30,6 +30,7 @@ describe("parse", () => {
     expect(parse(["enable-user", "a"])).toEqual({ kind: "enable-user", values: ["a"] });
     expect(parse(["disable-user", "a"])).toEqual({ kind: "disable-user", values: ["a"] });
     expect(parse(["list-users-roles-groups"])).toEqual({ kind: "list-users-roles-groups", values: [] });
+    expect(parse(["update-memberships"])).toEqual({ kind: "update-memberships", values: [] });
   });
 
   it("rejects bad args", () => {
@@ -53,6 +54,7 @@ describe("parse", () => {
     expect(() => parse(["enable-user", "a", "extra"])).toThrow();
     expect(() => parse(["disable-user", "a", "extra"])).toThrow();
     expect(() => parse(["list-users-roles-groups", "extra"])).toThrow();
+    expect(() => parse(["update-memberships", "extra"])).toThrow();
   });
 });
 
