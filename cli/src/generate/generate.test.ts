@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse, stringify } from "yaml";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
@@ -32,20 +32,34 @@ register("sqlite", new SqliteDriver());
 
 const specDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/contacts-crud-enriched-medium-rest-shared/deterministic");
 const userRolesDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/user-roles-simple-cli-shared/deterministic");
-const typesYaml = readFileSync(join(specDir, "types.yaml"), "utf8");
-const sqliteDatasourceYaml = readFileSync(join(specDir, "datasource.sqlite.yaml"), "utf8");
-const mysqlDatasourceYaml = readFileSync(join(specDir, "datasource.mysql.yaml"), "utf8");
-const postgresDatasourceYaml = readFileSync(join(specDir, "datasource.postgres.yaml"), "utf8");
+const specFile = (name: string): string => readFileSync(join(specDir, name), "utf8");
+const typeEntries = (text: string): string => {
+  const i = text.search(/\ntypes:\n/);
+  return i === -1 ? "" : text.slice(i + "\ntypes:\n".length).replace(/\n+$/, "");
+};
+const typesYaml = `version: 1.0.0\ntypes:\n${typeEntries(specFile("base.yaml"))}\n${typeEntries(specFile("lookups.yaml"))}\n${typeEntries(specFile("types.yaml"))}\n`;
+const sqliteDatasourceYaml = specFile("datasource.sqlite.yaml");
+const mysqlDatasourceYaml = specFile("datasource.mysql.yaml");
+const postgresDatasourceYaml = specFile("datasource.postgres.yaml");
 const userRolesFiles = (): Record<string, string> => ({
   "types.yaml": readFileSync(join(userRolesDir, "types.yaml"), "utf8"),
   "datasource.yaml": readFileSync(join(userRolesDir, "datasource.yaml"), "utf8"),
 });
-const contactsFiles = (): Record<string, string> => ({
-  "types.yaml": typesYaml,
+const contactsDatasources = (): Record<string, string> => ({
   "datasource.yaml": sqliteDatasourceYaml,
   "datasource.sqlite.yaml": sqliteDatasourceYaml,
   "datasource.mysql.yaml": mysqlDatasourceYaml,
   "datasource.postgres.yaml": postgresDatasourceYaml,
+});
+const contactsAuthored = (): Record<string, string> => ({
+  "types.yaml": specFile("types.yaml"),
+  "base.yaml": specFile("base.yaml"),
+  "lookups.yaml": specFile("lookups.yaml"),
+  ...contactsDatasources(),
+});
+const contactsFiles = (): Record<string, string> => ({
+  "types.yaml": typesYaml,
+  ...contactsDatasources(),
 });
 
 const request = (
@@ -80,7 +94,7 @@ const mem = (files: Record<string, string> = {}): { files: Record<string, string
     files: store,
     fs: {
       readFile: async (path) => {
-        const text = store[path];
+        const text = store[path] ?? store[relative(process.cwd(), resolve(path))];
         if (text === undefined) throw new Error("ENOENT");
         return text;
       },
@@ -388,7 +402,7 @@ seeds:
     const cwd = "app";
     const input = join(cwd, "deterministic");
     const leftover = join(cwd, "generated/typescript/types/generated/views/categories.ts");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     seeded[leftover] = "old";
     const kept = mem(seeded);
@@ -1091,7 +1105,7 @@ types:
     expect(textOf(rust, "mod.rs")).toContain('#[path = "repository-registry.rs"]');
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n  languages:\n    typescript:\n      casing:\n        file_names: camel\n        fields: camel\n";
     const store = mem(seeded);
     expect(
@@ -1422,7 +1436,7 @@ types: []
   it("cases layout directories from flags", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     const store = mem(seeded);
     const io = deps(store.fs);
@@ -1512,7 +1526,7 @@ types: []
     expect(root?.contents?.split("\n").filter((line) => line === "pub mod legacyContact;").length).toBe(1);
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const store = mem(seeded);
@@ -1939,7 +1953,7 @@ types: []
   it("writes each generate target", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const targets = ["all", "types", "repositories", "datasource"] as const;
@@ -1960,7 +1974,9 @@ types: []
     expect(await exec(["generate", "types", "--dialect", "rust", "--cwd", cwd], rustIo, cwd)).toBe(0);
     expect(rustIo.logs.length).toBeGreaterThan(0);
     const absolute = mem({
-      [join("/tmp/spec", "types.yaml")]: typesYaml,
+      [join("/tmp/spec", "types.yaml")]: specFile("types.yaml"),
+      [join("/tmp/spec", "base.yaml")]: specFile("base.yaml"),
+      [join("/tmp/spec", "lookups.yaml")]: specFile("lookups.yaml"),
       [join("/tmp/spec", "datasource.yaml")]: sqliteDatasourceYaml,
     });
     const io = deps(absolute.fs);
@@ -2078,7 +2094,7 @@ types: []
   it("generate all writes migrations and migrates up", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///./app.sqlite\n";
     const store = mem(seeded);
@@ -2147,7 +2163,7 @@ types: []
   it("writes migrations create into the migraters layout", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const store = mem(seeded);
@@ -2181,7 +2197,7 @@ types: []
     const migrations = join(cwd, "sql/sqlite/migrations");
     const stale = join(migrations, "0000000002_custom_002_seed_categories_up.sql");
     const handwritten = join(migrations, "0002_seed_categories_up.sql");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     seeded[stale] = "INSERT INTO categories VALUES (1);\n";
@@ -2353,7 +2369,7 @@ types:
   it("accepts --stored-procedures on generate all and migrations create", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const generate = mem(seeded);

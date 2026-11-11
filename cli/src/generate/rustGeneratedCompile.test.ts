@@ -33,12 +33,19 @@ const entity = (name: string, fields: string, tags = "[datasource_type]"): strin
 
 const idName = (name = "name"): string => `${field("id", "type: integer\n            is_id: true")}\n${field(name)}`;
 
+const restYaml = (name: string): string => readFileSync(join(restDir, name), "utf8");
+
+const typeEntries = (text: string): string => {
+  const i = text.search(/\ntypes:\n/);
+  return i === -1 ? "" : text.slice(i + "\ntypes:\n".length).replace(/\n+$/, "");
+};
+
 const restFiles = (): Record<string, string> => ({
-  "types.yaml": readFileSync(join(restDir, "types.yaml"), "utf8"),
-  "datasource.yaml": readFileSync(join(restDir, "datasource.sqlite.yaml"), "utf8"),
-  "datasource.sqlite.yaml": readFileSync(join(restDir, "datasource.sqlite.yaml"), "utf8"),
-  "datasource.mysql.yaml": readFileSync(join(restDir, "datasource.mysql.yaml"), "utf8"),
-  "datasource.postgres.yaml": readFileSync(join(restDir, "datasource.postgres.yaml"), "utf8"),
+  "types.yaml": `version: 1.0.0\ntypes:\n${typeEntries(restYaml("base.yaml"))}\n${typeEntries(restYaml("lookups.yaml"))}\n${typeEntries(restYaml("types.yaml"))}\n`,
+  "datasource.yaml": restYaml("datasource.sqlite.yaml"),
+  "datasource.sqlite.yaml": restYaml("datasource.sqlite.yaml"),
+  "datasource.mysql.yaml": restYaml("datasource.mysql.yaml"),
+  "datasource.postgres.yaml": restYaml("datasource.postgres.yaml"),
 });
 
 const qsFiles = (): Record<string, string> => ({

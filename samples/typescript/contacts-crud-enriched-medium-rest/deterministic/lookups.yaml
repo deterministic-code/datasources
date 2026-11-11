@@ -1,0 +1,43 @@
+version: 1.0.0
+includes:
+  - file: base.yaml
+types:
+  - contact_source:
+      tags:
+        - datasource_type
+        - readonly_lookup
+      inherits: base
+      fields:
+        - name:
+            type: string
+            size: 64
+        - description:
+            type: string
+            size: unlimited
+            is_nullable: true
+  - address_type:
+      tags:
+        - datasource_type
+        - readonly_lookup
+      inherits: base
+      fields:
+        - name:
+            type: string
+            size: 64
+        - description:
+            type: string
+            size: unlimited
+            is_nullable: true
+  - phone_type:
+      tags:
+        - datasource_type
+        - readonly_lookup
+      inherits: base
+      fields:
+        - name:
+            type: string
+            size: 64
+        - description:
+            type: string
+            size: unlimited
+            is_nullable: true

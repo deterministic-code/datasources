@@ -1,12 +1,15 @@
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "../io.ts";
 import { defaultDatasourceYaml, loadSpec } from "./loadSpec.ts";
 import { resolveIncludes } from "./resolveIncludes.ts";
 
+const lookup = (files: Record<string, string>, path: string): string | undefined =>
+  files[path] ?? files[relative(process.cwd(), resolve(path))];
+
 const mem = (entries: string[], files: Record<string, string>): Fs => ({
   readFile: async (path) => {
-    const text = files[path];
+    const text = lookup(files, path);
     if (text === undefined) throw new Error("ENOENT");
     return text;
   },
@@ -207,6 +210,42 @@ seeds:
     );
     expect(loaded.files["datasource_seeds.yaml"]).toMatch(/user:/);
     expect(loaded.files["datasource_seeds.yaml"]).not.toMatch(/file:/);
+  });
+
+  it("loads a diamond include of base.yaml once", async () => {
+    const dir = "app";
+    const loaded = await loadSpec(
+      mem(["types.yaml", "base.yaml", "child.yaml"], {
+        [join(dir, "types.yaml")]: `version: 1.0.0
+includes:
+  - file: base.yaml
+  - file: child.yaml
+types:
+  - extra:
+      fields: []
+`,
+        [join(dir, "base.yaml")]: `version: 1.0.0
+types:
+  - base:
+      fields:
+        - id:
+            type: integer
+            is_id: true
+`,
+        [join(dir, "child.yaml")]: `version: 1.0.0
+includes:
+  - file: base.yaml
+types:
+  - child:
+      inherits: base
+      fields: []
+`,
+      }),
+      dir,
+    );
+    expect(loaded.files["types.yaml"].match(/- base:/g)).toHaveLength(1);
+    expect(loaded.files["types.yaml"]).toMatch(/child:/);
+    expect(loaded.files["types.yaml"]).toMatch(/extra:/);
   });
 
   it("skips a version directory without a diff", async () => {

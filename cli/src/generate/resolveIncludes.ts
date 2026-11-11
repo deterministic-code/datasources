@@ -1,4 +1,4 @@
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { parse, stringify } from "yaml";
 import {
   resolveIncludes as foldIncludes,
@@ -34,8 +34,8 @@ export const resolveIncludes = async (fs: Fs, path: string, text: string): Promi
     async (include, ctx) => {
       const root = ctx.baseDir!;
       const file = include.file ?? "";
-      if (file.length === 0) return { text: emptyInclude(path), key: join(root, "#"), ctx: { baseDir: root } };
-      const child = join(root, file);
+      if (file.length === 0) return { text: emptyInclude(path), key: resolve(root, "#"), ctx: { baseDir: root } };
+      const child = resolve(root, file);
       return { text: await fs.readFile(child), key: child, ctx: { baseDir: dirname(child) } };
     },
     { baseDir: dirname(path) },
