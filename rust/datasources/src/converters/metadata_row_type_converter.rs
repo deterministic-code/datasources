@@ -305,6 +305,7 @@ fn coerced(cell: &Value, shape: &'static Shape, coerce_id: bool) -> Option<Value
     match (cell, ScalarType::try_from_shape(shape)?) {
         (Value::Int(n), ScalarType::I32) if coerce_id => Some(Value::Int(*n)),
         (Value::Int(n), ScalarType::I64) => Some(Value::Int(*n)),
+        (Value::Int(n), ScalarType::Bool) => Some(Value::Bool(*n != 0)),
         (Value::Uuid(id), ScalarType::String) => Some(Value::from(id.to_string())),
         _ => None,
     }
@@ -457,6 +458,36 @@ mod tests {
     }
 
     impl SchemaObject for Card {}
+
+    #[derive(Clone, Debug, PartialEq, Facet)]
+    struct Flag {
+        is_enabled: bool,
+    }
+
+    impl Default for Flag {
+        fn default() -> Self {
+            Self { is_enabled: false }
+        }
+    }
+
+    impl SchemaObject for Flag {}
+
+    #[test]
+    fn coerces_int_to_bool() {
+        let converter = MetaDataRowTypeConverter::<Flag>::new();
+        let on = TypeConverter::<Flag, Row>::convert(
+            &converter,
+            &record(&[("is_enabled", Value::Int(1))]),
+        )
+        .unwrap();
+        let off = TypeConverter::<Flag, Row>::convert(
+            &converter,
+            &record(&[("is_enabled", Value::Int(0))]),
+        )
+        .unwrap();
+        assert!(on.is_enabled);
+        assert!(!off.is_enabled);
+    }
 
     #[test]
     fn omitted_uuid_converts_to_nil() {

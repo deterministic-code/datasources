@@ -23,7 +23,15 @@ import { SqliteCommand } from "./command.ts";
 import { SqliteConnection } from "./connection.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 import type { SqliteDatabase, SqliteStatement } from "./i-sqlite-driver.ts";
-import { filenameOf, sqliteFilename } from "./sqlitePath.ts";
+import {
+  filenameOf,
+  isMemoryFilename,
+  optionsOf,
+  parseFilenameQuery,
+  resolvedOptions,
+  sqliteFilename,
+  sqlitePath,
+} from "./sqlitePath.ts";
 import { SqliteDriver } from "./SqliteDriver.ts";
 import { SqliteTransaction } from "./transaction.ts";
 
@@ -39,7 +47,10 @@ class FakeDatabase implements SqliteDatabase {
   columns?: Array<{ name: string; column: string | null; table: string | null }>;
   rawRows?: Array<Array<Value | null>>;
 
-  constructor(public filename: string) {
+  timeout?: number;
+
+  constructor(public filename: string, options?: { timeout?: number }) {
+    this.timeout = options?.timeout;
     FakeDatabase.latest = this;
   }
 
@@ -97,6 +108,45 @@ describe("sqlitePath", () => {
     expect(filenameOf({ filename: "x.db" })).toBe("x.db");
     expect(filenameOf({ url: "sqlite:///tmp/db.sqlite" })).toBe("tmp/db.sqlite");
     expect(filenameOf({ url: "mysql://x" })).toBe(":memory:");
+    expect(optionsOf({ url: "mysql://x" }).filename).toBe(":memory:");
+  });
+
+  it("parses connection-string options", () => {
+    const defaults = resolvedOptions("app.sqlite", {});
+    expect(defaults.journalMode).toBe("wal");
+    expect(defaults.busyTimeout).toBe(5000);
+    expect(defaults.poolSize).toBe(8);
+    const parsed = sqlitePath(
+      "sqlite:///./app.sqlite?journal_mode=delete&busy_timeout=1000&pool_size=4&synchronous=normal",
+    );
+    expect(parsed?.filename).toBe("./app.sqlite");
+    expect(parsed?.options).toEqual({
+      journalMode: "delete",
+      busyTimeout: 1000,
+      poolSize: 4,
+      synchronous: "normal",
+    });
+    expect(resolvedOptions("app.sqlite", { journalMode: "delete" }).poolSize).toBe(0);
+    expect(resolvedOptions("app.sqlite", { poolSize: 0 }).poolSize).toBe(0);
+    expect(resolvedOptions(":memory:", { journalMode: "wal", poolSize: 8 })).toEqual({
+      journalMode: undefined,
+      busyTimeout: 5000,
+      poolSize: 0,
+      synchronous: undefined,
+    });
+    expect(
+      sqlitePath("sqlite:///file:x?mode=memory&journal_mode=delete&cache=shared")?.filename,
+    ).toBe("file:x?mode=memory&cache=shared");
+    expect(sqlitePath("sqlite:///app.db?journal_mode=fast")?.error).toContain("journal_mode=fast");
+    expect(parseFilenameQuery("app.db?pool_size=65").error).toContain("pool_size=65");
+    expect(parseFilenameQuery("app.db?busy_timeout=-1").error).toContain("busy_timeout=-1");
+    expect(parseFilenameQuery("app.db?journal_mode").error).toContain("journal_mode");
+    expect(parseFilenameQuery("app.db?synchronous=fast").error).toContain("synchronous=fast");
+    expect(parseFilenameQuery("app.db?&journal_mode=wal&synchronous=extra").options).toEqual({
+      journalMode: "wal",
+      synchronous: "extra",
+    });
+    expect(isMemoryFilename(":memory")).toBe(true);
   });
 });
 
@@ -112,7 +162,9 @@ describe("SqliteConnection", () => {
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn2.isolation).toBe(IsolationLevel.ReadUncommitted);
     await txn2.abort();
+    expect(db.timeout).toBe(5000);
     expect(db.execs).toEqual([
+      "PRAGMA journal_mode = WAL",
       "PRAGMA read_uncommitted = 0",
       "BEGIN",
       "COMMIT",
@@ -126,6 +178,19 @@ describe("SqliteConnection", () => {
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
     expect(() => connection.require()).toThrow("not open");
     await expect(connection.startTransaction()).rejects.toThrow(DatasourceError);
+    await connection.close();
+  });
+
+  it("applies a synchronous pragma", async () => {
+    const connection = new SqliteConnection({
+      url: "sqlite:///x.db?synchronous=full",
+      Database: FakeDatabase,
+    });
+    await connection.open();
+    expect(FakeDatabase.latest!.execs).toEqual([
+      "PRAGMA journal_mode = WAL",
+      "PRAGMA synchronous = FULL",
+    ]);
     await connection.close();
   });
 
@@ -256,6 +321,12 @@ describe("Sqlite datasource", () => {
     expect(new Datasource("sqlite", of()).createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     expect(Datasource.create({ PROVIDER: "sqlite" }).provider).toBe("sqlite");
     expect(SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" }).filename).toBe(":memory:");
+    await expect(
+      new SqliteConnection({
+        url: "sqlite:///app.db?journal_mode=fast",
+        Database: FakeDatabase,
+      }).open(),
+    ).rejects.toThrow("journal_mode=fast");
     expect(SqliteConnection.from().filename).toBe(":memory:");
     const provider = new SqliteDriver();
     expect(provider.columnType("int")).toBe("INTEGER");

@@ -6,6 +6,7 @@ mod converters;
 mod create_table_statement_renderer;
 mod create_trigger_statement_renderer;
 mod driver;
+mod pool;
 mod reader;
 mod select_inserted_id_statement_text_renderer;
 mod sqlite_path;
@@ -19,6 +20,17 @@ mod statement_renderer;
 mod transaction;
 
 pub use driver::SqliteDriver;
+
+#[cfg(test)]
+pub(crate) fn boolean_schema() -> datasources::Schema {
+    use datasources::SchemaColumn;
+    use std::collections::HashMap;
+    datasources::Schema::new(HashMap::from([
+        ("IsEnabled".into(), SchemaColumn::new("boolean")),
+        ("is_enabled".into(), SchemaColumn::new("boolean")),
+        ("Active".into(), SchemaColumn::new("boolean")),
+    ]))
+}
 
 #[cfg(test)]
 pub(crate) fn env_lock() -> std::sync::MutexGuard<'static, ()> {
@@ -35,6 +47,9 @@ pub(crate) fn env_lock() -> std::sync::MutexGuard<'static, ()> {
 #[cfg(test)]
 #[path = "../tests/command.rs"]
 mod command_tests;
+#[cfg(test)]
+#[path = "../tests/concurrency.rs"]
+mod concurrency;
 #[cfg(test)]
 #[path = "../tests/contacts.rs"]
 mod contacts;
@@ -98,7 +113,7 @@ mod tests {
             isolation: IsolationLevel,
         ) -> Arc<dyn Transaction> {
             let conn = downcast_connection::<SqliteConnection>(connection).expect("sqlite");
-            Arc::new(SqliteTransaction::new(conn.share(), isolation))
+            Arc::new(SqliteTransaction::new(conn.share_pinned(), isolation))
         }
 
         fn row_type_converters(

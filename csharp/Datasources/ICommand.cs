@@ -3,6 +3,7 @@ namespace Datasources;
 public interface ICommand
 {
     IConnection Connection { get; }
+    Schema? Schema { get; set; }
     ICommand AddMiddleware(ICommandMiddleware middleware);
     Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null);
     Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null);

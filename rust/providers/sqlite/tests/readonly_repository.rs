@@ -71,6 +71,8 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     let mut options = create_readonly_repository_mapping_options::<User>();
     options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
     options.property_mappings = Some(std::sync::Arc::new(snake()));
+    options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+    options.schema = super::boolean_schema();
     let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let by_id = repo
         .read_single_where(&Where::binary("Id", eq, 1_i64), None)
@@ -135,6 +137,8 @@ async fn maps_an_object_explicitly() {
     let mut options = create_readonly_repository_mapping_options::<User>();
     options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
     options.property_mappings = Some(std::sync::Arc::new(snake()));
+    options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+    options.schema = super::boolean_schema();
     options.object_converter = Some(Box::new(UserConverter));
     let users_repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let user = users_repo
@@ -515,6 +519,7 @@ mod users_view_roles {
             ("Name".into(), "roles.name".into()),
             ("Id".into(), "id".into()),
         ])));
+        options.schema = super::super::boolean_schema();
         let mut users_repo = ReadonlyRepository::<Row>::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
             datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
@@ -619,6 +624,8 @@ mod user_crud {
         let mut options = create_crud_repository_options::<User>();
         options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         options.ids = vec!["Id".into()];
+        options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+        options.schema = super::super::boolean_schema();
         let users_repo = ds.create_repository::<Row>(Some(connection), Some(options));
         let mut created = datasources::Row::new();
         created.insert("Username".into(), Value::from("ada"));

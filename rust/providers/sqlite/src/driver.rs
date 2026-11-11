@@ -142,7 +142,7 @@ impl Driver for SqliteDriver {
         isolation: IsolationLevel,
     ) -> Arc<dyn Transaction> {
         let conn = downcast_connection::<SqliteConnection>(connection).expect("sqlite");
-        Arc::new(SqliteTransaction::new(conn.share(), isolation))
+        Arc::new(SqliteTransaction::new(conn.share_pinned(), isolation))
     }
 
     fn row_type_converters(

@@ -64,6 +64,41 @@ public class SqliteTests
     }
 
     [Fact]
+    public void ParsesConnectionStringOptions()
+    {
+        var parsed = SqlitePath.Parse("sqlite:///./app.sqlite?journal_mode=delete&busy_timeout=1000&pool_size=4&synchronous=normal");
+        Assert.NotNull(parsed);
+        Assert.Equal("./app.sqlite", parsed.Value.Filename);
+        Assert.Equal("DELETE", parsed.Value.Options.JournalMode);
+        Assert.Equal(1000, parsed.Value.Options.BusyTimeout);
+        Assert.Equal(4, parsed.Value.Options.PoolSize);
+        Assert.Equal("NORMAL", parsed.Value.Options.Synchronous);
+        var defaults = SqliteOptions.Empty;
+        Assert.Equal("WAL", defaults.ResolvedJournalMode("app.sqlite"));
+        Assert.Equal(5000, defaults.ResolvedBusyTimeout());
+        Assert.Equal(8, defaults.ResolvedPoolSize("app.sqlite"));
+        Assert.Null(defaults.ResolvedJournalMode(":memory:"));
+        Assert.Equal(0, defaults.ResolvedPoolSize(":memory:"));
+        Assert.Equal(0, new SqliteOptions { JournalMode = "DELETE" }.ResolvedPoolSize("app.sqlite"));
+        Assert.Equal(0, new SqliteOptions { PoolSize = 0 }.ResolvedPoolSize("app.sqlite"));
+        var uri = SqlitePath.Parse("sqlite:///file:x?mode=memory&journal_mode=delete&cache=shared");
+        Assert.Equal("file:x?mode=memory&cache=shared", uri!.Value.Filename);
+        Assert.Contains("journal_mode=fast", SqlitePath.Parse("sqlite:///app.db?journal_mode=fast")!.Value.Options.Error);
+        Assert.Contains("pool_size=65", SqlitePath.ParseFilenameQuery("app.db?pool_size=65").Options.Error);
+    }
+
+    [Fact]
+    public async Task BadOptionFailsOpen()
+    {
+        var connection = new SqliteConnection(new Dictionary<string, string?>
+        {
+            ["DATASOURCE_URL"] = "sqlite:///app.db?journal_mode=fast",
+        });
+        var error = await Assert.ThrowsAsync<DatasourceException>(connection.Open);
+        Assert.Contains("journal_mode=fast", error.Message);
+    }
+
+    [Fact]
     public void MapsColumnTypes()
     {
         var driver = new SqliteDriver();

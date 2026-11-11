@@ -307,11 +307,18 @@ public static class RepositoryTestsSpec
     static Dictionary<string, TypeConverter<Value, Value>> FieldsOf(
         TypeSpec type, IReadOnlyDictionary<string, TypeConverter<Value, Value>> types)
     {
+        var mapper = new DeterministicTypeMapper();
+        string Key(string canonical)
+        {
+            var mapped = mapper.Map(canonical);
+            return mapped.Length > 0 ? mapped : canonical;
+        }
         var fields = type.Fields
-            .Where(pair => types.ContainsKey(pair.Value))
-            .ToDictionary(pair => pair.Key, pair => types[pair.Value]);
+            .Select(pair => (pair.Key, Type: Key(pair.Value)))
+            .Where(pair => types.ContainsKey(pair.Type))
+            .ToDictionary(pair => pair.Key, pair => types[pair.Type]);
         foreach (var (name, canonical) in type.Converters)
-            if (types.TryGetValue(canonical, out var converter))
+            if (types.TryGetValue(Key(canonical), out var converter))
                 fields[name] = converter;
         return fields;
     }

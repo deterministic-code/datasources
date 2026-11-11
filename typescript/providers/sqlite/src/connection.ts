@@ -12,7 +12,12 @@ import { createRequire } from "node:module";
 import { SqliteCommand } from "./command.ts";
 import type { SqliteConnectionOptions } from "./connection-options.ts";
 import type { SqliteDatabase, SqliteDatabaseCtor } from "./i-sqlite-driver.ts";
-import { filenameOf } from "./sqlitePath.ts";
+import {
+  isMemoryFilename,
+  optionsOf,
+  resolvedOptions,
+  type SqliteOpenOptions,
+} from "./sqlitePath.ts";
 import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
 import { SqliteTransaction } from "./transaction.ts";
 
@@ -29,6 +34,8 @@ export class SqliteConnection implements IConnection {
   isOpen = false;
   private db?: SqliteDatabase;
   private readonly Database?: SqliteDatabaseCtor;
+  private readonly openOptions: SqliteOpenOptions;
+  private readonly parseError?: string;
 
   static from = (options?: DatasourceOptions): SqliteConnection =>
     new SqliteConnection({
@@ -37,7 +44,10 @@ export class SqliteConnection implements IConnection {
     });
 
   constructor(options: SqliteConnectionOptions = {}) {
-    this.filename = filenameOf(options);
+    const parsed = optionsOf(options);
+    this.filename = options.filename ?? parsed.filename;
+    this.openOptions = parsed.options;
+    this.parseError = parsed.error;
     this.Database = options.Database;
   }
 
@@ -45,9 +55,17 @@ export class SqliteConnection implements IConnection {
     new SqliteCommand(this, new StatementTextRenderer(t => new SqliteStatementRenderer(t)));
 
   async open(): Promise<void> {
+    if (this.parseError) throw new DatasourceError(this.parseError);
     if (this.isOpen) throw new DatasourceError("Connection is already open");
     if (!this.Database) throw new DatasourceError("SQLite driver is required");
-    this.db = new this.Database(this.filename, { timeout: 0 });
+    const resolved = resolvedOptions(this.filename, this.openOptions);
+    this.db = new this.Database(this.filename, { timeout: resolved.busyTimeout });
+    if (resolved.journalMode && !isMemoryFilename(this.filename)) {
+      this.exec(`PRAGMA journal_mode = ${resolved.journalMode.toUpperCase()}`);
+    }
+    if (resolved.synchronous) {
+      this.exec(`PRAGMA synchronous = ${resolved.synchronous.toUpperCase()}`);
+    }
     this.isOpen = true;
   }
 

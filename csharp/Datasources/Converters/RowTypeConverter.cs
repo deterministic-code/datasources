@@ -20,8 +20,12 @@ public sealed class RowTypeConverter : TypeConverter<Row, Row>
 
     static TypeConverter<Value, Value>? FieldConverter(
         IReadOnlyDictionary<string, TypeConverter<Value, Value>> converters,
-        string type) =>
-        converters.TryGetValue(type, out var converter) ? converter : null;
+        string type)
+    {
+        var mapped = new DeterministicTypeMapper().Map(type);
+        var key = mapped.Length > 0 ? mapped : type;
+        return converters.TryGetValue(key, out var converter) ? converter : null;
+    }
 
     public override Row Convert(Row from) => Apply(from, reverse: false);
 

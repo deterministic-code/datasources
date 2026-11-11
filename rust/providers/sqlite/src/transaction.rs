@@ -20,7 +20,7 @@ impl SqliteTransaction {
 #[async_trait]
 impl Transaction for SqliteTransaction {
     fn connection(&self) -> Arc<dyn datasources::Connection> {
-        Arc::new(self.connection.share())
+        Arc::new(self.connection.share_pinned())
     }
 
     fn isolation(&self) -> IsolationLevel {

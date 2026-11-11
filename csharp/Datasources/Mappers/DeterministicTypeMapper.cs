@@ -5,6 +5,8 @@ public sealed class DeterministicTypeMapper : IMapper<string, string>
     static readonly Dictionary<string, string> Forward = new()
     {
         ["Boolean"] = "boolean",
+        ["boolean"] = "boolean",
+        ["bool"] = "boolean",
         ["Byte"] = "unsignedsmallinteger",
         ["SByte"] = "smallinteger",
         ["Int16"] = "smallinteger",

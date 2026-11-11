@@ -145,7 +145,7 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L137-L162)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L147-L172)
 
 ```rust
 let mut seeds = [
@@ -187,10 +187,11 @@ const items = await collectAsync(parentsRepo.read());
 
 ### Resolve a lookup name on create
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L456-L468)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L452-L467)
 
 ```csharp
-var connection = await Setup();
+var texts = new List<string>();
+var connection = new RecordingConnection(await Setup(), texts);
 var typesRepo = Open<UserType>(connection);
 var parentsRepo = Open<Parent>(connection);
 await typesRepo.Create(new UserType { Name = "work" });
@@ -198,11 +199,15 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var created = await parentsRepo.Create(new Parent { TypeName = "work" });
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L213-L237)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L223-L264)
 
 ```rust
-let connection = setup(&mut []).await;
-let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+let texts = Arc::new(Mutex::new(Vec::new()));
+let connection: Arc<dyn Connection> = Arc::new(RecordingConnection::new(
+    setup(&mut []).await,
+    Arc::clone(&texts),
+));
+let types = Arc::new(mapped_crud(Arc::clone(&connection), "UserType"));
 let mut parents = mapped_crud(connection, "Parent");
 types
     .create(record(&[("Name", Value::from("work"))]))
@@ -220,10 +225,11 @@ let created = parents
 assert!(num(&created, "Id") > 0);
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L480-L490)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L506-L520)
 
 ```typescript
-const connection = await setup();
+const texts: string[] = [];
+const connection = new RecordingConnection(await setup(), texts);
 const typesRepo = repo(UserType, connection);
 const parentsRepo = repo(Parent, connection);
 await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
@@ -538,7 +544,7 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L152-L158)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L162-L168)
 
 ```rust
 let mut parents_repo = mapped(connection, "Parent");

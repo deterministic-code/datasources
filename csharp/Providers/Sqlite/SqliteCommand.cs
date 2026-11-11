@@ -18,7 +18,7 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
             if (string.IsNullOrWhiteSpace(query))
                 return ((IReader<Row>)new ArrayReader<Row>([]), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
-            var reader = await Typed.Commands.Open(query, Helpers.ParametersToRecord(paramsList));
+            var reader = await Typed.Commands.Open(query, Helpers.ParametersToRecord(paramsList), Schema);
             return await FirstResultReader.Capture(reader);
         });
 

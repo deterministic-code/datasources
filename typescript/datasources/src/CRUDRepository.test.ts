@@ -683,6 +683,14 @@ class RecordingCommand implements ICommand {
     return this.inner.connection;
   }
 
+  get schema() {
+    return this.inner.schema;
+  }
+
+  set schema(value) {
+    this.inner.schema = value;
+  }
+
   addMiddleware(middleware: ICommandMiddleware): this {
     this.inner.addMiddleware(middleware);
     return this;

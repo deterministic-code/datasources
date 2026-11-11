@@ -1,4 +1,5 @@
-const connection = await setup();
+const texts: string[] = [];
+const connection = new RecordingConnection(await setup(), texts);
 const typesRepo = repo(UserType, connection);
 const parentsRepo = repo(Parent, connection);
 await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));

@@ -17,7 +17,7 @@ impl Default for DeterministicTypeMapper {
 impl Mapper<String, String> for DeterministicTypeMapper {
     fn map(&self, value: String) -> String {
         match value.as_str() {
-            "bool" | "Boolean" => "boolean".into(),
+            "bool" | "Boolean" | "boolean" => "boolean".into(),
             "i8" | "i16" => "smallinteger".into(),
             "u8" | "u16" => "unsignedsmallinteger".into(),
             "i32" | "isize" => "integer".into(),
@@ -60,6 +60,7 @@ mod tests {
         let types = DeterministicTypeMapper::default();
         assert_eq!(types.map("bool".into()), "boolean");
         assert_eq!(types.map("Boolean".into()), "boolean");
+        assert_eq!(types.map("boolean".into()), "boolean");
         assert_eq!(types.map("i8".into()), "smallinteger");
         assert_eq!(types.map("i16".into()), "smallinteger");
         assert_eq!(types.map("u8".into()), "unsignedsmallinteger");

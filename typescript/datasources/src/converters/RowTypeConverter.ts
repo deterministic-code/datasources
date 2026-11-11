@@ -1,5 +1,6 @@
 import type { Value, Cells } from "./Value.ts";
 import { TypeConverter } from "./TypeConverter.ts";
+import { DeterministicTypeMapper } from "../mappers/DeterministicTypeMapper.ts";
 
 export class RowTypeConverter extends TypeConverter<Cells, Cells> {
   constructor(readonly fields: Record<string, TypeConverter<Value, Value>>) {
@@ -10,9 +11,11 @@ export class RowTypeConverter extends TypeConverter<Cells, Cells> {
     converters: Record<string, TypeConverter<Value, Value>>,
     columns: Record<string, string>,
   ): RowTypeConverter {
+    const mapper = new DeterministicTypeMapper();
     const fields: Record<string, TypeConverter<Value, Value>> = {};
     for (const [name, type] of Object.entries(columns)) {
-      const converter = converters[type];
+      const mapped = mapper.map(type);
+      const converter = converters[mapped || type];
       if (converter) fields[name] = converter;
     }
     return new RowTypeConverter(fields);

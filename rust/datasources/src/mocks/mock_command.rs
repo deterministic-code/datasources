@@ -63,6 +63,14 @@ impl Command for MockCommand {
         self.host.add_middleware(middleware);
     }
 
+    fn schema(&self) -> Option<crate::Schema> {
+        self.host.schema()
+    }
+
+    fn set_schema(&self, schema: Option<crate::Schema>) {
+        self.host.set_schema(schema);
+    }
+
     async fn execute_reader_native(
         &self,
         text: &Native,

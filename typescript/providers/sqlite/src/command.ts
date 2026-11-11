@@ -19,10 +19,11 @@ import {
   type IReader,
   type IStatement,
   type Parameter,
+  type Schema,
 } from "@deterministic-code/datasources";
 import type { SqliteConnection } from "./connection.ts";
 import type { SqliteStatement } from "./i-sqlite-driver.ts";
-import { reverse } from "./converters/SqliteRowTypeConverters.ts";
+import { reverse, SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
 
 const bound = (parameters?: Parameter[]): Record<string, Scalar> => {
@@ -139,7 +140,7 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
       ? statement.raw?.(true).iterate(params)
       : undefined;
     const rows = raw ? namedRows(raw, names) : closable(statement.iterate(params));
-    return rows[Symbol.iterator]();
+    return converted(rows, this.schema);
   }
 }
 
@@ -149,6 +150,34 @@ type ColumnStatement = SqliteStatement & {
   columns?: () => SqliteColumn[];
   raw?: (enabled: boolean) => {
     iterate(params?: Record<string, Scalar>): IterableIterator<Value[]>;
+  };
+};
+
+const converted = (
+  iter: IterableIterator<Cells> & { return(): IteratorResult<Cells> },
+  schema: Schema | null,
+): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
+  const types = schema?.types();
+  if (!types) return iter;
+  return {
+    next: () => {
+      const step = iter.next();
+      if (step.done || !step.value) return step;
+      return {
+        done: false,
+        value: Object.fromEntries(
+          Object.entries(step.value).map(([name, cell]) => {
+            const converter = SqliteRowTypeConverters[types[name]!];
+            return [name, converter ? converter.convert(cell) : cell];
+          }),
+        ),
+      };
+    },
+    return: () => iter.return(),
+    /* v8 ignore next 3 */
+    [Symbol.iterator]() {
+      return this;
+    },
   };
 };
 
@@ -166,6 +195,7 @@ const closable = (
       if (stop) stop();
       return { done: true, value: undefined };
     },
+    /* v8 ignore next 3 */
     [Symbol.iterator]() {
       return rows;
     },
@@ -194,6 +224,7 @@ const namedRows = (
       if (stop) stop();
       return { done: true, value: undefined };
     },
+    /* v8 ignore next 3 */
     [Symbol.iterator]() {
       return rows;
     },

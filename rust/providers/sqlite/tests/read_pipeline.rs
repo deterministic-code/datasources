@@ -92,7 +92,7 @@ async fn maps_and_converts_users_through_the_read_pipeline() {
 
     let columns = HashMap::from([
         ("Uuid".into(), "uuid".into()),
-        ("IsEnabled".into(), "bool".into()),
+        ("IsEnabled".into(), "boolean".into()),
         ("Created".into(), "datetime".into()),
     ]);
     let row_converter = RowTypeConverter::from(|| crate::SqliteDriver.row_type_converters(), &columns);
@@ -111,10 +111,7 @@ async fn maps_and_converts_users_through_the_read_pipeline() {
     assert_eq!(unmapped[0].get("id"), Some(&Value::Int(1)));
     assert_eq!(unmapped[0].get("uuid"), Some(&Value::from(ada.to_string())));
     assert_eq!(unmapped[0].get("name"), Some(&Value::from("ada")));
-    assert!(matches!(
-        unmapped[0].get("is_enabled"),
-        Some(Value::Bool(_)) | Some(Value::Int(_))
-    ));
+    assert_eq!(unmapped[0].get("is_enabled"), Some(&Value::Int(1)));
     assert!(matches!(unmapped[0].get("created"), Some(Value::Text(_))));
 
     assert_eq!(column_mapped_rows[0].get("Id"), Some(&Value::Int(1)));

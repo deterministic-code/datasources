@@ -260,6 +260,7 @@ export { ChangeCasingMapper } from "./mappers/ChangeCasingMapper.ts";
 export { DictionaryMapper } from "./mappers/DictionaryMapper.ts";
 export { DeterministicTypeMapper } from "./mappers/DeterministicTypeMapper.ts";
 export { Schema, type SchemaColumn } from "./Schema.ts";
+export { SchemaOf } from "./SchemaOf.ts";
 export { IdentityMapper } from "./mappers/IdentityMapper.ts";
 export { PluralizerMapper } from "./mappers/PluralizerMapper.ts";
 export { TransformMapper } from "./mappers/TransformMapper.ts";

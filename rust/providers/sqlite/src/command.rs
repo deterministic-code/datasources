@@ -78,15 +78,25 @@ impl Command for SqliteCommand {
         self.host.add_middleware(middleware);
     }
 
+    fn schema(&self) -> Option<datasources::Schema> {
+        self.host.schema()
+    }
+
+    fn set_schema(&self, schema: Option<datasources::Schema>) {
+        self.host.set_schema(schema);
+    }
+
     async fn execute_reader_native(
         &self,
         text: &Native,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         let connection = self.connection.clone();
+        let schema = self.schema();
         self.host
             .run(text.text(), parameters, move |sql, params| {
                 let connection = connection.clone();
+                let schema = schema.clone();
                 async move {
                     if sql.trim().is_empty() {
                         return Ok((
@@ -99,6 +109,8 @@ impl Command for SqliteCommand {
                         &connection,
                         &sql,
                         &parameters_to_map(params.as_deref()),
+                        false,
+                        schema.as_ref(),
                     )?;
                     FirstResultReader::capture(Box::new(reader)).await
                 }
@@ -159,8 +171,32 @@ impl Command for SqliteCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
+        let pooled = statement.kind() == StatementKind::Select;
         let text = self.statements.render(statement);
-        self.execute_reader_native(&Native::new(text), parameters)
+        let connection = self.connection.clone();
+        let schema = self.schema();
+        self.host
+            .run(&text, parameters, move |sql, params| {
+                let connection = connection.clone();
+                let schema = schema.clone();
+                async move {
+                    if sql.trim().is_empty() {
+                        return Ok((
+                            Box::new(ArrayReader::new(vec![])) as Box<dyn Reader>,
+                            vec![],
+                        ));
+                    }
+                    connection.ensure_open()?;
+                    let reader = crate::reader::SqliteReader::open(
+                        &connection,
+                        &sql,
+                        &parameters_to_map(params.as_deref()),
+                        pooled,
+                        schema.as_ref(),
+                    )?;
+                    FirstResultReader::capture(Box::new(reader)).await
+                }
+            })
             .await
     }
 

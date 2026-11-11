@@ -37,12 +37,16 @@ fn register(ds: &Arc<dyn Datasource>) {
             options.property_mappings =
                 Some(Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
             options.ids = vec!["Id".into()];
+            options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+            options.schema = super::boolean_schema();
             Ok(crud.create_repository::<Row>(Some(connection), Some(options)))
         },
         move |connection| {
             let mut options = create_readonly_repository_mapping_options::<User>();
             options.property_mappings =
                 Some(Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+            options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+            options.schema = super::boolean_schema();
             read.create_readonly_repository::<Row>(Some(connection), Some(options))
         },
     );

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import {
   ConsoleCommandMiddleware,
+  DeterministicTypeMapper,
   CreateTableStatement,
   CRUDRepository,
   MetaDataRowTypeConverter,
@@ -123,16 +124,19 @@ const rowOf = (row: SpecRow): RepositoryRow =>
 const fieldsOf = (
   spec: RepositoryTypeSpec,
   catalog: Record<string, TypeConverter<Value, Value>>,
-): Record<string, TypeConverter<Value, Value>> =>
-  Object.fromEntries(
+): Record<string, TypeConverter<Value, Value>> => {
+  const mapper = new DeterministicTypeMapper();
+  return Object.fromEntries(
     [
       ...Object.entries(spec.fields),
       ...Object.entries(spec.converters ?? {}),
     ].flatMap(([name, canonical]) => {
-      const converter = catalog[canonical];
+      const mapped = mapper.map(canonical);
+      const converter = catalog[mapped || canonical];
       return converter ? [[name, converter]] : [];
     }),
   );
+};
 
 const crudFieldsOf = (type: RepositoryTypeSpec, quote: (id: string) => string) => {
   const mapper: CRUDMapperSpec = type.crudMapper ?? {};

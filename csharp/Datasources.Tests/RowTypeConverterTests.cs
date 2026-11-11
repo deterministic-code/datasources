@@ -67,6 +67,19 @@ public class RowTypeConverterTests
     }
 
     [Fact]
+    public void CoercesLongToBool()
+    {
+        var user = new MetaDataRowTypeConverter<User>().Convert(new Row
+        {
+            ["Id"] = 7L,
+            ["Username"] = "ada",
+            ["IsEnabled"] = 1L,
+        });
+        Assert.True(user.IsEnabled);
+        Assert.False(new MetaDataRowTypeConverter<User>().Convert(new Row { ["IsEnabled"] = 0L }).IsEnabled);
+    }
+
+    [Fact]
     public void LeavesIntPropertyWhenCellIsLong()
     {
         var row = new MetaDataRowTypeConverter<Counted>().Convert(new Row { ["id"] = 1L });

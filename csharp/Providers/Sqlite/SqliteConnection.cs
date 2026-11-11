@@ -7,6 +7,7 @@ internal sealed class SqliteConnection : IConnection
     readonly ISqliteConnectionSession _session;
     readonly ISqliteCommands _commands;
     readonly ISqliteTransactions _transactions;
+    readonly SqliteOptions _options;
 
     public string Filename { get; }
     public string Provider => "sqlite";
@@ -25,7 +26,9 @@ internal sealed class SqliteConnection : IConnection
     public SqliteConnection(SqliteConnectionOptions? options = null)
     {
         options ??= new SqliteConnectionOptions();
-        Filename = options.Filename ?? SqlitePath.FromUrl(options.Url) ?? ":memory:";
+        var parsed = options.Filename is null ? SqlitePath.Parse(options.Url) : null;
+        Filename = options.Filename ?? parsed?.Filename ?? ":memory:";
+        _options = parsed?.Options ?? SqliteOptions.Empty;
         var session = new SqliteConnectionDriver();
         var commands = new SqliteCommandDriver(session);
         _session = session;
@@ -35,8 +38,9 @@ internal sealed class SqliteConnection : IConnection
 
     public async Task Open()
     {
+        if (_options.Error is not null) throw new DatasourceException(_options.Error);
         if (IsOpen) throw new DatasourceException("Connection is already open");
-        await _session.Open(Filename);
+        await _session.Open(Filename, _options);
         IsOpen = true;
     }
 

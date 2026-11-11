@@ -813,7 +813,7 @@ factory.register(Arc::new(StubRepository::new("memory")));
 let created = factory.create::<Row>().unwrap();
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/RepositoryFactory.test.ts#L19-L25)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/RepositoryFactory.test.ts#L21-L27)
 
 ```typescript
 const factory = new RepositoryFactory();

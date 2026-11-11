@@ -3,6 +3,7 @@ import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextR
 import { Native } from "./statements/Native.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
+import type { Schema } from "./Schema.ts";
 import type { Cells } from "./converters/Value.ts";
 import type { IReader } from "./IReader.ts";
 import type { Response } from "./Response.ts";
@@ -10,6 +11,7 @@ import type { Parameter } from "./Parameter.ts";
 
 export interface ICommand {
   readonly connection: IConnection;
+  schema: Schema | null;
   addMiddleware(middleware: ICommandMiddleware): this;
   executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>;
   execute(text: string, parameters?: Parameter[]): Promise<Response>;

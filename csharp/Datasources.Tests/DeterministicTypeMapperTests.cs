@@ -7,6 +7,8 @@ public class DeterministicTypeMapperTests
     {
         var types = new DeterministicTypeMapper();
         Assert.Equal("boolean", types.Map(nameof(Boolean)));
+        Assert.Equal("boolean", types.Map("boolean"));
+        Assert.Equal("boolean", types.Map("bool"));
         Assert.Equal("smallinteger", types.Map(nameof(SByte)));
         Assert.Equal("smallinteger", types.Map(nameof(Int16)));
         Assert.Equal("unsignedsmallinteger", types.Map(nameof(Byte)));
