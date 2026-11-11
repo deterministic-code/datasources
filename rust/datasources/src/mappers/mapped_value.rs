@@ -7,4 +7,5 @@ pub type MappedRow = HashMap<String, MappedValue>;
 pub enum MappedValue {
     Cell(Value),
     Many(Vec<MappedRow>),
+    Map(HashMap<String, Value>),
 }

@@ -3,9 +3,9 @@ use crate::converters::{MetaDataRowTypeConverter, SchemaObject, TypeConverter};
 use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::enrichment_fields::{
-    cell_from_row, cell_from_struct, payload_from_row, payload_from_struct, set_cell_on_row,
-    set_cell_on_struct, set_one_on_struct, set_payload_on_row, set_payload_on_struct,
-    set_typed_list_on_struct, typed_list_from_struct,
+    cell_from_row, cell_from_struct, hydrate_nested_payloads, payload_from_row,
+    payload_from_struct, set_cell_on_row, set_cell_on_struct, set_one_on_struct,
+    set_payload_on_row, set_payload_on_struct, set_typed_list_on_struct, typed_list_from_struct,
 };
 use crate::readonly_repository::ReadonlyRepository;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
@@ -30,6 +30,12 @@ pub trait Entity: Clone + Default + Send + Sync + 'static {
 
     fn set_payload(&mut self, name: &str, rows: Vec<Row>) -> Result<()> {
         let _ = (name, rows);
+        Ok(())
+    }
+
+    #[doc(hidden)]
+    fn hydrate_from_row(&mut self, row: &Row) -> Result<()> {
+        let _ = row;
         Ok(())
     }
 
@@ -202,6 +208,10 @@ impl<T: SchemaObject> Entity for T {
         Ok(())
     }
 
+    fn hydrate_from_row(&mut self, row: &Row) -> Result<()> {
+        hydrate_nested_payloads(self, row)
+    }
+
     fn cell(&self, name: &str) -> Option<Value> {
         cell_from_struct(self, name)
     }
@@ -212,7 +222,11 @@ impl<T: SchemaObject> Entity for T {
     }
 
     fn has(&self, name: &str) -> bool {
-        Peek::new(self).into_struct().ok().and_then(|st| st.field_by_name(name).ok()).is_some()
+        Peek::new(self)
+            .into_struct()
+            .ok()
+            .and_then(|st| st.field_by_name(name).ok())
+            .is_some()
     }
 
     fn related<R: Entity>(&self, name: &str) -> Vec<R> {
@@ -290,7 +304,11 @@ pub fn assign_related<T: Entity, TRelated: Entity>(
     parent.set_related(name, items)
 }
 
-pub fn assign_one<T: Entity, TRelated: Entity>(parent: &mut T, name: &str, item: TRelated) -> Result<()> {
+pub fn assign_one<T: Entity, TRelated: Entity>(
+    parent: &mut T,
+    name: &str,
+    item: TRelated,
+) -> Result<()> {
     parent.set_one(name, item)
 }
 

@@ -25,6 +25,7 @@ describe("readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions", () => {
       Id = 0;
       Type = new UserType();
       TypeName = "";
+      Settings: Record<string, string> = {};
       Children: Child[] = [];
     }
 
@@ -77,8 +78,22 @@ describe("readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions", () => {
     await parents.create(Object.assign(new Parent(), { Type: Object.assign(new UserType(), { Id: type.Id }) }));
     const enriched = await parents.readSingle();
 
-    const row1: Seed = { Id: 1, TypeName: "person", ChildId: 10, Label: "a" };
-    const row2: Seed = { Id: 1, TypeName: "person", ChildId: 11, Label: "b" };
+    const row1: Seed = {
+      Id: 1,
+      TypeName: "person",
+      ChildId: 10,
+      Label: "a",
+      SettingName: "lives",
+      SettingValue: "3",
+    };
+    const row2: Seed = {
+      Id: 1,
+      TypeName: "person",
+      ChildId: 11,
+      Label: "b",
+      SettingName: "level",
+      SettingValue: "2",
+    };
     const mockConnection = new MockConnection({ provider: "memory" });
     const command = new MockCommand(mockConnection);
     mockConnection.command = command;
@@ -103,6 +118,7 @@ describe("readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions", () => {
           fields: {
             Id: "Id",
             TypeName: "TypeName",
+            Settings: { key: "SettingName", value: "SettingValue" },
             Children: {
               key: "ChildId",
               fields: { Id: "ChildId", Label: "Label" },
@@ -116,5 +132,6 @@ describe("readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions", () => {
     expect(items[0]?.Id).toBe(1);
     expect(items[0]?.TypeName).toBe("person");
     expect(items[0]?.Children.map((child) => child.Label)).toEqual(["a", "b"]);
+    expect(items[0]?.Settings).toEqual({ lives: "3", level: "2" });
   });
 });

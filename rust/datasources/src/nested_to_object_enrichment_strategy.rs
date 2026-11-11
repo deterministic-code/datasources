@@ -57,5 +57,16 @@ fn value_of(value: MappedValue) -> Value {
     match value {
         MappedValue::Cell(cell) => cell,
         MappedValue::Many(items) => encode_rows(&items.into_iter().map(row_of).collect::<Vec<_>>()),
+        MappedValue::Map(items) => encode_rows(
+            &items
+                .into_iter()
+                .map(|(key, value)| {
+                    Row::from([
+                        ("key".to_string(), Value::from(key)),
+                        ("value".to_string(), value),
+                    ])
+                })
+                .collect::<Vec<_>>(),
+        ),
     }
 }

@@ -16,6 +16,7 @@ public class ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests
         public long Id { get; set; }
         public UserType Type { get; set; } = new();
         public string TypeName { get; set; } = "";
+        public Dictionary<string, string> Settings { get; set; } = [];
         public List<Child> Children { get; set; } = [];
     }
 
@@ -54,8 +55,24 @@ public class ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests
         await parentsRepo.Create(new Parent { Type = new UserType { Id = type.Id } });
         var enriched = await parentsRepo.ReadSingle();
 
-        var row1 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 10L, ["Label"] = "a" };
-        var row2 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 11L, ["Label"] = "b" };
+        var row1 = new Row
+        {
+            ["Id"] = 1L,
+            ["TypeName"] = "person",
+            ["ChildId"] = 10L,
+            ["Label"] = "a",
+            ["SettingName"] = "lives",
+            ["SettingValue"] = "3",
+        };
+        var row2 = new Row
+        {
+            ["Id"] = 1L,
+            ["TypeName"] = "person",
+            ["ChildId"] = 11L,
+            ["Label"] = "b",
+            ["SettingName"] = "level",
+            ["SettingValue"] = "2",
+        };
         var mockConnection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(mockConnection);
         mockConnection.Command = command;
@@ -87,6 +104,7 @@ public class ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests
                     {
                         ["Id"] = "Id",
                         ["TypeName"] = "TypeName",
+                        ["Settings"] = new TypeMapField.Dictionary("SettingName", "SettingValue"),
                         ["Children"] = new TypeMapGroup
                         {
                             Key = "ChildId",
@@ -104,6 +122,8 @@ public class ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests
         Assert.Equal(1L, parent.Id);
         Assert.Equal("person", parent.TypeName);
         Assert.Equal(["a", "b"], parent.Children.Select(child => child.Label));
+        Assert.Equal("3", parent.Settings["lives"]);
+        Assert.Equal("2", parent.Settings["level"]);
     }
 
     static CRUDRepository<UserType> TypesRepo(IConnection connection) =>

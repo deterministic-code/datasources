@@ -121,6 +121,18 @@ pub fn set_one_on_struct<T: SchemaObject, R: SchemaObject>(item: &T, name: &str,
     partial.build().map_err(reflect)?.materialize().map_err(reflect)
 }
 
+pub(crate) fn hydrate_nested_payloads<T: SchemaObject>(item: &mut T, row: &Row) -> Result<()> {
+    for field in struct_fields(T::SHAPE)? {
+        if !matches!(field.shape().def, Def::List(_) | Def::Map(_)) {
+            continue;
+        }
+        if let Some(cell) = row.get(field.name) {
+            *item = set_payload_on_struct(item, field.name, decode_rows(Some(cell)))?;
+        }
+    }
+    Ok(())
+}
+
 pub fn set_payload_on_struct<T: SchemaObject>(item: &T, name: &str, rows: Vec<Row>) -> Result<T> {
     let st = Peek::new(item).into_struct().map_err(reflect)?;
     let fields = struct_fields(T::SHAPE)?;

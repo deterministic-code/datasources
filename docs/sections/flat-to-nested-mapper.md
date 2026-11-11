@@ -82,7 +82,7 @@ reverseMap(values: T[]): Cells[]
 type TypeMap<T>
 ```
 
-Collapse spec. Scalars are column names; array fields are [TypeMapGroup](#typemapgroup) values.
+Collapse spec. Scalars are column names; array fields are [TypeMapGroup](#typemapgroup) values; string-keyed cell records are [TypeMapDictionary](#typemapdictionary) values.
 
 **Properties**
 
@@ -96,7 +96,7 @@ key: string
 
 ##### fields
 
-Column or group per destination field.
+Column, group, or dictionary per destination field.
 
 ```typescript
 fields: TypeMapFields<T>
@@ -128,13 +128,39 @@ Column names for the child.
 fields: TypeMapFields<E>
 ```
 
+#### TypeMapDictionary
+
+```typescript
+type TypeMapDictionary
+```
+
+Scalar dictionary in a [TypeMap](#typemap). `key` and `value` are source columns.
+
+**Properties**
+
+##### key
+
+Source column used as the dictionary key.
+
+```typescript
+key: string
+```
+
+##### value
+
+Source column used as the dictionary value.
+
+```typescript
+value: string
+```
+
 #### TypeMapFields
 
 ```typescript
 type TypeMapFields<T>
 ```
 
-Per-field mapping: a column name, or a [TypeMapGroup](#typemapgroup) when the field is an array.
+Per-field mapping: a column name, a [TypeMapGroup](#typemapgroup) when the field is an array, or a [TypeMapDictionary](#typemapdictionary) when the field is a string-keyed record of cells.
 
 ### csharp
 #### IFlatToNestedMapper
@@ -213,7 +239,7 @@ IReadOnlyList<Row> ReverseMap(IReadOnlyList<Dictionary<string, MappedValue>> val
 public sealed class TypeMap
 ```
 
-Collapse spec. A string field is a column; a [TypeMapGroup](#typemapgroup) is a child collection.
+Collapse spec. A string field is a column; a [TypeMapGroup](#typemapgroup) is a child collection; [TypeMapField.Dictionary](#typemapfield-dictionary) is a string-keyed map of cells.
 
 **Properties**
 
@@ -227,7 +253,7 @@ required string Key { get; init; }
 
 ##### Fields
 
-Column or group per destination field.
+Column, group, or dictionary per destination field.
 
 ```csharp
 required IReadOnlyDictionary<string, TypeMapField> Fields { get; init; }
@@ -265,7 +291,7 @@ required IReadOnlyDictionary<string, TypeMapField> Fields { get; init; }
 public abstract record TypeMapField
 ```
 
-A column name or a [TypeMapGroup](#typemapgroup). A `string` or [TypeMapGroup](#typemapgroup) converts to this type.
+A column name, a [TypeMapGroup](#typemapgroup), or source key and value columns. A `string` or [TypeMapGroup](#typemapgroup) converts to this type.
 
 **Properties**
 
@@ -283,6 +309,14 @@ Maps a destination field to a child [TypeMapGroup](#typemapgroup).
 
 ```csharp
 TypeMapField.Group(TypeMapGroup Map)
+```
+
+##### Dictionary
+
+Maps a destination field to source key and value columns.
+
+```csharp
+TypeMapField.Dictionary(string Key, string Value)
 ```
 
 #### MappedValue
@@ -309,6 +343,14 @@ A child collection.
 
 ```csharp
 MappedValue.Many(List<Dictionary<string, MappedValue>> Items)
+```
+
+##### Map
+
+A string-keyed map of cells.
+
+```csharp
+MappedValue.Map(Dictionary<string, Value> Items)
 ```
 
 ### rust
@@ -421,7 +463,7 @@ pub key: String
 
 ##### fields
 
-Column or group per destination field.
+Column, group, or dictionary per destination field.
 
 ```rust
 pub fields: Vec<(String, TypeMapField)>
@@ -474,7 +516,7 @@ pub fields: Vec<(String, TypeMapField)>
 pub enum TypeMapField
 ```
 
-A column name or a [TypeMapGroup](#typemapgroup).
+A column name, a [TypeMapGroup](#typemapgroup), or a dictionary.
 
 **Properties**
 
@@ -494,6 +536,14 @@ Maps a destination field to a child [TypeMapGroup](#typemapgroup).
 Group(TypeMapGroup)
 ```
 
+##### Dictionary
+
+Maps a destination field to source key and value columns.
+
+```rust
+Dictionary { key: String, value: String }
+```
+
 **Methods**
 
 ##### column(source)
@@ -505,6 +555,19 @@ pub fn column(source: impl Into<String>) -> Self
 ```
 
 - `source` — source column name
+
+**Returns** [TypeMapField](#typemapfield)
+
+##### dictionary(key, value)
+
+Builds a [Dictionary](#typemapfield-dictionary) field.
+
+```rust
+pub fn dictionary(key: impl Into<String>, value: impl Into<String>) -> Self
+```
+
+- `key` — source column used as the dictionary key
+- `value` — source column used as the dictionary value
 
 **Returns** [TypeMapField](#typemapfield)
 
@@ -534,6 +597,14 @@ A child collection.
 Many(Vec<MappedRow>)
 ```
 
+##### Map
+
+A string-keyed map of cells.
+
+```rust
+Map(HashMap<String, Value>)
+```
+
 #### MappedRow
 
 ```rust
@@ -545,7 +616,7 @@ A mapped graph row. Keys are destination field names.
 
 ## Remarks
 
-Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key.
+Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key; dictionaries collect unique key/value entries. The first row wins a duplicate key. A null key is omitted.
 
 ::: prose
 ### typescript
@@ -621,6 +692,25 @@ This is a collapse mapper, not enrichment. Related fills after read use [IEnrich
     phone_type_name: "Mobile"
   }
 ]
+```
+:::
+
+### Map join rows to a nested dictionary
+
+::: example
+```csharp csharp/Datasources.Tests/FlatToNestedMapperTests.cs#MapsJoinRowsToANestedDictionary
+```
+```rust rust/datasources/src/mappers/flat_to_nested_mapper.rs#maps_join_rows_to_a_nested_dictionary
+```
+```typescript typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#maps-join-rows-to-a-nested-dictionary
+```
+
+```output [After: nested dictionary]
+{
+  Id: 1,
+  Name: "star",
+  Settings: { lives: "3", level: "2" }
+}
 ```
 :::
 

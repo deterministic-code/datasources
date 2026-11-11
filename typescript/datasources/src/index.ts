@@ -254,6 +254,7 @@ export type { IMapper } from "./mappers/IMapper.ts";
 export type { IFlatToNestedMapper } from "./mappers/IFlatToNestedMapper.ts";
 export type { TypeMap, TypeMapFields } from "./mappers/TypeMap.ts";
 export type { TypeMapGroup } from "./mappers/TypeMapGroup.ts";
+export type { TypeMapDictionary } from "./mappers/TypeMapDictionary.ts";
 export { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
 export { ChangeCasingMapper } from "./mappers/ChangeCasingMapper.ts";
 export { DictionaryMapper } from "./mappers/DictionaryMapper.ts";

@@ -25,15 +25,19 @@ command.reader_rows.lock().unwrap().extend([
         ("TypeName", Value::from("person")),
         ("ChildId", Value::Int(10)),
         ("Label", Value::from("a")),
+        ("SettingName", Value::from("lives")),
+        ("SettingValue", Value::from("3")),
     ]),
     record(&[
         ("Id", Value::Int(1)),
         ("TypeName", Value::from("person")),
         ("ChildId", Value::Int(11)),
         ("Label", Value::from("b")),
+        ("SettingName", Value::from("level")),
+        ("SettingValue", Value::from("2")),
     ]),
 ]);
-let join_repo = parents_repo(MockConnection::with_command_provider(
+let join_repo = join_parents_repo(MockConnection::with_command_provider(
     command,
     "memory",
 ));
@@ -58,6 +62,10 @@ options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap
     vec![
         ("Id".into(), TypeMapField::column("Id")),
         ("TypeName".into(), TypeMapField::column("TypeName")),
+        (
+            "Settings".into(),
+            TypeMapField::dictionary("SettingName", "SettingValue"),
+        ),
         (
             "Children".into(),
             TypeMapField::Group(TypeMapGroup::new(

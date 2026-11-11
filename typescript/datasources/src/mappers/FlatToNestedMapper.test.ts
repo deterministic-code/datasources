@@ -154,6 +154,50 @@ describe("FlatToNestedMapper", () => {
     expect(flat).toEqual([adaHome, adaWork]);
   });
 
+  it("maps join rows to a nested dictionary", () => {
+    type Game = { Id: number; Name: string; Settings: Record<string, string> };
+    const mapper = new FlatToNestedMapper<Game>({
+      key: "Id",
+      fields: {
+        Id: "Id",
+        Name: "Name",
+        Settings: { key: "SettingName", value: "SettingValue" },
+      },
+    });
+    const lives: Cells = { Id: 1, Name: "star", SettingName: "lives", SettingValue: "3" };
+    const level = { ...lives, SettingName: "level", SettingValue: "2" };
+    const again = { ...lives, SettingValue: "9" };
+    const empty: Cells = { Id: 2, Name: "moon", SettingName: null, SettingValue: null };
+    const nested = mapper.map([lives, level, again, empty]);
+    expect(nested).toHaveLength(2);
+    expect(nested[0]?.Name).toBe("star");
+    expect(nested[0]?.Settings).toEqual({ lives: "3", level: "2" });
+    expect(nested[1]?.Settings).toEqual({});
+    const flat = mapper.reverseMap(nested);
+    expect(flat.filter((row) => row.Id === 1)).toHaveLength(2);
+    expect(flat.filter((row) => row.Id === 2)).toHaveLength(1);
+  });
+
+  it("collapses already mapped dictionary rows", () => {
+    type Game = { Id: number; Name: string; Settings: Record<string, string> };
+    const mapper = new FlatToNestedMapper<Game>({
+      key: "Id",
+      fields: {
+        Id: "Id",
+        Name: "Name",
+        Settings: { key: "SettingName", value: "SettingValue" },
+      },
+    });
+    const lives: Cells = { Id: 1, Name: "star", SettingName: "lives", SettingValue: "3" };
+    const level = { ...lives, SettingName: "level", SettingValue: "2" };
+    const remapped = mapper.map([mapper.map([lives])[0]!, mapper.map([level])[0]!]);
+    expect(remapped[0]?.Settings).toEqual({ lives: "3", level: "2" });
+    expect(mapper.map([{ ...lives, Settings: [] }])[0]?.Settings).toEqual({ lives: "3" });
+    expect(mapper.map([{ Id: 3, Name: "sun", SettingName: "theme" }])[0]?.Settings).toEqual({
+      theme: null,
+    });
+  });
+
   it("maps one denormalized row into a contact with 0-1 children", () => {
     expect(mapper.map([adaHome])[0]).toEqual({
       id: 7,

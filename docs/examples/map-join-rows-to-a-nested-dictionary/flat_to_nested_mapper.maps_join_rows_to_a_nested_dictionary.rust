@@ -1,0 +1,29 @@
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "Id",
+    vec![
+        ("Id".into(), TypeMapField::column("Id")),
+        ("Name".into(), TypeMapField::column("Name")),
+        (
+            "Settings".into(),
+            TypeMapField::dictionary("SettingName", "SettingValue"),
+        ),
+    ],
+));
+let lives = cell(&[
+    ("Id", Value::Int(1)),
+    ("Name", Value::from("star")),
+    ("SettingName", Value::from("lives")),
+    ("SettingValue", Value::from("3")),
+]);
+let mut level = lives.clone();
+level.insert("SettingName".into(), Value::from("level"));
+level.insert("SettingValue".into(), Value::from("2"));
+let mut again = lives.clone();
+again.insert("SettingValue".into(), Value::from("9"));
+let empty = cell(&[
+    ("Id", Value::Int(2)),
+    ("Name", Value::from("moon")),
+    ("SettingName", Value::Null),
+    ("SettingValue", Value::Null),
+]);
+let nested = Mapper::map(&mapper, vec![lives, level, again, empty]);

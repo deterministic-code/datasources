@@ -335,6 +335,10 @@ Find the closest title. Open that language's snippet. Topic files already includ
   - `docs/examples/map-join-rows-to-a-nested-contact/FlatToNestedMapperTests.MapsJoinRowsToANestedContact.csharp`
   - `docs/examples/map-join-rows-to-a-nested-contact/flat_to_nested_mapper.maps_join_rows_to_a_nested_contact.rust`
   - `docs/examples/map-join-rows-to-a-nested-contact/FlatToNestedMapper.test.maps-join-rows-to-a-nested-contact.typescript`
+- Map join rows to a nested dictionary
+  - `docs/examples/map-join-rows-to-a-nested-dictionary/FlatToNestedMapperTests.MapsJoinRowsToANestedDictionary.csharp`
+  - `docs/examples/map-join-rows-to-a-nested-dictionary/flat_to_nested_mapper.maps_join_rows_to_a_nested_dictionary.rust`
+  - `docs/examples/map-join-rows-to-a-nested-dictionary/FlatToNestedMapper.test.maps-join-rows-to-a-nested-dictionary.typescript`
 
 ## Metadata Row Type Converter
 
