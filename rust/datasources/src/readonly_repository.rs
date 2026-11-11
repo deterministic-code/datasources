@@ -189,6 +189,21 @@ impl<T: Entity> ReadonlyRepository<T> {
         for middleware in &middlewares {
             command.add_middleware(middleware.clone());
         }
+        command.set_schema(Some(Schema::new(
+            self.schema
+                .columns
+                .iter()
+                .flat_map(|(name, column)| {
+                    [
+                        (name.clone(), column.clone()),
+                        (
+                            Mapper::map(self.property_mappings.as_ref(), name.clone()),
+                            column.clone(),
+                        ),
+                    ]
+                })
+                .collect(),
+        )));
         command
     }
 

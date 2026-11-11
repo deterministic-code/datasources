@@ -700,6 +700,7 @@ public class CRUDRepositoryTests
     sealed class RecordingCommand(ICommand inner, List<string> texts) : ICommand
     {
         public IConnection Connection => inner.Connection;
+        public Schema? Schema { get => inner.Schema; set => inner.Schema = value; }
         public ICommand AddMiddleware(ICommandMiddleware middleware)
         {
             inner.AddMiddleware(middleware);

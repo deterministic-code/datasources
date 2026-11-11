@@ -1,5 +1,9 @@
-let connection = setup(&mut []).await;
-let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+let texts = Arc::new(Mutex::new(Vec::new()));
+let connection: Arc<dyn Connection> = Arc::new(RecordingConnection::new(
+    setup(&mut []).await,
+    Arc::clone(&texts),
+));
+let types = Arc::new(mapped_crud(Arc::clone(&connection), "UserType"));
 let mut parents = mapped_crud(connection, "Parent");
 types
     .create(record(&[("Name", Value::from("work"))]))

@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
+    DeterministicTypeMapper, Mapper,
     Schema, SchemaColumn,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
     InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
@@ -188,6 +189,14 @@ fn where_of(mapping: &RowTypeConverter, map: &BTreeMap<String, serde_yaml::Value
     ))
 }
 
+fn catalog_field(
+    field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+    canonical: &str,
+) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
+    let mapped = Mapper::map(&DeterministicTypeMapper::new(), canonical.to_string());
+    field(if mapped.is_empty() { canonical } else { mapped.as_str() })
+}
+
 fn fields_overlay(
     type_spec: &TypeSpec,
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
@@ -195,10 +204,12 @@ fn fields_overlay(
     let mut fields: HashMap<_, _> = type_spec
         .fields
         .iter()
-        .filter_map(|(name, canonical)| field(canonical).map(|converter| (name.clone(), converter)))
+        .filter_map(|(name, canonical)| {
+            catalog_field(field, canonical).map(|converter| (name.clone(), converter))
+        })
         .collect();
     for (name, canonical) in &type_spec.converters {
-        if let Some(converter) = field(canonical) {
+        if let Some(converter) = catalog_field(field, canonical) {
             fields.insert(name.clone(), converter);
         }
     }

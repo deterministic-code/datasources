@@ -37,6 +37,14 @@ impl Command for StubCommand {
         self.host.add_middleware(middleware);
     }
 
+    fn schema(&self) -> Option<crate::Schema> {
+        self.host.schema()
+    }
+
+    fn set_schema(&self, schema: Option<crate::Schema>) {
+        self.host.set_schema(schema);
+    }
+
     async fn execute_reader_native(
         &self,
         text: &Native,
@@ -88,6 +96,14 @@ macro_rules! named_stub_command {
 
             fn add_middleware(&self, middleware: std::sync::Arc<dyn $crate::CommandMiddleware>) {
                 self.inner.add_middleware(middleware);
+            }
+
+            fn schema(&self) -> Option<$crate::Schema> {
+                self.inner.schema()
+            }
+
+            fn set_schema(&self, schema: Option<$crate::Schema>) {
+                self.inner.set_schema(schema);
             }
 
             async fn execute_reader_native(

@@ -1,4 +1,5 @@
-var connection = await Setup();
+var texts = new List<string>();
+var connection = new RecordingConnection(await Setup(), texts);
 var typesRepo = Open<UserType>(connection);
 var parentsRepo = Open<Parent>(connection);
 await typesRepo.Create(new UserType { Name = "work" });

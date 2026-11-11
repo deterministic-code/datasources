@@ -942,7 +942,7 @@ var parents = await parentsRepo.Read().ToListAsync();
 var children = await childrenRepo.Read().ToListAsync();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L1076-L1114)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L1218-L1256)
 
 ```rust
 let connection = setup(&mut []).await;

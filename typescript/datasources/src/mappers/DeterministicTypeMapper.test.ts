@@ -6,6 +6,7 @@ describe("DeterministicTypeMapper", () => {
     const types = new DeterministicTypeMapper();
     expect(types.map("boolean")).toBe("boolean");
     expect(types.map("Boolean")).toBe("boolean");
+    expect(types.map("bool")).toBe("boolean");
     expect(types.map("number")).toBe("integer");
     expect(types.map("Number")).toBe("integer");
     expect(types.map("bigint")).toBe("biginteger");

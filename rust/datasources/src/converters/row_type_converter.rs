@@ -1,4 +1,5 @@
 use crate::converters::type_converter::TypeConverter;
+use crate::mappers::{DeterministicTypeMapper, Mapper};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -24,8 +25,11 @@ impl RowTypeConverter {
         columns: &HashMap<String, String>,
     ) -> Self {
         let mut fields = HashMap::new();
+        let mapper = DeterministicTypeMapper::new();
         for (name, ty) in columns {
-            if let Some(converter) = catalog().remove(ty) {
+            let mapped = mapper.map(ty.clone());
+            let key = if mapped.is_empty() { ty.clone() } else { mapped };
+            if let Some(converter) = catalog().remove(&key) {
                 fields.insert(name.clone(), converter);
             }
         }

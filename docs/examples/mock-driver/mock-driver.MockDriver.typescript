@@ -1,6 +1,7 @@
 export class MockDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Value, Value>> = {};
   columnType = identityColumnType;
+  defaultValueConverter = emptyDefaultValueConverter;
   connection = (_options?: DatasourceOptions): IConnection => new MockConnection();
   command = (connection: IConnection): ICommand => new MockCommand(connection);
   transaction = (

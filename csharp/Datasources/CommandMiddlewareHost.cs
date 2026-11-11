@@ -5,6 +5,7 @@ namespace Datasources;
 public class CommandMiddlewareHost
 {
     private readonly List<ICommandMiddleware> _middlewares = new();
+    public Schema? Schema { get; set; }
 
     public ICommand AddMiddleware(ICommandMiddleware middleware)
     {

@@ -1620,6 +1620,14 @@ impl Command for RecordingCommand {
         self.inner.add_middleware(middleware);
     }
 
+    fn schema(&self) -> Option<Schema> {
+        self.inner.schema()
+    }
+
+    fn set_schema(&self, schema: Option<Schema>) {
+        self.inner.set_schema(schema);
+    }
+
     async fn execute_reader_native(
         &self,
         text: &Native,

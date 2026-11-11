@@ -149,11 +149,21 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     return this.entries().length > 0;
   }
 
-  protected command = (): ICommand =>
-    this.middlewares.reduce(
-      (command, middleware) => command.addMiddleware(middleware),
+  protected command = (): ICommand => {
+    const command = this.middlewares.reduce(
+      (next, middleware) => next.addMiddleware(middleware),
       this.connection!.createCommand(),
     );
+    command.schema = new Schema(
+      Object.fromEntries(
+        Object.entries(this.schema.columns).flatMap(([name, column]) => [
+          [name, column],
+          [this.propertyMappers.map(name), column],
+        ]),
+      ),
+    );
+    return command;
+  };
 
   private ensureOpen = async (): Promise<void> => {
     const connection = this.connection;

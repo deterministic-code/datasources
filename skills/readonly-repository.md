@@ -1891,7 +1891,7 @@ CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL, name strin
 
 The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](#propertymappings) stay in effect when a later read passes only an [EntityMapper](repositories.md#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](docs/sections/nested-to-object-enrichment-strategy.md) is the [Enrichment](#enrichment) on that call's mapping options and collapses flat join rows using a [TypeMap](mappings.md#typemap).
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#L47-L131)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#L47-L127)
 
 ```csharp
 var connection = await Setup();
@@ -1981,13 +1981,16 @@ var items = await joinRepo.Read(
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L162)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L91-L192)
 
 ```rust
 let connection = MemoryDriver.connection(None);
 connection.open().await.unwrap();
 let types = Arc::new(types_repo(connection.clone()));
-let created_type = types.create(record(&[("Name", Value::from("person"))])).await.unwrap();
+let created_type = types
+    .create(record(&[("Name", Value::from("person"))]))
+    .await
+    .unwrap();
 let mut parents = parents_repo(connection);
 parents.add_enriched(
     Enrichment::new(
@@ -2023,50 +2026,45 @@ command.reader_rows.lock().unwrap().extend([
         ("SettingValue", Value::from("2")),
     ]),
 ]);
-let join_repo = join_parents_repo(MockConnection::with_command_provider(
-    command,
-    "memory",
-));
+let join_repo = join_parents_repo(MockConnection::with_command_provider(command, "memory"));
 let where_clause = Where::new(Operator::equals("Parent.Id", Value::Int(1)));
 let join = SelectStatement::new(SelectStatementOptions {
     joins: &[Join::left("Child", "Parent.Id", "Child.ParentId")],
     where_clause: Some(&where_clause),
     ..SelectStatementOptions::new(
         "Parent",
-        &[
-            "Parent.Id",
-            "Parent.TypeName",
-            "Child.Id",
-            "Child.Label",
-        ],
+        &["Parent.Id", "Parent.TypeName", "Child.Id", "Child.Label"],
     )
 });
 let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity_mapper = Some(Arc::new(join_entity()));
-options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap::new(
-    "Id",
-    vec![
-        ("Id".into(), TypeMapField::column("Id")),
-        ("TypeName".into(), TypeMapField::column("TypeName")),
-        (
-            "Settings".into(),
-            TypeMapField::dictionary("SettingName", "SettingValue"),
-        ),
-        (
-            "Children".into(),
-            TypeMapField::Group(TypeMapGroup::new(
-                "ChildId",
-                vec![
-                    ("Id".into(), TypeMapField::column("ChildId")),
-                    ("Label".into(), TypeMapField::column("Label")),
-                ],
-            )),
-        ),
-    ],
-))));
+options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+    TypeMap::new(
+        "Id",
+        vec![
+            ("Id".into(), TypeMapField::column("Id")),
+            ("TypeName".into(), TypeMapField::column("TypeName")),
+            (
+                "Settings".into(),
+                TypeMapField::dictionary("SettingName", "SettingValue"),
+            ),
+            (
+                "Children".into(),
+                TypeMapField::Group(TypeMapGroup::new(
+                    "ChildId",
+                    vec![
+                        ("Id".into(), TypeMapField::column("ChildId")),
+                        ("Label".into(), TypeMapField::column("Label")),
+                    ],
+                )),
+            ),
+        ],
+    ),
+)));
 let items = join_repo
     .read(Some(&join), Some(&options))
-    .try_collect::<Vec<_>>().await
+    .try_collect::<Vec<_>>()
+    .await
     .unwrap();
 ```
 

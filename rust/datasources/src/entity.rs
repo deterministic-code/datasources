@@ -9,6 +9,7 @@ use crate::enrichment_fields::{
 };
 use crate::readonly_repository::ReadonlyRepository;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
+use crate::schema_of::SchemaOf;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
@@ -275,23 +276,29 @@ impl<T: SchemaObject> Entity for T {
 
     fn create_repository(
         connection: Arc<dyn Connection>,
-        options: CRUDRepositoryOptions,
+        mut options: CRUDRepositoryOptions,
         _from_row: impl FnOnce(
             Arc<dyn Connection>,
             CRUDRepositoryOptions,
         ) -> Arc<dyn ICRUDRepository<Row>>,
     ) -> Arc<dyn ICRUDRepository<Self>> {
+        if options.schema.columns.is_empty() {
+            options.schema = SchemaOf::from::<T>();
+        }
         Arc::new(CRUDRepository::<T>::new(connection, options).expect("repository"))
     }
 
     fn create_readonly_repository(
         connection: Arc<dyn Connection>,
-        options: ReadonlyRepositoryMappingOptions,
+        mut options: ReadonlyRepositoryMappingOptions,
         _from_row: impl FnOnce(
             Arc<dyn Connection>,
             ReadonlyRepositoryMappingOptions,
         ) -> Arc<dyn IReadonlyRepository<Row>>,
     ) -> Arc<dyn IReadonlyRepository<Self>> {
+        if options.schema.columns.is_empty() {
+            options.schema = SchemaOf::from::<T>();
+        }
         Arc::new(ReadonlyRepository::<T>::new(connection, options).expect("repository"))
     }
 }

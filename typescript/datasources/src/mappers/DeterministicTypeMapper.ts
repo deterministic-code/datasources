@@ -3,6 +3,7 @@ import type { IMapper } from "./IMapper.ts";
 const forward: Record<string, string> = {
   boolean: "boolean",
   Boolean: "boolean",
+  bool: "boolean",
   number: "integer",
   Number: "integer",
   bigint: "biginteger",

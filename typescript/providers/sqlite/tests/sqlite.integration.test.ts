@@ -8,6 +8,7 @@ import {
   Native,
   ReturnStatement,
   MetaDataRowTypeConverter,
+  SchemaOf,
   StatementTextRenderer,
   TransformMapper,
 } from "@deterministic-code/datasources";
@@ -35,6 +36,15 @@ class NameValue {
 class Item {
   id = 0;
   name = "";
+}
+
+class FlagsRow {
+  enabled = false;
+  count = 0;
+}
+
+class Stamp {
+  created = new Date(0);
 }
 
 class Contact {
@@ -82,10 +92,40 @@ describe("command", () => {
     await connection.open();
     const command = connection.createCommand();
     await applySchema(connection, "flags");
+    command.schema = SchemaOf.from(FlagsRow);
     await command.executeNative(new Native("INSERT INTO flags (enabled, count) VALUES (1, 1)"));
     await using reader = await command.executeReaderNative(new Native("SELECT enabled, count, 1 AS one FROM flags"));
     expect(await reader.next()).toBe(true);
-    expect(reader.current).toEqual({ enabled: 1, count: 1, one: 1 });
+    expect(reader.current).toEqual({ enabled: true, count: 1, one: 1 });
+  });
+
+  it("reads a boolean column as int when schema is missing", async () => {
+    const ds = Datasource.default;
+    await using connection = await ds.createConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await applySchema(connection, "flags");
+    await command.executeNative(new Native("INSERT INTO flags (enabled, count) VALUES (1, 1)"));
+    await using reader = await command.executeReaderNative(new Native("SELECT enabled, count FROM flags"));
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ enabled: 1, count: 1 });
+  });
+
+  it("reads datetime text when schema is set", async () => {
+    const ds = Datasource.default;
+    await using connection = await ds.createConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await applySchema(connection, "pipeline-users");
+    command.schema = SchemaOf.from(Stamp);
+    await command.executeNative(
+      new Native(
+        "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '11111111-1111-1111-1111-111111111111', 'ada', 1, '2001-01-01T00:00:00.000Z')",
+      ),
+    );
+    await using reader = await command.executeReaderNative(new Native("SELECT created FROM users"));
+    expect(await reader.next()).toBe(true);
+    expect(reader.current?.created).toEqual(new Date("2001-01-01T00:00:00.000Z"));
   });
 
   it("run executeReader on a simple list", async () => {

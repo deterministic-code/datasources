@@ -103,7 +103,7 @@ public class ReadPipelineIntegrationTests
         Assert.Equal(new Value.Int(1), unmapped[0]["id"]);
         Assert.Equal(new Value.Text(ada.ToString()), unmapped[0]["uuid"]);
         Assert.Equal(new Value.Text("ada"), unmapped[0]["name"]);
-        Assert.True(unmapped[0]["is_enabled"] is Value.Bool or Value.Int);
+        Assert.Equal(new Value.Int(1), unmapped[0]["is_enabled"]);
         Assert.True(unmapped[0]["created"] is Value.Text);
 
         Assert.Equal(new Value.Int(1), columnMappedRows[0]["Id"]);

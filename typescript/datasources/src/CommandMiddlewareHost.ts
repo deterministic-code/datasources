@@ -1,4 +1,5 @@
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
+import type { Schema } from "./Schema.ts";
 import type { IReader } from "./IReader.ts";
 import type { Parameter } from "./Parameter.ts";
 import type { Response } from "./Response.ts";
@@ -24,6 +25,7 @@ const logged = <T>(value: T, rows: readonly Row[]): readonly Row[] =>
 
 export class CommandMiddlewareHost {
   private readonly middlewares: ICommandMiddleware[] = [];
+  schema: Schema | null = null;
 
   addMiddleware(middleware: ICommandMiddleware): this {
     this.middlewares.push(middleware);

@@ -93,10 +93,17 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         ReadonlyRepositoryMappingOptions<T>? options = null) =>
         await Read(query, parameters, options).FirstOrDefaultAsync() ?? default;
 
-        protected ICommand Command() =>
-        middlewares.Aggregate(
+        protected ICommand Command()
+    {
+        var command = middlewares.Aggregate(
             (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
-            (command, middleware) => command.AddMiddleware(middleware));
+            (next, middleware) => next.AddMiddleware(middleware));
+        command.Schema = new Schema(schema.Columns
+            .SelectMany(pair => new[] { pair, KeyValuePair.Create(propertyMappers.Map(pair.Key), pair.Value) })
+            .GroupBy(pair => pair.Key)
+            .ToDictionary(group => group.Key, group => group.First().Value));
+        return command;
+    }
 
     async Task EnsureOpen()
     {

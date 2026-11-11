@@ -32,6 +32,14 @@ impl Command for JsonCommand {
         self.host.add_middleware(middleware);
     }
 
+    fn schema(&self) -> Option<datasources::Schema> {
+        self.host.schema()
+    }
+
+    fn set_schema(&self, schema: Option<datasources::Schema>) {
+        self.host.set_schema(schema);
+    }
+
     async fn execute_reader_native(
         &self,
         text: &Native,

@@ -74,7 +74,7 @@ let column_mapped_rows: Vec<Row> = unmapped
 
 let columns = HashMap::from([
     ("Uuid".into(), "uuid".into()),
-    ("IsEnabled".into(), "bool".into()),
+    ("IsEnabled".into(), "boolean".into()),
     ("Created".into(), "datetime".into()),
 ]);
 let row_converter = RowTypeConverter::from(|| crate::SqliteDriver.row_type_converters(), &columns);

@@ -34,6 +34,15 @@ describe("MetaDataRowTypeConverter", () => {
     expect(converter.convert({ flag: 1 }, Item)).toBeInstanceOf(Item);
   });
 
+  it("coerces a number to a boolean property", () => {
+    class Item {
+      flag = false;
+    }
+    const converter = new MetaDataRowTypeConverter<Item>();
+    expect(converter.convert({ flag: 1 }, Item).flag).toBe(true);
+    expect(converter.convert({ flag: 0 }, Item).flag).toBe(false);
+  });
+
   it("keeps a null in a string field", () => {
     class Item {
       name = "";

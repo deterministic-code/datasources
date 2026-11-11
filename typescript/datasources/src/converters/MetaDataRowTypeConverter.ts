@@ -27,6 +27,7 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
   }
 
   convert = (row: Cells, type?: Constructable<T>): T => {
+    const sample = type ? (new type() as Record<string, unknown>) : {};
     const blank = type ? new type() : {};
     const cells = Object.fromEntries(
       Object.entries(row).filter(([key]) => !this.references.has(key)),
@@ -46,6 +47,8 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
       }
       const converter = this.fields[key];
       if (converter) record[key] = converter.convert(value);
+      else if (typeof sample[key] === "boolean" && typeof value === "number")
+        record[key] = value !== 0;
     }
     return dest;
   };

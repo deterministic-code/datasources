@@ -1,9 +1,10 @@
 use datasources::{
     default, Casing, ChangeCasingMapper, FlatToNestedMapper,
     MappedRow, MappedValue,
-    Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, TypeMap, TypeMapField,
+    Mapper, Native, Parameter, Row, RowTypeConverter, Schema, SchemaColumn, TransformMapper, TypeMap, TypeMapField,
     TypeMapGroup, Value,
 };
+use std::collections::HashMap;
 use datasources_tests::apply_schema;
 use futures_util::TryStreamExt;
 
@@ -29,6 +30,10 @@ async fn reads_boolean_as_bool_and_leaves_integer() {
     connection.open().await.unwrap();
     apply_schema(connection.as_ref(), "flags").await.unwrap();
     let command = connection.create_command();
+    command.set_schema(Some(Schema::new(HashMap::from([
+        ("enabled".into(), SchemaColumn::new("boolean")),
+        ("count".into(), SchemaColumn::new("integer")),
+    ]))));
     command
         .execute_native(&Native::new("INSERT INTO flags (enabled, count) VALUES (1, 1)"), None)
         .await
@@ -45,6 +50,63 @@ async fn reads_boolean_as_bool_and_leaves_integer() {
     assert_eq!(row.get("enabled"), Some(&Value::Bool(true)));
     assert_eq!(row.get("count"), Some(&Value::Int(1)));
     assert_eq!(row.get("one"), Some(&Value::Int(1)));
+}
+
+#[tokio::test]
+async fn reads_boolean_as_int_when_schema_is_missing() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "flags").await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute_native(&Native::new("INSERT INTO flags (enabled, count) VALUES (1, 1)"), None)
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader_native(
+            &Native::new("SELECT enabled, count FROM flags"),
+            None,
+        )
+        .await
+        .unwrap();
+    assert!(reader.next().await.unwrap());
+    let row = reader.current().unwrap();
+    assert_eq!(row.get("enabled"), Some(&Value::Int(1)));
+    assert_eq!(row.get("count"), Some(&Value::Int(1)));
+}
+
+#[tokio::test]
+async fn reads_datetime_text_when_schema_is_set() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "pipeline-users").await.unwrap();
+    let command = connection.create_command();
+    command.set_schema(Some(Schema::new(HashMap::from([(
+        "created".into(),
+        SchemaColumn::new("datetime"),
+    )]))));
+    command
+        .execute_native(
+            &Native::new(
+                "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '11111111-1111-1111-1111-111111111111', 'ada', 1, '2001-01-01T00:00:00.000Z')",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader_native(&Native::new("SELECT created FROM users"), None)
+        .await
+        .unwrap();
+    assert!(reader.next().await.unwrap());
+    assert!(matches!(
+        reader.current().unwrap().get("created"),
+        Some(Value::DateTime(_))
+    ));
 }
 
 #[tokio::test]

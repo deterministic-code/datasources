@@ -1,5 +1,6 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::parameter::Parameter;
+use crate::schema::Schema;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -12,6 +13,7 @@ use std::time::Instant;
 #[derive(Clone, Default)]
 pub struct CommandMiddlewareHost {
     middlewares: Arc<Mutex<Vec<Arc<dyn CommandMiddleware>>>>,
+    schema: Arc<Mutex<Option<Schema>>>,
 }
 
 impl CommandMiddlewareHost {
@@ -24,6 +26,14 @@ impl CommandMiddlewareHost {
             .lock()
             .expect("middleware")
             .push(middleware);
+    }
+
+    pub fn schema(&self) -> Option<Schema> {
+        self.schema.lock().expect("schema").clone()
+    }
+
+    pub fn set_schema(&self, schema: Option<Schema>) {
+        *self.schema.lock().expect("schema") = schema;
     }
 
     pub async fn run<T: 'static, F, Fut>(
