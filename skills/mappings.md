@@ -922,7 +922,7 @@ Address
 
 #### Flat to nested
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L101-L164)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L104-L167)
 
 ```csharp
 var mapper = new FlatToNestedMapper(new TypeMap
@@ -1039,7 +1039,7 @@ var flat = mapper.ReverseMap(nested);
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L385-L456)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L461-L532)
 
 ```rust
 let mapper = FlatToNestedMapper::new(TypeMap::new(
@@ -3366,7 +3366,7 @@ type TypeMap<T>
 | Name | Description |
 | --- | --- |
 | key | Parent key column. |
-| fields | Column or group per destination field. |
+| fields | Column, group, or dictionary per destination field. |
 
 ##### TypeMapGroup {#typescript-typemapgroup}
 
@@ -3380,6 +3380,19 @@ type TypeMapGroup<E>
 | --- | --- |
 | key | Child key column used to unique children. |
 | fields | Column names for the child. |
+
+##### TypeMapDictionary {#typescript-typemapdictionary}
+
+```typescript
+type TypeMapDictionary
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| key | Source column used as the dictionary key. |
+| value | Source column used as the dictionary value. |
 
 ##### TypeMapFields {#typescript-typemapfields}
 
@@ -3493,7 +3506,7 @@ public sealed class TypeMap
 | Name | Description |
 | --- | --- |
 | Key | Parent key column. |
-| Fields | Column or group per destination field. |
+| Fields | Column, group, or dictionary per destination field. |
 
 ##### TypeMapGroup {#csharp-typemapgroup}
 
@@ -3520,6 +3533,7 @@ public abstract record TypeMapField
 | --- | --- |
 | Column | Maps a destination field to a source column. |
 | Group | Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup). |
+| Dictionary | Maps a destination field to source key and value columns. |
 
 ##### MappedValue {#csharp-mappedvalue}
 
@@ -3533,6 +3547,7 @@ public abstract record MappedValue
 | --- | --- |
 | Cell | A scalar cell. |
 | Many | A child collection. |
+| Map | A string-keyed map of cells. |
 
 ##### Rust
 
@@ -3673,7 +3688,7 @@ pub struct TypeMap
 | Name | Description |
 | --- | --- |
 | key | Parent key column. |
-| fields | Column or group per destination field. |
+| fields | Column, group, or dictionary per destination field. |
 
 ###### new(key, fields) {#rust-typemap-new-key-fields}
 
@@ -3748,12 +3763,14 @@ pub enum TypeMapField
 | --- | --- |
 | Column | Maps a destination field to a source column. |
 | Group | Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup). |
+| Dictionary | Maps a destination field to source key and value columns. |
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
 | [column(source)](#rust-typemapfield-column-source) | Builds a [Column](#rust-typemapfield-column) field. |
+| [dictionary(key, value)](#rust-typemapfield-dictionary-key-value) | Builds a [Dictionary](#rust-typemapfield-dictionary) field. |
 
 ###### column(source) {#rust-typemapfield-column-source}
 
@@ -3775,6 +3792,27 @@ pub fn column(source: impl Into<String>) -> Self
 
 [TypeMapField](#rust-typemapfield)
 
+###### dictionary(key, value) {#rust-typemapfield-dictionary-key-value}
+
+Builds a [Dictionary](#rust-typemapfield-dictionary) field.
+
+**Definition**
+
+```rust
+pub fn dictionary(key: impl Into<String>, value: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `key` | source column used as the dictionary key |
+| `value` | source column used as the dictionary value |
+
+**Returns**
+
+[TypeMapField](#rust-typemapfield)
+
 ##### MappedValue {#rust-mappedvalue}
 
 ```rust
@@ -3787,6 +3825,7 @@ pub enum MappedValue
 | --- | --- |
 | Cell | A scalar cell. |
 | Many | A child collection. |
+| Map | A string-keyed map of cells. |
 
 ##### MappedRow {#rust-mappedrow}
 
@@ -3796,7 +3835,7 @@ pub type MappedRow = HashMap<String, MappedValue>
 
 ### Remarks
 
-Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key.
+Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key; dictionaries collect unique key/value entries. The first row wins a duplicate key. A null key is omitted.
 
 > **TypeScript**
 >
@@ -3818,7 +3857,7 @@ This is a collapse mapper, not enrichment. Related fills after read use [IEnrich
 
 #### Map join rows to a nested contact
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L101-L164)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L104-L167)
 
 ```csharp
 var mapper = new FlatToNestedMapper(new TypeMap
@@ -3935,7 +3974,7 @@ var flat = mapper.ReverseMap(nested);
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L385-L453)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L461-L529)
 
 ```rust
 let mapper = FlatToNestedMapper::new(TypeMap::new(
@@ -4169,4 +4208,122 @@ const flat = mapper.reverseMap(nested);
     phone_type_name: "Mobile"
   }
 ]
+```
+
+#### Map join rows to a nested dictionary
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L169-L212)
+
+```csharp
+var mapper = new FlatToNestedMapper(new TypeMap
+{
+    Key = "Id",
+    Fields = new Dictionary<string, TypeMapField>
+    {
+        ["Id"] = "Id",
+        ["Name"] = "Name",
+        ["Settings"] = new TypeMapField.Dictionary("SettingName", "SettingValue"),
+    },
+});
+var lives = new Row
+{
+    ["Id"] = 1L,
+    ["Name"] = "star",
+    ["SettingName"] = "lives",
+    ["SettingValue"] = "3",
+};
+var level = new Row(lives) { ["SettingName"] = "level", ["SettingValue"] = "2" };
+var again = new Row(lives) { ["SettingValue"] = "9" };
+var empty = new Row
+{
+    ["Id"] = 2L,
+    ["Name"] = "moon",
+    ["SettingName"] = Value.Null.Instance,
+    ["SettingValue"] = Value.Null.Instance,
+};
+var nested = mapper.Map([lives, level, again, empty]);
+```
+
+**After: nested dictionary**
+
+```
+{
+  Id: 1,
+  Name: "star",
+  Settings: { lives: "3", level: "2" }
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L534-L589)
+
+```rust
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "Id",
+    vec![
+        ("Id".into(), TypeMapField::column("Id")),
+        ("Name".into(), TypeMapField::column("Name")),
+        (
+            "Settings".into(),
+            TypeMapField::dictionary("SettingName", "SettingValue"),
+        ),
+    ],
+));
+let lives = cell(&[
+    ("Id", Value::Int(1)),
+    ("Name", Value::from("star")),
+    ("SettingName", Value::from("lives")),
+    ("SettingValue", Value::from("3")),
+]);
+let mut level = lives.clone();
+level.insert("SettingName".into(), Value::from("level"));
+level.insert("SettingValue".into(), Value::from("2"));
+let mut again = lives.clone();
+again.insert("SettingValue".into(), Value::from("9"));
+let empty = cell(&[
+    ("Id", Value::Int(2)),
+    ("Name", Value::from("moon")),
+    ("SettingName", Value::Null),
+    ("SettingValue", Value::Null),
+]);
+let nested = Mapper::map(&mapper, vec![lives, level, again, empty]);
+```
+
+**After: nested dictionary**
+
+```
+{
+  Id: 1,
+  Name: "star",
+  Settings: { lives: "3", level: "2" }
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#L157-L179)
+
+```typescript
+type Game = { Id: number; Name: string; Settings: Record<string, string> };
+const mapper = new FlatToNestedMapper<Game>({
+  key: "Id",
+  fields: {
+    Id: "Id",
+    Name: "Name",
+    Settings: { key: "SettingName", value: "SettingValue" },
+  },
+});
+const lives: Cells = { Id: 1, Name: "star", SettingName: "lives", SettingValue: "3" };
+const level = { ...lives, SettingName: "level", SettingValue: "2" };
+const again = { ...lives, SettingValue: "9" };
+const empty: Cells = { Id: 2, Name: "moon", SettingName: null, SettingValue: null };
+const nested = mapper.map([lives, level, again, empty]);
+expect(nested).toHaveLength(2);
+```
+
+**After: nested dictionary**
+
+```
+{
+  Id: 1,
+  Name: "star",
+  Settings: { lives: "3", level: "2" }
+}
 ```

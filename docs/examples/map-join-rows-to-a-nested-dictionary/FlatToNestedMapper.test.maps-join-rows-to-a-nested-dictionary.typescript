@@ -1,0 +1,15 @@
+type Game = { Id: number; Name: string; Settings: Record<string, string> };
+const mapper = new FlatToNestedMapper<Game>({
+  key: "Id",
+  fields: {
+    Id: "Id",
+    Name: "Name",
+    Settings: { key: "SettingName", value: "SettingValue" },
+  },
+});
+const lives: Cells = { Id: 1, Name: "star", SettingName: "lives", SettingValue: "3" };
+const level = { ...lives, SettingName: "level", SettingValue: "2" };
+const again = { ...lives, SettingValue: "9" };
+const empty: Cells = { Id: 2, Name: "moon", SettingName: null, SettingValue: null };
+const nested = mapper.map([lives, level, again, empty]);
+expect(nested).toHaveLength(2);

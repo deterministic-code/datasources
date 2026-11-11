@@ -1421,7 +1421,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L108-L115)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L117-L124)
 
 ```typescript
 command.reader = new MockReader([{ id: 1, name: "a" }]);
@@ -1483,7 +1483,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L69-L79)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L78-L88)
 
 ```typescript
 const { repo, command } = create();
@@ -1527,7 +1527,7 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L152-L158)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L162-L168)
 
 ```rust
 let mut parents_repo = mapped(connection, "Parent");
@@ -1891,7 +1891,7 @@ CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL, name strin
 
 The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](#propertymappings) stay in effect when a later read passes only an [EntityMapper](repositories.md#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](docs/sections/nested-to-object-enrichment-strategy.md) is the [Enrichment](#enrichment) on that call's mapping options and collapses flat join rows using a [TypeMap](mappings.md#typemap).
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#L46-L107)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#L47-L131)
 
 ```csharp
 var connection = await Setup();
@@ -1902,8 +1902,24 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 await parentsRepo.Create(new Parent { Type = new UserType { Id = type.Id } });
 var enriched = await parentsRepo.ReadSingle();
 
-var row1 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 10L, ["Label"] = "a" };
-var row2 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 11L, ["Label"] = "b" };
+var row1 = new Row
+{
+    ["Id"] = 1L,
+    ["TypeName"] = "person",
+    ["ChildId"] = 10L,
+    ["Label"] = "a",
+    ["SettingName"] = "lives",
+    ["SettingValue"] = "3",
+};
+var row2 = new Row
+{
+    ["Id"] = 1L,
+    ["TypeName"] = "person",
+    ["ChildId"] = 11L,
+    ["Label"] = "b",
+    ["SettingName"] = "level",
+    ["SettingValue"] = "2",
+};
 var mockConnection = new MockConnection { Provider = "memory" };
 var command = new MockCommand(mockConnection);
 mockConnection.Command = command;
@@ -1935,6 +1951,7 @@ var items = await joinRepo.Read(
             {
                 ["Id"] = "Id",
                 ["TypeName"] = "TypeName",
+                ["Settings"] = new TypeMapField.Dictionary("SettingName", "SettingValue"),
                 ["Children"] = new TypeMapGroup
                 {
                     Key = "ChildId",
@@ -1964,7 +1981,7 @@ var items = await joinRepo.Read(
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L149)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L162)
 
 ```rust
 let connection = MemoryDriver.connection(None);
@@ -1994,15 +2011,19 @@ command.reader_rows.lock().unwrap().extend([
         ("TypeName", Value::from("person")),
         ("ChildId", Value::Int(10)),
         ("Label", Value::from("a")),
+        ("SettingName", Value::from("lives")),
+        ("SettingValue", Value::from("3")),
     ]),
     record(&[
         ("Id", Value::Int(1)),
         ("TypeName", Value::from("person")),
         ("ChildId", Value::Int(11)),
         ("Label", Value::from("b")),
+        ("SettingName", Value::from("level")),
+        ("SettingValue", Value::from("2")),
     ]),
 ]);
-let join_repo = parents_repo(MockConnection::with_command_provider(
+let join_repo = join_parents_repo(MockConnection::with_command_provider(
     command,
     "memory",
 ));
@@ -2027,6 +2048,10 @@ options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap
     vec![
         ("Id".into(), TypeMapField::column("Id")),
         ("TypeName".into(), TypeMapField::column("TypeName")),
+        (
+            "Settings".into(),
+            TypeMapField::dictionary("SettingName", "SettingValue"),
+        ),
         (
             "Children".into(),
             TypeMapField::Group(TypeMapGroup::new(
@@ -2060,7 +2085,7 @@ let items = join_repo
 ]
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions.test.ts#L18-L119)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions.test.ts#L18-L136)
 
 ```typescript
 class UserType {
@@ -2072,6 +2097,7 @@ class Parent {
   Id = 0;
   Type = new UserType();
   TypeName = "";
+  Settings: Record<string, string> = {};
   Children: Child[] = [];
 }
 
@@ -2124,8 +2150,22 @@ parents.addEnriched(
 await parents.create(Object.assign(new Parent(), { Type: Object.assign(new UserType(), { Id: type.Id }) }));
 const enriched = await parents.readSingle();
 
-const row1: Seed = { Id: 1, TypeName: "person", ChildId: 10, Label: "a" };
-const row2: Seed = { Id: 1, TypeName: "person", ChildId: 11, Label: "b" };
+const row1: Seed = {
+  Id: 1,
+  TypeName: "person",
+  ChildId: 10,
+  Label: "a",
+  SettingName: "lives",
+  SettingValue: "3",
+};
+const row2: Seed = {
+  Id: 1,
+  TypeName: "person",
+  ChildId: 11,
+  Label: "b",
+  SettingName: "level",
+  SettingValue: "2",
+};
 const mockConnection = new MockConnection({ provider: "memory" });
 const command = new MockCommand(mockConnection);
 mockConnection.command = command;
@@ -2150,6 +2190,7 @@ const items = await collectAsync(
       fields: {
         Id: "Id",
         TypeName: "TypeName",
+        Settings: { key: "SettingName", value: "SettingValue" },
         Children: {
           key: "ChildId",
           fields: { Id: "ChildId", Label: "Label" },

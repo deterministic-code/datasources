@@ -115,6 +115,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ## Flat To Nested Mapper
 
 - [Map join rows to a nested contact](./sections/flat-to-nested-mapper.md#map-join-rows-to-a-nested-contact)
+- [Map join rows to a nested dictionary](./sections/flat-to-nested-mapper.md#map-join-rows-to-a-nested-dictionary)
 
 ## Metadata Row Type Converter
 

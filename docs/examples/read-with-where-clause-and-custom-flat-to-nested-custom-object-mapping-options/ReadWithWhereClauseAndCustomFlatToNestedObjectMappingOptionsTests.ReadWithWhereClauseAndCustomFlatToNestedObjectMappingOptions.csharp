@@ -6,8 +6,24 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 await parentsRepo.Create(new Parent { Type = new UserType { Id = type.Id } });
 var enriched = await parentsRepo.ReadSingle();
 
-var row1 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 10L, ["Label"] = "a" };
-var row2 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 11L, ["Label"] = "b" };
+var row1 = new Row
+{
+    ["Id"] = 1L,
+    ["TypeName"] = "person",
+    ["ChildId"] = 10L,
+    ["Label"] = "a",
+    ["SettingName"] = "lives",
+    ["SettingValue"] = "3",
+};
+var row2 = new Row
+{
+    ["Id"] = 1L,
+    ["TypeName"] = "person",
+    ["ChildId"] = 11L,
+    ["Label"] = "b",
+    ["SettingName"] = "level",
+    ["SettingValue"] = "2",
+};
 var mockConnection = new MockConnection { Provider = "memory" };
 var command = new MockCommand(mockConnection);
 mockConnection.Command = command;
@@ -39,6 +55,7 @@ var items = await joinRepo.Read(
             {
                 ["Id"] = "Id",
                 ["TypeName"] = "TypeName",
+                ["Settings"] = new TypeMapField.Dictionary("SettingName", "SettingValue"),
                 ["Children"] = new TypeMapGroup
                 {
                     Key = "ChildId",

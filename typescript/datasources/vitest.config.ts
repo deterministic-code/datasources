@@ -63,6 +63,7 @@ export default defineConfig({
         "src/mappers/IFlatToNestedMapper.ts",
         "src/mappers/TypeMap.ts",
         "src/mappers/TypeMapGroup.ts",
+        "src/mappers/TypeMapDictionary.ts",
         "src/ICRUDRepository.ts",
         "src/ICRUDRepositoryFactory.ts",
         "src/IRepositoryFactory.ts",

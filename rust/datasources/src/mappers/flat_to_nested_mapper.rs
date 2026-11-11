@@ -13,10 +13,16 @@ struct GroupPlan {
     dest_key: String,
 }
 
+struct DictPlan {
+    key: String,
+    value: String,
+}
+
 pub struct FlatToNestedMapper {
     spec: TypeMap,
     scalars: Vec<(String, String)>,
     groups: Vec<(String, GroupPlan)>,
+    dictionaries: Vec<(String, DictPlan)>,
     parent_dest: String,
 }
 
@@ -24,6 +30,7 @@ impl FlatToNestedMapper {
     pub fn new(spec: TypeMap) -> Self {
         let mut scalars = Vec::new();
         let mut groups = Vec::new();
+        let mut dictionaries = Vec::new();
         for (name, field) in &spec.fields {
             match field {
                 TypeMapField::Column(source) => scalars.push((name.clone(), source.clone())),
@@ -39,6 +46,13 @@ impl FlatToNestedMapper {
                         },
                     ));
                 }
+                TypeMapField::Dictionary { key, value } => dictionaries.push((
+                    name.clone(),
+                    DictPlan {
+                        key: key.clone(),
+                        value: value.clone(),
+                    },
+                )),
             }
         }
         let parent_dest = dest_of(&scalars, &spec.key);
@@ -46,6 +60,7 @@ impl FlatToNestedMapper {
             spec,
             scalars,
             groups,
+            dictionaries,
             parent_dest,
         }
     }
@@ -60,7 +75,7 @@ fn string_fields(fields: &[(String, TypeMapField)]) -> Vec<(String, String)> {
         .iter()
         .filter_map(|(name, field)| match field {
             TypeMapField::Column(source) => Some((name.clone(), source.clone())),
-            TypeMapField::Group(_) => None,
+            TypeMapField::Group(_) | TypeMapField::Dictionary { .. } => None,
         })
         .collect()
 }
@@ -98,7 +113,7 @@ impl Mapper<Vec<Row>, Vec<MappedRow>> for FlatToNestedMapper {
         self.collapse(
             rows.into_iter()
                 .map(|row| {
-                    if self.groups.is_empty() {
+                    if self.groups.is_empty() && self.dictionaries.is_empty() {
                         passthrough(&row)
                     } else {
                         self.map_row(row)
@@ -135,6 +150,15 @@ impl FlatToNestedMapper {
                         }
                         child
                     }],
+                }),
+            );
+        }
+        for (name, dict) in &self.dictionaries {
+            dest.insert(
+                name.clone(),
+                MappedValue::Map(match cell_key(row.get(&dict.key)) {
+                    None => HashMap::new(),
+                    Some(key) => HashMap::from([(key, Self::cell(&row, &dict.value))]),
                 }),
             );
         }
@@ -185,6 +209,24 @@ impl FlatToNestedMapper {
                 })
                 .collect();
         }
+        for (name, dict) in &self.dictionaries {
+            let entries: Vec<(Option<String>, Value)> = match value.get(name) {
+                Some(MappedValue::Map(items)) if !items.is_empty() => items
+                    .iter()
+                    .map(|(key, cell)| (Some(key.clone()), cell.clone()))
+                    .collect(),
+                _ => vec![(None, Value::Null)],
+            };
+            rows = rows
+                .into_iter()
+                .flat_map(|row| {
+                    entries
+                        .iter()
+                        .map(|(key, cell)| self.with_entry(&row, dict, key.as_deref(), cell))
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+        }
         rows
     }
 
@@ -216,6 +258,16 @@ impl FlatToNestedMapper {
         next
     }
 
+    fn with_entry(&self, row: &Row, dict: &DictPlan, key: Option<&str>, cell: &Value) -> Row {
+        let mut next = row.clone();
+        next.insert(
+            dict.key.clone(),
+            key.map(Value::from).unwrap_or(Value::Null),
+        );
+        next.insert(dict.value.clone(), cell.clone());
+        next
+    }
+
     fn mark(&self, seen: &mut HashSet<String>, parent: &str, item: &MappedRow) {
         for (name, group) in &self.groups {
             let Some(MappedValue::Many(children)) = item.get(name) else {
@@ -225,6 +277,14 @@ impl FlatToNestedMapper {
                 if let Some(key) = mapped_cell_key(child, &group.dest_key) {
                     seen.insert(format!("{parent}:{name}:{key}"));
                 }
+            }
+        }
+        for (name, _) in &self.dictionaries {
+            let Some(MappedValue::Map(entries)) = item.get(name) else {
+                continue;
+            };
+            for key in entries.keys() {
+                seen.insert(format!("{parent}:{name}:{key}"));
             }
         }
     }
@@ -253,6 +313,22 @@ impl FlatToNestedMapper {
                 }
                 seen.insert(seen_key);
                 dest.push(child.clone());
+            }
+        }
+        for (name, _) in &self.dictionaries {
+            let Some(MappedValue::Map(source)) = from.get(name) else {
+                continue;
+            };
+            let Some(MappedValue::Map(dest)) = into.get_mut(name) else {
+                continue;
+            };
+            for (key, cell) in source {
+                let seen_key = format!("{parent}:{name}:{key}");
+                if seen.contains(&seen_key) {
+                    continue;
+                }
+                seen.insert(seen_key);
+                dest.insert(key.clone(), cell.clone());
             }
         }
     }
@@ -453,6 +529,63 @@ mod tests {
         assert_eq!(many(&nested[0], "addresses").len(), 2);
         assert_eq!(many(&nested[0], "phones").len(), 1);
         assert_eq!(flat, vec![ada_home, ada_work]);
+    }
+
+    #[test]
+    fn maps_join_rows_to_a_nested_dictionary() {
+        let mapper = FlatToNestedMapper::new(TypeMap::new(
+            "Id",
+            vec![
+                ("Id".into(), TypeMapField::column("Id")),
+                ("Name".into(), TypeMapField::column("Name")),
+                (
+                    "Settings".into(),
+                    TypeMapField::dictionary("SettingName", "SettingValue"),
+                ),
+            ],
+        ));
+        let lives = cell(&[
+            ("Id", Value::Int(1)),
+            ("Name", Value::from("star")),
+            ("SettingName", Value::from("lives")),
+            ("SettingValue", Value::from("3")),
+        ]);
+        let mut level = lives.clone();
+        level.insert("SettingName".into(), Value::from("level"));
+        level.insert("SettingValue".into(), Value::from("2"));
+        let mut again = lives.clone();
+        again.insert("SettingValue".into(), Value::from("9"));
+        let empty = cell(&[
+            ("Id", Value::Int(2)),
+            ("Name", Value::from("moon")),
+            ("SettingName", Value::Null),
+            ("SettingValue", Value::Null),
+        ]);
+        let nested = Mapper::map(&mapper, vec![lives, level, again, empty]);
+        assert_eq!(nested.len(), 2);
+        assert_eq!(text(&nested[0], "Name"), Value::from("star"));
+        let Some(MappedValue::Map(settings)) = nested[0].get("Settings") else {
+            panic!("settings");
+        };
+        assert_eq!(settings.get("lives"), Some(&Value::from("3")));
+        assert_eq!(settings.get("level"), Some(&Value::from("2")));
+        let Some(MappedValue::Map(empty_settings)) = nested[1].get("Settings") else {
+            panic!("empty");
+        };
+        assert!(empty_settings.is_empty());
+        let flat = Mapper::reverse_map(&mapper, nested);
+        assert_eq!(
+            flat.iter()
+                .filter(|row| row.get("Id") == Some(&Value::Int(1)))
+                .count(),
+            2
+        );
+        assert_eq!(
+            flat.iter()
+                .filter(|row| row.get("Id") == Some(&Value::Int(2)))
+                .count(),
+            1
+        );
     }
 
     #[test]

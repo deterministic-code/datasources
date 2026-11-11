@@ -91,6 +91,9 @@ public class FlatToNestedMapperTests
     static List<Dictionary<string, MappedValue>> Many(Dictionary<string, MappedValue> row, string name) =>
         row.TryGetValue(name, out var mapped) && mapped is MappedValue.Many(var items) ? items : [];
 
+    static Dictionary<string, Value> MapOf(Dictionary<string, MappedValue> row, string name) =>
+        row.TryGetValue(name, out var mapped) && mapped is MappedValue.Map(var items) ? items : [];
+
     static void AssertRow(Row expected, Row actual)
     {
         Assert.Equal(expected.Count, actual.Count);
@@ -161,6 +164,73 @@ public class FlatToNestedMapperTests
         Assert.Equal(2, Many(nested[0], "addresses").Count);
         Assert.Single(Many(nested[0], "phones"));
         Assert.Equal(2, flat.Count);
+    }
+
+    [Fact]
+    public void MapsJoinRowsToANestedDictionary()
+    {
+        var mapper = new FlatToNestedMapper(new TypeMap
+        {
+            Key = "Id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["Id"] = "Id",
+                ["Name"] = "Name",
+                ["Settings"] = new TypeMapField.Dictionary("SettingName", "SettingValue"),
+            },
+        });
+        var lives = new Row
+        {
+            ["Id"] = 1L,
+            ["Name"] = "star",
+            ["SettingName"] = "lives",
+            ["SettingValue"] = "3",
+        };
+        var level = new Row(lives) { ["SettingName"] = "level", ["SettingValue"] = "2" };
+        var again = new Row(lives) { ["SettingValue"] = "9" };
+        var empty = new Row
+        {
+            ["Id"] = 2L,
+            ["Name"] = "moon",
+            ["SettingName"] = Value.Null.Instance,
+            ["SettingValue"] = Value.Null.Instance,
+        };
+        var nested = mapper.Map([lives, level, again, empty]);
+        Assert.Equal(2, nested.Count);
+        Assert.Equal(new Value.Text("star"), Cell(nested[0], "Name"));
+        var settings = MapOf(nested[0], "Settings");
+        Assert.Equal(new Value.Text("3"), settings["lives"]);
+        Assert.Equal(new Value.Text("2"), settings["level"]);
+        Assert.Empty(MapOf(nested[1], "Settings"));
+        var flat = mapper.ReverseMap(nested);
+        Assert.Equal(2, flat.Count(row => row["Id"].Equals(new Value.Int(1))));
+        Assert.Single(flat, row => row["Id"].Equals(new Value.Int(2)));
+    }
+
+    [Fact]
+    public void CollapsesAlreadyMappedDictionaryRows()
+    {
+        var mapper = new FlatToNestedMapper(new TypeMap
+        {
+            Key = "Id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["Id"] = "Id",
+                ["Name"] = "Name",
+                ["Settings"] = new TypeMapField.Dictionary("SettingName", "SettingValue"),
+            },
+        });
+        var lives = new Row
+        {
+            ["Id"] = 1L,
+            ["Name"] = "star",
+            ["SettingName"] = "lives",
+            ["SettingValue"] = "3",
+        };
+        var level = new Row(lives) { ["SettingName"] = "level", ["SettingValue"] = "2" };
+        var remapped = mapper.Map([mapper.Map([lives])[0], mapper.Map([level])[0]]);
+        Assert.Equal(new Value.Text("3"), MapOf(remapped[0], "Settings")["lives"]);
+        Assert.Equal(new Value.Text("2"), MapOf(remapped[0], "Settings")["level"]);
     }
 
     [Fact]

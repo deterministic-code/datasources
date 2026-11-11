@@ -5,9 +5,11 @@ namespace Datasources;
 public sealed class FlatToNestedMapper : IFlatToNestedMapper
 {
     readonly record struct GroupPlan(string Key, IReadOnlyDictionary<string, string> Fields, string DestKey);
+    readonly record struct DictPlan(string Key, string Value);
 
     readonly Dictionary<string, string> scalars = [];
     readonly Dictionary<string, GroupPlan> groups = [];
+    readonly Dictionary<string, DictPlan> dictionaries = [];
     readonly string parentDest;
 
     public TypeMap Spec { get; }
@@ -20,13 +22,14 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
             {
                 TypeMapField.Column(var source) => (Action)(() => scalars[name] = source),
                 TypeMapField.Group(var map) => () => groups[name] = Plan(map),
+                TypeMapField.Dictionary(var key, var value) => () => dictionaries[name] = new(key, value),
                 _ => () => throw new InvalidOperationException($"{spec.Key}: empty field")
             })();
         parentDest = DestOf(scalars, spec.Key);
     }
 
     public IReadOnlyList<Dictionary<string, MappedValue>> Map(IEnumerable<Row> rows) =>
-        Collapse(rows.Select(row => groups.Count == 0 ? Passthrough(row) : MapRow(row)));
+        Collapse(rows.Select(row => Nested ? MapRow(row) : Passthrough(row)));
 
     public IReadOnlyList<Dictionary<string, MappedValue>> Map(
         IEnumerable<Dictionary<string, MappedValue>> rows) =>
@@ -38,6 +41,8 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
     IEnumerable<Row> IMapper<IEnumerable<Row>, IReadOnlyList<Dictionary<string, MappedValue>>>.ReverseMap(
         IReadOnlyList<Dictionary<string, MappedValue>> values) =>
         ReverseMap(values);
+
+    bool Nested => groups.Count > 0 || dictionaries.Count > 0;
 
     Dictionary<string, MappedValue> MapRow(Row value)
     {
@@ -51,6 +56,11 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
                     : [group.Fields.ToDictionary(
                         pair => pair.Key,
                         pair => (MappedValue)new MappedValue.Cell(Cell(value, pair.Value)))]);
+        foreach (var (name, dict) in dictionaries)
+            dest[name] = new MappedValue.Map(
+                CellKey(Cell(value, dict.Key)) is not { } key
+                    ? []
+                    : new Dictionary<string, Value> { [key] = Cell(value, dict.Value) });
         return dest;
     }
 
@@ -83,6 +93,13 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
                 : [new Dictionary<string, MappedValue>()];
             rows = rows.SelectMany(row => children.Select(child => With(row, group, child)));
         }
+        foreach (var (name, dict) in dictionaries)
+        {
+            var entries = value.GetValueOrDefault(name) is MappedValue.Map { Items.Count: > 0 } map
+                ? map.Items.Select(pair => ((string?)pair.Key, pair.Value))
+                : [(null, Value.Null.Instance)];
+            rows = rows.SelectMany(row => entries.Select(entry => With(row, dict, entry.Item1, entry.Item2)));
+        }
         return rows;
     }
 
@@ -108,6 +125,16 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
         return next;
     }
 
+    static Row With(Row row, DictPlan dict, string? key, Value value)
+    {
+        var next = new Row(row)
+        {
+            [dict.Key] = key is null ? Value.Null.Instance : new Value.Text(key),
+            [dict.Value] = value
+        };
+        return next;
+    }
+
     void Mark(HashSet<string> seen, string parent, Dictionary<string, MappedValue> item)
     {
         foreach (var (name, group) in groups)
@@ -118,6 +145,12 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
                 var key = MappedKey(child, group.DestKey);
                 if (key is not null) seen.Add($"{parent}:{name}:{key}");
             }
+        }
+        foreach (var (name, _) in dictionaries)
+        {
+            if (item.GetValueOrDefault(name) is not MappedValue.Map(var entries)) continue;
+            foreach (var key in entries.Keys)
+                seen.Add($"{parent}:{name}:{key}");
         }
     }
 
@@ -138,6 +171,15 @@ public sealed class FlatToNestedMapper : IFlatToNestedMapper
                 if (key is null || !seen.Add($"{parent}:{name}:{key}")) continue;
                 dest.Add(child);
             }
+        }
+        foreach (var (name, _) in dictionaries)
+        {
+            if (into.GetValueOrDefault(name) is not MappedValue.Map(var dest)
+                || from.GetValueOrDefault(name) is not MappedValue.Map(var source))
+                continue;
+            foreach (var (key, cell) in source)
+                if (seen.Add($"{parent}:{name}:{key}"))
+                    dest[key] = cell;
         }
     }
 

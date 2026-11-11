@@ -1,0 +1,27 @@
+var mapper = new FlatToNestedMapper(new TypeMap
+{
+    Key = "Id",
+    Fields = new Dictionary<string, TypeMapField>
+    {
+        ["Id"] = "Id",
+        ["Name"] = "Name",
+        ["Settings"] = new TypeMapField.Dictionary("SettingName", "SettingValue"),
+    },
+});
+var lives = new Row
+{
+    ["Id"] = 1L,
+    ["Name"] = "star",
+    ["SettingName"] = "lives",
+    ["SettingValue"] = "3",
+};
+var level = new Row(lives) { ["SettingName"] = "level", ["SettingValue"] = "2" };
+var again = new Row(lives) { ["SettingValue"] = "9" };
+var empty = new Row
+{
+    ["Id"] = 2L,
+    ["Name"] = "moon",
+    ["SettingName"] = Value.Null.Instance,
+    ["SettingValue"] = Value.Null.Instance,
+};
+var nested = mapper.Map([lives, level, again, empty]);
