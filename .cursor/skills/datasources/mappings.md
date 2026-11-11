@@ -3837,17 +3837,19 @@ pub type MappedRow = HashMap<String, MappedValue>
 
 Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key; dictionaries collect unique key/value entries. The first row wins a duplicate key. A null key is omitted.
 
+A dictionary field names a key column and a value column. The key cell becomes the string key and the value cell becomes the entry. Rows that share a parent key merge. `ReverseMap` / `reverseMap` / `reverse_map` writes one flat row per entry. An empty dictionary becomes one row with a null key and a null value. [NestedToObjectEnrichmentStrategy](docs/sections/nested-to-object-enrichment-strategy.md) applies this mapper and replaces the parents from those join rows.
+
 > **TypeScript**
 >
-> Map to generic `T`.
+> Map to generic `T`. A dictionary field is a record of the reader cell, and a missing value is `null`. A bool key is `true` or `false`. A non-string value stays the reader cell.
 
 > **C#**
 >
-> Map to a [MappedValue](#mappedvalue) graph.
+> Map to a [MappedValue](#mappedvalue) graph. A dictionary field is `MappedValue.Map`. The strategy writes it onto `Dictionary<string, TValue>` through `MappedValueMapper`. `TValue` is a column type. Each cell goes through `ToObject`, then `ChangeType` when the runtime value does not match. A null cell stays null. A bool key is `True` or `False`.
 
 > **Rust**
 >
-> Map to a [MappedValue](#mappedvalue) graph.
+> Map to a [MappedValue](#mappedvalue) graph. A dictionary field is `MappedValue::Map`. The strategy stores that map as `key` and `value` rows in one text cell. Hydration reads `key` or `Key` and `value` or `Value` through `wire_text`. A bool key is `true` or `false`. A map of structs receives only that value cell.
 
 Nested group fields on a collection are omitted.
 
@@ -4212,7 +4214,7 @@ const flat = mapper.reverseMap(nested);
 
 #### Map join rows to a nested dictionary
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L169-L212)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L169-L208)
 
 ```csharp
 var mapper = new FlatToNestedMapper(new TypeMap

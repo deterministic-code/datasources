@@ -54,6 +54,13 @@ test("skill query headings match evals.json", () => {
   assert.equal(ids.length, headings.length);
 });
 
+test("flat to nested records how a dictionary lands on the parent", () => {
+  assert.match(files["mappings.md"], /A dictionary field names a key column and a value column/);
+  assert.match(files["mappings.md"], /Dictionary<string, TValue>/);
+  assert.match(files["mappings.md"], /key` and `value` rows/);
+  assert.match(files["mappings.md"], /record of the reader cell/);
+});
+
 test("a join read is one select folded by the nested mapper", () => {
   assert.match(files["SKILL.md"], /NestedToObjectEnrichmentStrategy/);
   assert.match(files["SKILL.md"], /select-statement\.md/);
