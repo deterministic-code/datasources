@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Rust">
+  <rect width="48" height="48" rx="8" fill="#000"/>
+  <circle cx="24" cy="24" r="12" fill="none" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="24" cy="24" r="5" fill="#fff"/>
+  <g fill="#fff">
+    <circle cx="24" cy="10" r="2"/>
+    <circle cx="24" cy="38" r="2"/>
+    <circle cx="10" cy="24" r="2"/>
+    <circle cx="38" cy="24" r="2"/>
+    <circle cx="14" cy="14" r="2"/>
+    <circle cx="34" cy="14" r="2"/>
+    <circle cx="14" cy="34" r="2"/>
+    <circle cx="34" cy="34" r="2"/>
+  </g>
+</svg>
