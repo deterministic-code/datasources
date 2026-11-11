@@ -1,0 +1,78 @@
+types.yaml:
+  includes:
+    - file: base.yaml
+    - file: lookups.yaml
+  types:
+    removed:
+      - address_type
+      - base
+      - contact_source
+      - phone_type
+base.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    types:
+      - base:
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - uuid:
+                type: uuid
+                default_value: NewId
+            - created:
+                type: datetime
+                default_value: UtcNow
+            - updated:
+                type: datetime
+                default_value: UtcNow
+            - version:
+                type: binary
+                default_value: Hex('00')
+lookups.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    includes:
+      - file: base.yaml
+    types:
+      - contact_source:
+          tags:
+            - datasource_type
+            - readonly_lookup
+          inherits: base
+          fields:
+            - name:
+                type: string
+                size: 64
+            - description:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - address_type:
+          tags:
+            - datasource_type
+            - readonly_lookup
+          inherits: base
+          fields:
+            - name:
+                type: string
+                size: 64
+            - description:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - phone_type:
+          tags:
+            - datasource_type
+            - readonly_lookup
+          inherits: base
+          fields:
+            - name:
+                type: string
+                size: 64
+            - description:
+                type: string
+                size: unlimited
+                is_nullable: true
