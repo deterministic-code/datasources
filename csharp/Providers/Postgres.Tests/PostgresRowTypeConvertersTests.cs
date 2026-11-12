@@ -5,6 +5,14 @@ namespace Datasources.Postgres.Tests;
 public class PostgresRowTypeConvertersTests
 {
     [Fact]
+    public void Base64()
+    {
+        Assert.True(BinaryConverter.IsBase64("AA=="));
+        Assert.False(BinaryConverter.IsBase64("ada"));
+        Assert.False(BinaryConverter.IsBase64("===="));
+    }
+
+    [Fact]
     public void RegistersPostgresRowTypeConverters()
     {
         var types = new PostgresDriver().RowTypeConverters;

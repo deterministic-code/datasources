@@ -5,61 +5,112 @@ namespace Datasources.Sqlite.Tests;
 
 public class SqliteDriverConvertersTests
 {
+    public static readonly Conversion[] TypeConverter =
+    [
+        new("string", "string", "TEXT"),
+        new("character", "character", "TEXT"),
+        new("integer", "integer", "INTEGER"),
+        new("unsignedinteger", "unsignedinteger", "INTEGER"),
+        new("smallinteger", "smallinteger", "INTEGER"),
+        new("unsignedsmallinteger", "unsignedsmallinteger", "INTEGER"),
+        new("biginteger", "biginteger", "INTEGER"),
+        new("unsignedbiginteger", "unsignedbiginteger", "INTEGER"),
+        new("float", "float", "REAL"),
+        new("decimal", "decimal", "NUMERIC"),
+        new("boolean", "boolean", "BOOLEAN"),
+        new("datetime", "datetime", "TEXT"),
+        new("binary", "binary", "BLOB"),
+        new("uuid", "uuid", "TEXT"),
+        new("reference", "reference", "INTEGER"),
+        new("string", new SpecField { Type = "string" }, "TEXT"),
+        new("string", new SpecField { Type = "string", Size = "unlimited" }, "TEXT"),
+        new("string", new SpecField { Type = "string", Size = 64 }, "VARCHAR(64)"),
+        new("nope", "nope", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] ReverseTypeConverter =
+    [
+        new("string", "TEXT", "string"),
+        new("integer", "INTEGER", "integer"),
+        new("nope", "nope", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] DefaultValueConverter =
+    [
+        new("datetime", "Now", "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"),
+        new("datetime", "UtcNow", "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"),
+        new("datetime", "DateTime('2020-01-01T00:00:00Z')", "'2020-01-01T00:00:00Z'"),
+        new("uuid", "Empty", "'00000000-0000-0000-0000-000000000000'"),
+        new("uuid", "uuid('11111111-1111-1111-1111-111111111111')", "'11111111-1111-1111-1111-111111111111'"),
+        new("binary", "Hex('ab')", "X'ab'"),
+        new("boolean", "true", "1"),
+        new("boolean", "false", "0"),
+        new("string", "hi", "'hi'"),
+        new("integer", "7", "7"),
+        new("reference", "1", null),
+        new("nope", "x", typeof(InvalidOperationException)),
+        new("datetime", "2020-01-01T00:00:00Z", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] ReverseDefaultValueConverter =
+    [
+        new("datetime", "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))", "Now"),
+        new("datetime", "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))", "UtcNow"),
+        new("datetime", "'2020-01-01T00:00:00Z'", "DateTime('2020-01-01T00:00:00Z')"),
+        new("binary", "X'ab'", "Hex('ab')"),
+        new("string", "'hi'", "String"),
+        new("string", "oops", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] RowTypeConverters =
+    [
+        new("boolean", 1L, true),
+        new("boolean", 0L, false),
+        new("datetime", "2020-01-02T03:04:05.000Z", new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)),
+        new("uuid", Guid.Parse("550e8400-e29b-41d4-a716-446655440000"), "550e8400-e29b-41d4-a716-446655440000"),
+        new("uuid", Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray(), "550e8400-e29b-41d4-a716-446655440000"),
+        new("decimal", 7L, "7"),
+        new("decimal", 10.5d, "10.5"),
+        new("decimal", "10.50", "10.5"),
+        new("decimal", 0L, "0"),
+        new("decimal", "0.00", "0"),
+        new("integer", "10", 10L),
+        new("integer", "0", 0L),
+        new("integer", "", typeof(FormatException)),
+        new("integer", "1.0", typeof(FormatException)),
+    ];
+
+    public static readonly Conversion[] ReverseRowTypeConverters =
+    [
+        new("boolean", true, 1L),
+        new("boolean", false, 0L),
+        new("uuid", Guid.Parse("550e8400-e29b-41d4-a716-446655440000"), "550e8400-e29b-41d4-a716-446655440000"),
+        new("decimal", 10.5m, "10.5"),
+    ];
+
     [Fact]
-    public void TypeConverter()
+    public void ConvertsTypes()
     {
-        var driver = new SqliteDriver();
-        var types = Assert.IsType<TypeMap>(driver.TypeConverter);
-        Assert.Equal("TEXT", types.Convert("string"));
-        Assert.Equal("TEXT", types.Convert("character"));
-        Assert.Equal("INTEGER", types.Convert("integer"));
-        Assert.Equal("INTEGER", types.Convert("unsignedinteger"));
-        Assert.Equal("INTEGER", types.Convert("smallinteger"));
-        Assert.Equal("INTEGER", types.Convert("unsignedsmallinteger"));
-        Assert.Equal("INTEGER", types.Convert("biginteger"));
-        Assert.Equal("INTEGER", types.Convert("unsignedbiginteger"));
-        Assert.Equal("REAL", types.Convert("float"));
-        Assert.Equal("NUMERIC", types.Convert("decimal"));
-        Assert.Equal("BOOLEAN", types.Convert("boolean"));
-        Assert.Equal("TEXT", types.Convert("datetime"));
-        Assert.Equal("BLOB", types.Convert("binary"));
-        Assert.Equal("TEXT", types.Convert("uuid"));
-        Assert.Equal("INTEGER", types.Convert("reference"));
-        Assert.Equal("TEXT", types.Convert(new SpecField { Type = "string" }));
-        Assert.Equal("TEXT", types.Convert(new SpecField { Type = "string", Size = "unlimited" }));
-        Assert.Equal("VARCHAR(64)", types.Convert(new SpecField { Type = "string", Size = 64 }));
-        Assert.Equal("string", types.ReverseConvert("TEXT"));
-        Assert.Equal("integer", types.ReverseConvert("INTEGER"));
-        Assert.Throws<InvalidOperationException>(() => types.Convert("nope"));
-        Assert.Throws<InvalidOperationException>(() => types.ReverseConvert("nope"));
+        var types = Assert.IsType<TypeMap>(new SqliteDriver().TypeConverter);
+        Conversion.Types(TypeConverter, types.Convert, types.Convert);
+        Conversion.ReverseTypes(types, ReverseTypeConverter);
     }
 
     [Fact]
-    public void DefaultValueConverter()
+    public void ConvertsDefaults()
     {
         var defaults = new SqliteDriver().DefaultValueConverter;
-        Assert.Equal("(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))", defaults.Convert("datetime", "Now"));
-        Assert.Equal("(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))", defaults.Convert("datetime", "UtcNow"));
-        Assert.Equal("'2020-01-01T00:00:00Z'", defaults.Convert("datetime", "DateTime('2020-01-01T00:00:00Z')"));
+        Conversion.Defaults(defaults, DefaultValueConverter);
+        Conversion.Defaults(defaults, ReverseDefaultValueConverter, reverse: true);
         Assert.Contains("randomblob", defaults.Convert("uuid", "NewId"));
-        Assert.Equal("'00000000-0000-0000-0000-000000000000'", defaults.Convert("uuid", "Empty"));
-        Assert.Equal(
-            "'11111111-1111-1111-1111-111111111111'",
-            defaults.Convert("uuid", "uuid('11111111-1111-1111-1111-111111111111')"));
-        Assert.Equal("X'ab'", defaults.Convert("binary", "Hex('ab')"));
-        Assert.Equal("1", defaults.Convert("boolean", "true"));
-        Assert.Equal("0", defaults.Convert("boolean", "false"));
-        Assert.Equal("'hi'", defaults.Convert("string", "hi"));
-        Assert.Equal("7", defaults.Convert("integer", "7"));
-        Assert.Null(defaults.Convert("reference", "1"));
-        Assert.Equal("Now", defaults.ReverseConvert("datetime", "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"));
-        Assert.Equal("UtcNow", defaults.ReverseConvert("datetime", "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"));
-        Assert.Equal("DateTime('2020-01-01T00:00:00Z')", defaults.ReverseConvert("datetime", "'2020-01-01T00:00:00Z'"));
         Assert.Equal("NewId", defaults.ReverseConvert("uuid", defaults.Convert("uuid", "NewId")!));
-        Assert.Equal("Hex('ab')", defaults.ReverseConvert("binary", "X'ab'"));
-        Assert.Equal("String", defaults.ReverseConvert("string", "'hi'"));
-        Assert.Throws<InvalidOperationException>(() => defaults.Convert("nope", "x"));
-        Assert.Throws<InvalidOperationException>(() => defaults.Convert("datetime", "2020-01-01T00:00:00Z"));
-        Assert.Throws<InvalidOperationException>(() => defaults.ReverseConvert("string", "oops"));
+    }
+
+    [Fact]
+    public void ConvertsCells()
+    {
+        var converters = new SqliteDriver().RowTypeConverters;
+        Conversion.Cells(converters, RowTypeConverters);
+        Conversion.Cells(converters, ReverseRowTypeConverters, reverse: true);
     }
 }

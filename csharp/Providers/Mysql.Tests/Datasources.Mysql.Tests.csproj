@@ -15,6 +15,7 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Conversion.cs" Link="Conversion.cs" />
     <Compile Include="..\SqlSpec.cs" Link="SqlSpec.cs" />
     <Compile Include="..\SchemaSpec.cs" Link="SchemaSpec.cs" />
     <Compile Include="..\RepositoryTestsSpec.cs" Link="RepositoryTestsSpec.cs" />

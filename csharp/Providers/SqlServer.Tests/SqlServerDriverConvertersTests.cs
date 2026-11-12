@@ -5,56 +5,75 @@ namespace Datasources.SqlServer.Tests;
 
 public class SqlServerDriverConvertersTests
 {
+    public static readonly Conversion[] TypeConverter =
+    [
+        new("string", "string", "NVARCHAR(MAX)"),
+        new("character", "character", "NCHAR(1)"),
+        new("integer", "integer", "INT"),
+        new("unsignedinteger", "unsignedinteger", "BIGINT"),
+        new("smallinteger", "smallinteger", "SMALLINT"),
+        new("unsignedsmallinteger", "unsignedsmallinteger", "INT"),
+        new("biginteger", "biginteger", "BIGINT"),
+        new("unsignedbiginteger", "unsignedbiginteger", "DECIMAL(20)"),
+        new("float", "float", "FLOAT"),
+        new("decimal", "decimal", "DECIMAL"),
+        new("boolean", "boolean", "BIT"),
+        new("datetime", "datetime", "DATETIME2"),
+        new("binary", "binary", "VARBINARY(MAX)"),
+        new("uuid", "uuid", "UNIQUEIDENTIFIER"),
+        new("reference", "reference", "INT"),
+        new("string", new SpecField { Type = "string", Size = 64 }, "NVARCHAR(64)"),
+        new("character", new SpecField { Type = "character", Size = 4 }, "NCHAR(4)"),
+        new("decimal", new SpecField { Type = "decimal", Size = new[] { 10, 2 } }, "DECIMAL(10, 2)"),
+        new("binary", new SpecField { Type = "binary", Size = 16 }, "VARBINARY(16)"),
+        new("nope", "nope", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] ReverseTypeConverter =
+    [
+        new("integer", "INT", "integer"),
+        new("unsignedinteger", "BIGINT", "unsignedinteger"),
+        new("nope", "nope", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] DefaultValueConverter =
+    [
+        new("datetime", "Now", "GETDATE()"),
+        new("datetime", "UtcNow", "GETUTCDATE()"),
+        new("uuid", "NewId", "NEWID()"),
+        new("uuid", "Empty", "'00000000-0000-0000-0000-000000000000'"),
+        new("binary", "Hex('ab')", "0xab"),
+        new("boolean", "true", "1"),
+        new("boolean", "false", "0"),
+        new("string", "hi", "'hi'"),
+        new("integer", "7", "7"),
+        new("reference", "1", null),
+        new("nope", "x", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] ReverseDefaultValueConverter =
+    [
+        new("datetime", "GETDATE()", "Now"),
+        new("datetime", "GETUTCDATE()", "UtcNow"),
+        new("uuid", "NEWID()", "NewId"),
+        new("binary", "0xab", "Hex('ab')"),
+        new("string", "'hi'", "String"),
+    ];
+
     [Fact]
-    public void TypeConverter()
+    public void ConvertsTypes()
     {
-        var driver = new SqlServerDriver();
-        var types = Assert.IsType<TypeMap>(driver.TypeConverter);
-        Assert.Equal("NVARCHAR(MAX)", types.Convert("string"));
-        Assert.Equal("NCHAR(1)", types.Convert("character"));
-        Assert.Equal("INT", types.Convert("integer"));
-        Assert.Equal("BIGINT", types.Convert("unsignedinteger"));
-        Assert.Equal("SMALLINT", types.Convert("smallinteger"));
-        Assert.Equal("INT", types.Convert("unsignedsmallinteger"));
-        Assert.Equal("BIGINT", types.Convert("biginteger"));
-        Assert.Equal("DECIMAL(20)", types.Convert("unsignedbiginteger"));
-        Assert.Equal("FLOAT", types.Convert("float"));
-        Assert.Equal("DECIMAL", types.Convert("decimal"));
-        Assert.Equal("BIT", types.Convert("boolean"));
-        Assert.Equal("DATETIME2", types.Convert("datetime"));
-        Assert.Equal("VARBINARY(MAX)", types.Convert("binary"));
-        Assert.Equal("UNIQUEIDENTIFIER", types.Convert("uuid"));
-        Assert.Equal("INT", types.Convert("reference"));
-        Assert.Equal("NVARCHAR(64)", types.Convert(new SpecField { Type = "string", Size = 64 }));
-        Assert.Equal("NCHAR(4)", types.Convert(new SpecField { Type = "character", Size = 4 }));
-        Assert.Equal("DECIMAL(10, 2)", types.Convert(new SpecField { Type = "decimal", Size = new[] { 10, 2 } }));
-        Assert.Equal("VARBINARY(16)", types.Convert(new SpecField { Type = "binary", Size = 16 }));
-        Assert.Equal("integer", types.ReverseConvert("INT"));
-        Assert.Equal("unsignedinteger", types.ReverseConvert("BIGINT"));
-        Assert.Throws<InvalidOperationException>(() => types.Convert("nope"));
-        Assert.Throws<InvalidOperationException>(() => types.ReverseConvert("nope"));
+        var types = Assert.IsType<TypeMap>(new SqlServerDriver().TypeConverter);
+        Conversion.Types(TypeConverter, types.Convert, types.Convert);
+        Conversion.ReverseTypes(types, ReverseTypeConverter);
     }
 
     [Fact]
-    public void DefaultValueConverter()
+    public void ConvertsDefaults()
     {
         var defaults = new SqlServerDriver().DefaultValueConverter;
-        Assert.Equal("GETDATE()", defaults.Convert("datetime", "Now"));
-        Assert.Equal("GETUTCDATE()", defaults.Convert("datetime", "UtcNow"));
-        Assert.Equal("NEWID()", defaults.Convert("uuid", "NewId"));
-        Assert.Equal("'00000000-0000-0000-0000-000000000000'", defaults.Convert("uuid", "Empty"));
-        Assert.Equal("0xab", defaults.Convert("binary", "Hex('ab')"));
-        Assert.Equal("1", defaults.Convert("boolean", "true"));
-        Assert.Equal("0", defaults.Convert("boolean", "false"));
-        Assert.Equal("'hi'", defaults.Convert("string", "hi"));
-        Assert.Equal("7", defaults.Convert("integer", "7"));
-        Assert.Null(defaults.Convert("reference", "1"));
-        Assert.Equal("Now", defaults.ReverseConvert("datetime", "GETDATE()"));
-        Assert.Equal("UtcNow", defaults.ReverseConvert("datetime", "GETUTCDATE()"));
-        Assert.Equal("NewId", defaults.ReverseConvert("uuid", "NEWID()"));
-        Assert.Equal("Hex('ab')", defaults.ReverseConvert("binary", "0xab"));
-        Assert.Equal("String", defaults.ReverseConvert("string", "'hi'"));
-        Assert.Throws<InvalidOperationException>(() => defaults.Convert("nope", "x"));
+        Conversion.Defaults(defaults, DefaultValueConverter);
+        Conversion.Defaults(defaults, ReverseDefaultValueConverter, reverse: true);
     }
 
     [Fact]
