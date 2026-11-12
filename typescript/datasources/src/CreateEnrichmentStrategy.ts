@@ -107,7 +107,7 @@ export abstract class CreateEnrichmentStrategy<T> {
       Object.assign(target, { [name]: key });
       return;
     }
-    if (holds(related, by)) Object.assign(related, { [by]: key });
+    Object.assign(related, { [by]: key });
   };
 
   protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void =>
@@ -133,19 +133,3 @@ export abstract class CreateEnrichmentStrategy<T> {
     return key;
   };
 }
-
-const blank = (related: object): object | undefined => {
-  const ctor = related.constructor;
-  if (typeof ctor !== "function" || ctor === Object) return undefined;
-  try {
-    return new (ctor as new () => object)();
-  } catch {
-    return undefined;
-  }
-};
-
-const holds = (related: object, by: string): boolean => {
-  if (Object.getPrototypeOf(related) === Object.prototype || by in related) return true;
-  const instance = blank(related);
-  return instance !== undefined && by in instance;
-};
