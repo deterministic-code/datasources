@@ -2,12 +2,8 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   FirstResultReader,
-  DatasourceError,
-  InsertStatement,
   Native,
   ParameterDirection,
-  ReturnStatement,
-  SelectStatement,
   StatementTextRenderer,
   Response,
   splitStatements,
@@ -55,25 +51,9 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    if (statement instanceof SelectStatement || statement instanceof ReturnStatement)
-      return this.firstCell(statement, parameters);
-    if (statement instanceof InsertStatement && statement.returning)
-      return this.firstCell(statement, parameters);
-    return this.executeNative(new Native(this.statements.render(statement)), parameters);
-  }
-
-  private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    const reader = await this.executeReaderStatement(statement, parameters);
-    try {
-      if (!(await reader.next())) return new Response(null, 0, parameters);
-      const row = reader.current;
-      /* v8 ignore next */
-      if (!row) throw new DatasourceError("Reader current must be a row");
-      const values = Object.values(row);
-      return new Response(values.length === 0 ? null : values[0], 1, parameters);
-    } finally {
-      await reader.dispose();
-    }
+    return this.readsCell(statement)
+      ? this.firstCell(statement, parameters)
+      : this.executeNative(new Native(this.statements.render(statement)), parameters);
   }
 
   async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
@@ -83,8 +63,8 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
       this.connection.ensureOpen();
       const named = bindParameters(params);
       let rowsAffected = 0;
+      let result: Scalar = null;
       let parameters = params;
-      let result: PostgresExecuteResult["result"] = null;
       for (const part of splitStatements(query)) {
         const names = new Set(statementParameters(part));
         const used = Object.fromEntries(
@@ -92,11 +72,11 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
         );
         const executed = await this.runSql(part, used, params);
         rowsAffected += executed.rowsAffected;
+        if (executed.result !== undefined && executed.result !== null) result = executed.result;
         parameters = executed.parameters ?? params;
-        if (executed.result != null) result = executed.result;
       }
       return {
-        value: new Response(result ?? null, rowsAffected, parameters),
+        value: new Response(result, rowsAffected, parameters),
         rows: [],
       };
     });
@@ -110,9 +90,10 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     const { text, values } = toPostgres(sql, params);
     const queried = await this.connection.require().query(text, values);
     const row = queried.rows[0];
+    const cells = row ? Object.values(row) : [];
     return {
       rowsAffected: queried.rowCount ?? queried.rows.length,
-      result: null,
+      result: cells.length === 0 ? null : (cells[0] as Scalar),
       parameters: parameters?.map((parameter) => {
         if (!parameter.direction || parameter.direction === ParameterDirection.Input || !row)
           return parameter;

@@ -278,7 +278,7 @@ SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX("id") FROM user
     ).toContain("id BIGINT");
     expect(
       renderer.render(
-        new CreateDeleteStoredProcedureStatement("DeleteUsersByKey", "users", ["id"], [], "id", "INT", [], []),
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByKey", "users", ["id"], [{ name: "id", type: "INT" }], "id", "INT", [], []),
       ),
     ).toContain("WHERE t.id = DeleteUsersByKey.id");
     expect(

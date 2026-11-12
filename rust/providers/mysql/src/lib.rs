@@ -27,6 +27,9 @@ mod isolate;
 #[path = "../tests/contacts.rs"]
 mod contacts;
 #[cfg(test)]
+#[path = "../tests/insert_id.rs"]
+mod insert_id;
+#[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]

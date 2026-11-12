@@ -1,5 +1,9 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  CRUDRepository,
+  createCRUDRepositoryOptions,
+  DictionaryMapper,
+  InsertStatement,
   Native,
   ParameterDirection,
   ReturnStatement,
@@ -113,6 +117,108 @@ describe("shared sql specs", () => {
       }
     });
   }
+});
+
+describe("execute reader", () => {
+  it("enumerates two result sets", async () => {
+    const isolated = await isolate(url);
+    try {
+      const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
+      await connection.open();
+      const command = new MysqlCommand(connection);
+      await using reader = await command.executeReaderNative(new Native("SELECT 1 AS id; SELECT 2 AS id"));
+      const first: { id: number }[] = [];
+      while (await reader.next()) first.push(reader.current as { id: number });
+      const moved = await reader.nextResult();
+      const second: { id: number }[] = [];
+      while (await reader.next()) second.push(reader.current as { id: number });
+      const again = await reader.nextResult();
+      expect(moved).toBe(true);
+      expect(again).toBe(false);
+      expect(first[0]?.id).toBe(1);
+      expect(second[0]?.id).toBe(2);
+    } finally {
+      await isolated.cleanup();
+    }
+  });
+});
+
+describe("insert returning", () => {
+  it("create puts the inserted id on the item", async () => {
+    const isolated = await isolate(url);
+    try {
+      const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
+      await connection.open();
+      const command = new MysqlCommand(connection);
+      await command.executeNative(
+        new Native("CREATE TABLE items (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT)"),
+      );
+      const native = await command.executeNative(new Native("INSERT INTO items (name) VALUES ('ada')"));
+      expect(native.result).toBeNull();
+      const fields = [{ name: "name", value: "bea" }];
+      const inserted = await command.executeStatement(new InsertStatement("items", fields, "id"), fields);
+      expect(inserted.result).not.toBeNull();
+      expect(inserted.result).toBe(2);
+      class Item {
+        id!: number;
+        name = "";
+      }
+      const repo = new CRUDRepository(connection, {
+        ...createCRUDRepositoryOptions(Item),
+        ids: ["id"],
+        entity: "items",
+      });
+      const created = await repo.create(Object.assign(new Item(), { name: "cee" }));
+      expect(created.id).toBeGreaterThan(0);
+      const next = await repo.create(Object.assign(new Item(), { name: "dee" }));
+      expect(next.id).toBeGreaterThan(created.id);
+    } finally {
+      await isolated.cleanup();
+    }
+  });
+
+  it("create then child insert uses the parent id", async () => {
+    class Contact {
+      id!: number;
+      name = "";
+    }
+    class Address {
+      id!: number;
+      contactId!: number;
+      line1 = "";
+    }
+    const isolated = await isolate(url);
+    try {
+      const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
+      await connection.open();
+      const command = new MysqlCommand(connection);
+      await command.executeNative(
+        new Native(
+          "CREATE TABLE contacts (id INTEGER PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL); CREATE TABLE addresses (id INTEGER PRIMARY KEY AUTO_INCREMENT, contact_id INTEGER NOT NULL, line1 TEXT NOT NULL)",
+        ),
+      );
+      const contacts = new CRUDRepository(connection, {
+        ...createCRUDRepositoryOptions(Contact),
+        ids: ["id"],
+        entity: "contacts",
+        createProperties: ["name"],
+      });
+      const addresses = new CRUDRepository(connection, {
+        ...createCRUDRepositoryOptions(Address),
+        ids: ["id"],
+        entity: "addresses",
+        createProperties: ["contactId", "line1"],
+        propertyMappings: new DictionaryMapper([["contactId", "contact_id"]]),
+      });
+      const created = await contacts.create(Object.assign(new Contact(), { name: "ada" }));
+      await addresses.create(Object.assign(new Address(), { contactId: created.id, line1: "12 Engine" }));
+      await using reader = await command.executeReaderNative(new Native("SELECT contact_id FROM addresses"));
+      expect(await reader.next()).toBe(true);
+      expect(reader.current?.contact_id).toBe(created.id);
+    } finally {
+      await isolated.cleanup();
+    }
+  });
 });
 
 describe("return and output parameters", () => {

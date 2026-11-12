@@ -3,6 +3,7 @@ import { MemoryDriver } from "@deterministic-code/datasources-memory";
 import { collectAsync } from "./collectAsync.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
+import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { IConnection } from "./IConnection.ts";
@@ -329,6 +330,32 @@ describe("CRUDRepository", () => {
     const child = await childrenRepo.readSingle();
     expect(parent?.Id).toBe(created.Id);
     expect(child?.ParentId).toBe(parent?.Id);
+  });
+
+  it("createChildren requires parent id and does not create", async () => {
+    const connection = await setup();
+    const childrenRepo = repo(Child, connection);
+    await expect(
+      new DefaultCreateEnrichmentStrategy<Parent>().createChildren(
+        childrenRepo,
+        { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
+        Object.assign(new Parent(), { Children: [Object.assign(new Child(), { Label: "a" })] }),
+      ),
+    ).rejects.toThrow(/requires "Id"/);
+    expect(await collectAsync(childrenRepo.read())).toEqual([]);
+  });
+
+  it("createChildren stamps parent id and creates", async () => {
+    const connection = await setup();
+    const childrenRepo = repo(Child, connection);
+    await new DefaultCreateEnrichmentStrategy<Parent>().createChildren(
+      childrenRepo,
+      { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
+      Object.assign(new Parent(), { Id: 7, Children: [Object.assign(new Child(), { Label: "a" })] }),
+    );
+    const child = (await collectAsync(childrenRepo.read()))[0];
+    expect(child?.ParentId).toBe(7);
+    expect(child?.Label).toBe("a");
   });
 
   it("update replace-syncs children", async () => {

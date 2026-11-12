@@ -4,7 +4,7 @@ use crate::statement_renderer::SqliteStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, FirstResultReader, InsertStatement, Native, Parameter, Reader, Response, Result, ReturnStatement, split_statements,
+    DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, split_statements,
     statement_parameters, Statement,
     StatementKind, StatementTextRenderer, Value,
 };
@@ -42,52 +42,40 @@ impl SqliteCommand {
     fn execute_sql(
         connection: &SqliteConnection,
         sql: &str,
-        params: &HashMap<String, Value>,
+        map: &HashMap<String, Value>,
     ) -> Result<SqliteExecuteResult> {
         let db = connection.db.lock().unwrap();
         let conn = db
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let (sql, values) = to_sqlite(sql, params);
-        let mut statement = conn.prepare(&sql).map_err(map_err)?;
-        let rows_affected = if statement.column_count() > 0 {
-            let mut rows = statement
-                .query(rusqlite::params_from_iter(values.iter()))
-                .map_err(map_err)?;
-            while rows.next().map_err(map_err)?.is_some() {}
-            conn.changes() as i64
-        } else {
-            statement
-                .execute(rusqlite::params_from_iter(values.iter()))
-                .map_err(map_err)? as i64
-        };
-        drop(statement);
-        Ok(SqliteExecuteResult {
-            rows_affected,
-            result: Value::Int(conn.last_insert_rowid()),
-        })
-    }
-
-    fn execute_parts(
-        connection: &SqliteConnection,
-        sql: &str,
-        map: &HashMap<String, Value>,
-    ) -> Result<SqliteExecuteResult> {
         let mut rows_affected = 0;
         let mut result = Value::Null;
         for part in split_statements(sql) {
             let names = statement_parameters(&part);
-            let used = map
+            let used: HashMap<String, Value> = map
                 .iter()
                 .filter(|(name, _)| {
                     names.iter().any(|found| found == name.trim_start_matches(['$', '@', ':']))
                 })
                 .map(|(name, value)| (name.clone(), value.clone()))
                 .collect();
-            let executed = SqliteCommand::execute_sql(connection, &part, &used)?;
-            rows_affected += executed.rows_affected;
-            if executed.rows_affected > 0 {
-                result = executed.result;
+            let (sql, values) = to_sqlite(&part, &used);
+            let mut statement = conn.prepare(&sql).map_err(map_err)?;
+            if statement.column_count() > 0 {
+                {
+                    let mut rows = statement
+                        .query(rusqlite::params_from_iter(values.iter()))
+                        .map_err(map_err)?;
+                    if let Some(row) = rows.next().map_err(map_err)? {
+                        result = from_sql(row.get_ref_unwrap(0));
+                    }
+                    while rows.next().map_err(map_err)?.is_some() {}
+                }
+                rows_affected += conn.changes() as i64;
+            } else {
+                rows_affected += statement
+                    .execute(rusqlite::params_from_iter(values.iter()))
+                    .map_err(map_err)? as i64;
             }
         }
         Ok(SqliteExecuteResult {
@@ -165,10 +153,10 @@ impl Command for SqliteCommand {
                     }
                     connection.ensure_open()?;
                     let map = parameters_to_map(params.as_deref());
-                    let executed = SqliteCommand::execute_parts(&connection, &sql, &map)?;
+                    let executed = SqliteCommand::execute_sql(&connection, &sql, &map)?;
                     Ok((
                         Response::new(
-                            Value::Null,
+                            executed.result,
                             executed.rows_affected,
                             params.map(|list| list.to_vec()),
                         ),
@@ -218,75 +206,11 @@ impl Command for SqliteCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
-        if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
+        if self.reads_cell(statement) {
             return self.first_cell(statement, parameters).await;
-        }
-        if let Some(insert) = statement.as_any().downcast_ref::<InsertStatement>() {
-            if insert.returning_column().is_some() {
-                return self.inserted(statement, parameters).await;
-            }
         }
         let text = self.statements.render(statement);
         self.execute_native(&Native::new(text), parameters).await
-    }
-}
-
-impl SqliteCommand {
-    async fn inserted(
-        &self,
-        statement: &dyn Statement,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
-        let text = self.statements.render(statement);
-        let connection = self.connection.clone();
-        self.host
-            .run(&text, parameters, move |sql, params| {
-                let connection = connection.clone();
-                async move {
-                    if sql.trim().is_empty() {
-                        return Ok((
-                            Response::new(Value::Null, 0, params.map(|list| list.to_vec())),
-                            vec![],
-                        ));
-                    }
-                    connection.ensure_open()?;
-                    let map = parameters_to_map(params.as_deref());
-                    let executed = SqliteCommand::execute_parts(&connection, &sql, &map)?;
-                    Ok((
-                        Response::new(
-                            if executed.rows_affected <= 0 {
-                                Value::Null
-                            } else {
-                                executed.result
-                            },
-                            executed.rows_affected,
-                            params.map(|list| list.to_vec()),
-                        ),
-                        vec![],
-                    ))
-                }
-            })
-            .await
-    }
-
-    async fn first_cell(
-        &self,
-        statement: &dyn Statement,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
-        let reader = self.execute_reader_statement(statement, parameters).await?;
-        if !reader.next().await? {
-            return Ok(Response::new(
-                Value::Null,
-                0,
-                parameters.map(|list| list.to_vec()),
-            ));
-        }
-        let row = reader
-            .current()
-            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
-        let cell = row.into_values().next().unwrap_or(Value::Null);
-        Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

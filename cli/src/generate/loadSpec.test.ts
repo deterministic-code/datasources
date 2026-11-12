@@ -248,6 +248,53 @@ types:
     expect(loaded.files["types.yaml"]).toMatch(/extra:/);
   });
 
+  it("keeps one base when children remove_types a nested base include", async () => {
+    const dir = "app";
+    const child = (name: string) => `version: 1.0.0
+includes:
+  - file: base.yaml
+types:
+  - ${name}:
+      inherits: base
+      fields: []
+`;
+    const loaded = await loadSpec(
+      mem(["types.yaml", "base.yaml", "a.yaml", "b.yaml"], {
+        [join(dir, "types.yaml")]: `version: 1.0.0
+includes:
+  - file: base.yaml
+  - file: a.yaml
+    combine_options:
+      source:
+        remove_types: [base]
+  - file: b.yaml
+    combine_options:
+      source:
+        remove_types: [base]
+types:
+  - extra:
+      inherits: base
+      fields: []
+`,
+        [join(dir, "base.yaml")]: `version: 1.0.0
+types:
+  - base:
+      fields:
+        - id:
+            type: integer
+            is_id: true
+`,
+        [join(dir, "a.yaml")]: child("a"),
+        [join(dir, "b.yaml")]: child("b"),
+      }),
+      dir,
+    );
+    expect(loaded.files["types.yaml"].match(/- base:/g)).toHaveLength(1);
+    expect(loaded.files["types.yaml"]).toMatch(/- a:/);
+    expect(loaded.files["types.yaml"]).toMatch(/- b:/);
+    expect(loaded.files["types.yaml"]).toMatch(/extra:/);
+  });
+
   it("skips a version directory without a diff", async () => {
     const dir = "app";
     const loaded = await loadSpec(

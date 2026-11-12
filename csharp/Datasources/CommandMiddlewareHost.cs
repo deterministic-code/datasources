@@ -58,6 +58,24 @@ public class CommandMiddlewareHost
         }
     }
 
+    protected async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
+    {
+        var reader = await ((ICommand)this).ExecuteReader(statement, parameters);
+        try
+        {
+            if (!await reader.Next())
+                return new Response(Value.Null.Instance, 0, parameters);
+            var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
+            var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
+            return new Response(cell, 1, parameters);
+        }
+        finally
+        {
+            if (reader is IAsyncDisposable disposable)
+                await disposable.DisposeAsync();
+        }
+    }
+
     static IReadOnlyList<Row> Logged<T>(T value, IReadOnlyList<Row> rows) =>
         rows.Count > 0 || value is not Response response
             ? rows

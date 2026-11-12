@@ -32,38 +32,8 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         statement switch
         {
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
-            InsertStatement { Returning: not null } insert => Inserted(insert, parameters),
             _ => Execute(new Native(statements.Render(statement)), parameters)
         };
-
-    Task<Response> Inserted(InsertStatement insert, IReadOnlyList<Parameter>? parameters) =>
-        Run(statements.Render(insert), parameters, async (query, paramsList) =>
-        {
-            Typed.EnsureOpen();
-            var executed = await RunSql(query, paramsList);
-            var response = executed.RowsAffected <= 0
-                ? new Response(Value.Null.Instance, executed.RowsAffected, executed.Parameters)
-                : new Response(executed.Result, executed.RowsAffected, executed.Parameters);
-            return (response, (IReadOnlyList<Row>)[]);
-        });
-
-    async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
-    {
-        var reader = await ExecuteReader(statement, parameters);
-        try
-        {
-            if (!await reader.Next())
-                return new Response(Value.Null.Instance, 0, parameters);
-            var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
-            var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
-            return new Response(cell, 1, parameters);
-        }
-        finally
-        {
-            if (reader is IAsyncDisposable disposable)
-                await disposable.DisposeAsync();
-        }
-    }
 
     public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text.Text, parameters, async (query, paramsList) =>
@@ -72,7 +42,7 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
                 return (new Response(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
             var executed = await RunSql(query, paramsList);
-            return (new Response(Value.Null.Instance, executed.RowsAffected, executed.Parameters), (IReadOnlyList<Row>)[]);
+            return (new Response(executed.Result, executed.RowsAffected, executed.Parameters), (IReadOnlyList<Row>)[]);
         });
 
     async Task<SqliteExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
@@ -81,6 +51,7 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         try
         {
             var rows = 0;
+            Value result = Value.Null.Instance;
             foreach (var part in SplitStatements.Split(sql))
             {
                 var names = SplitStatements.Parameters(part).ToHashSet();
@@ -89,11 +60,15 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
                     if (names.Contains(name.TrimStart('$', '@', ':')))
                         used[name] = value;
                 using var command = BindPositional(part, used);
-                rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
+                await using var reader = await command.ExecuteReaderAsync();
+                do
+                {
+                    if (reader.FieldCount > 0 && await reader.ReadAsync())
+                        result = Value.From(reader.IsDBNull(0) ? null : reader.GetValue(0));
+                } while (await reader.NextResultAsync());
+                rows += Math.Max(reader.RecordsAffected, 0);
             }
-            using var inserted = Typed.Require().CreateCommand();
-            inserted.CommandText = "SELECT last_insert_rowid()";
-            return new SqliteExecuteResult(rows, Value.From(await inserted.ExecuteScalarAsync()), parameters);
+            return new SqliteExecuteResult(rows, result, parameters);
         }
         finally
         {

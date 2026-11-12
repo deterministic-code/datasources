@@ -14,6 +14,7 @@ import {
   NotNull,
   PrimaryKey,
   ReferentialAction,
+  InsertStatement,
   SelectInsertedIdStatement,
   SelectStatement,
   SqlSeedStatement,
@@ -30,6 +31,9 @@ describe("SqliteStatementRenderer", () => {
   it("renders inserted id and create table", () => {
     expect(renderer.render(new SelectInsertedIdStatement("users", "id"))).toBe(
       "SELECT last_insert_rowid() AS id",
+    );
+    expect(renderer.render(new InsertStatement("users", [{ name: "name", value: "ada" }], "id"))).toBe(
+      "INSERT INTO users (name) VALUES ($name) RETURNING last_insert_rowid() AS id",
     );
 
     const create = new CreateTableStatement(

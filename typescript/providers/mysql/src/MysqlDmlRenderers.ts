@@ -16,7 +16,8 @@ const parameter = (name: string): string => `:${name}`;
 
 export class MysqlInsertStatementTextRenderer extends InsertStatementTextRenderer {
   override render(statement: InsertStatement): string {
-    return `INSERT INTO ${quote(statement.table)} (${statement.fields.map((field) => quote(field.name)).join(", ")}) VALUES (${statement.fields.map((field) => parameter(field.name)).join(", ")})`;
+    const sql = `INSERT INTO ${quote(statement.table)} (${statement.fields.map((field) => quote(field.name)).join(", ")}) VALUES (${statement.fields.map((field) => parameter(field.name)).join(", ")})`;
+    return statement.returning ? `${sql}; SELECT LAST_INSERT_ID() AS ${statement.returning}` : sql;
   }
 }
 

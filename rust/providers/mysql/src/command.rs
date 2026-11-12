@@ -6,12 +6,14 @@ use crate::statement_renderer::MysqlStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, statement_parameters, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, FirstResultReader, InsertStatement, Native, Parameter, ParameterDirection, Reader, Response, Result, ReturnStatement,
-    Statement, StatementKind, StatementTextRenderer, Value,
+    CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, ParameterDirection, Reader, Response, Result,
+    Statement, StatementTextRenderer, Value,
 };
+use futures_core::Stream;
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
 use std::collections::HashMap;
+use std::pin::Pin;
 use std::sync::Arc;
 
 struct MysqlExecuteResult {
@@ -37,28 +39,46 @@ impl MysqlCommand {
     async fn execute_sql(
         connection: &MysqlConnection,
         sql: &str,
-        params: &HashMap<String, Value>,
+        parameters: Option<&[Parameter]>,
     ) -> Result<MysqlExecuteResult> {
-        let sql = MysqlDriver::placeholders(sql);
+        let mapped = parameters_to_map(parameters);
         let mut slot = connection.lock_conn().await?;
         let conn = slot
             .as_mut()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        if params.is_empty() {
-            conn.query_drop(sql.as_str()).await.map_err(map_err)?;
-        } else {
-            conn.exec_drop(sql.as_str(), named_params(params))
+        let mut rows_affected = 0;
+        let mut result = Value::Null;
+        for part in split_statements(sql) {
+            let names = statement_parameters(&part);
+            let used = mapped
+                .iter()
+                .filter(|(name, _)| {
+                    names
+                        .iter()
+                        .any(|found| found == name.trim_start_matches(['$', '@', ':']))
+                })
+                .map(|(name, value)| (name.clone(), value.clone()))
+                .collect();
+            let sql = MysqlDriver::placeholders(&part);
+            let mut query = conn
+                .exec_iter(sql.as_str(), named_params(&used))
                 .await
                 .map_err(map_err)?;
+            while let Some(mut stream) = query.stream::<Row>().await.map_err(map_err)? {
+                let columns = stream.columns_ref().len();
+                while let Some(row) = pull(Pin::new(&mut stream)).await.map_err(map_err)?
+                {
+                    if columns > 0 {
+                        let value = row.as_ref(0).cloned().unwrap_or(MysqlValue::NULL);
+                        result = from_mysql_value(value);
+                    }
+                }
+            }
+            rows_affected += conn.affected_rows() as i64;
         }
-        let id = conn.last_insert_id().unwrap_or(0);
         Ok(MysqlExecuteResult {
-            rows_affected: conn.affected_rows() as i64,
-            result: if id == 0 {
-                Value::Null
-            } else {
-                Value::Int(i64::try_from(id).unwrap_or(i64::MAX))
-            },
+            rows_affected,
+            result,
         })
     }
 }
@@ -105,23 +125,6 @@ impl Command for MysqlCommand {
                             vec![],
                         ));
                     }
-                    let head = statements[0].trim_start();
-                    if head.len() >= 6 {
-                        let verb = head[..6].to_ascii_uppercase();
-                        if verb == "INSERT" || verb == "UPDATE" || verb == "DELETE" {
-                            let mapped = parameters_to_map(params.as_deref());
-                            let result = MysqlCommand::execute_sql(&connection, &sql, &mapped).await?;
-                            let logged = logged_response(&Response::new(
-                                result.result,
-                                result.rows_affected,
-                                params.map(|list| list.to_vec()),
-                            ));
-                            return Ok((
-                                Box::new(ArrayReader::new(vec![])) as Box<dyn Reader>,
-                                logged,
-                            ));
-                        }
-                    }
                     FirstResultReader::capture(Box::new(
                         MysqlReader::open(
                             &connection,
@@ -153,25 +156,11 @@ impl Command for MysqlCommand {
                         ));
                     }
                     connection.ensure_open()?;
-                    let mapped = parameters_to_map(params.as_deref());
-                    let mut rows_affected = 0;
-                    for part in split_statements(&sql) {
-                        let names = statement_parameters(&part);
-                        let used = mapped
-                            .iter()
-                            .filter(|(name, _)| {
-                                names.iter().any(|found| {
-                                    found == name.trim_start_matches(['$', '@', ':'])
-                                })
-                            })
-                            .map(|(name, value)| (name.clone(), value.clone()))
-                            .collect();
-                        let executed = MysqlCommand::execute_sql(&connection, &part, &used).await?;
-                        rows_affected += executed.rows_affected;
-                    }
+                    let executed =
+                        MysqlCommand::execute_sql(&connection, &sql, params.as_deref()).await?;
                     let response = Response::new(
-                        Value::Null,
-                        rows_affected,
+                        executed.result,
+                        executed.rows_affected,
                         params.map(|list| list.to_vec()),
                     );
                     let logged = logged_response(&response);
@@ -195,13 +184,8 @@ impl Command for MysqlCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
-        if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
+        if self.reads_cell(statement) {
             return self.first_cell(statement, parameters).await;
-        }
-        if let Some(insert) = statement.as_any().downcast_ref::<InsertStatement>() {
-            if insert.returning_column().is_some() {
-                return self.inserted(statement, parameters).await;
-            }
         }
         let text = self.statements.render(statement);
         if parameters.is_some_and(|list| {
@@ -215,47 +199,6 @@ impl Command for MysqlCommand {
 }
 
 impl MysqlCommand {
-    async fn inserted(
-        &self,
-        statement: &dyn Statement,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
-        let text = self.statements.render(statement);
-        let connection = self.connection.clone();
-        self.host
-            .run(&text, parameters, move |sql, params| {
-                let connection = connection.clone();
-                async move {
-                    connection.ensure_open()?;
-                    let mapped = parameters_to_map(params.as_deref());
-                    let mut rows_affected = 0;
-                    let mut result = Value::Null;
-                    for part in split_statements(&sql) {
-                        let names = statement_parameters(&part);
-                        let used = mapped
-                            .iter()
-                            .filter(|(name, _)| {
-                                names.iter().any(|found| {
-                                    found == name.trim_start_matches(['$', '@', ':'])
-                                })
-                            })
-                            .map(|(name, value)| (name.clone(), value.clone()))
-                            .collect();
-                        let executed = MysqlCommand::execute_sql(&connection, &part, &used).await?;
-                        rows_affected += executed.rows_affected;
-                        result = executed.result;
-                    }
-                    let response = if rows_affected <= 0 {
-                        Response::new(Value::Null, rows_affected, params.map(|list| list.to_vec()))
-                    } else {
-                        Response::new(result, rows_affected, params.map(|list| list.to_vec()))
-                    };
-                    Ok((response, vec![]))
-                }
-            })
-            .await
-    }
-
     async fn execute_procedure(
         &self,
         sql: &str,
@@ -342,26 +285,6 @@ impl MysqlCommand {
             })
             .collect();
         Ok(Response::new(Value::Null, 0, Some(applied)))
-    }
-
-    async fn first_cell(
-        &self,
-        statement: &dyn Statement,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
-        let reader = self.execute_reader_statement(statement, parameters).await?;
-        if !reader.next().await? {
-            return Ok(Response::new(
-                Value::Null,
-                0,
-                parameters.map(|list| list.to_vec()),
-            ));
-        }
-        let row = reader
-            .current()
-            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
-        let cell = row.into_values().next().unwrap_or(Value::Null);
-        Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 
@@ -469,4 +392,13 @@ pub(crate) fn row_record(row: Row) -> datasources::Row {
         record.insert(column.name_str().into_owned(), from_mysql_value(value));
     }
     record
+}
+
+async fn pull<S, T, E>(mut stream: Pin<&mut S>) -> std::result::Result<Option<T>, E>
+where
+    S: Stream<Item = std::result::Result<T, E>> + Unpin + ?Sized,
+{
+    std::future::poll_fn(|cx| stream.as_mut().poll_next(cx))
+        .await
+        .transpose()
 }

@@ -11,8 +11,9 @@ use crate::sql_seed_statement_renderer::SqliteSqlSeedStatementRenderer;
 use datasources::{
     AlterTableStatement, CreateIndexStatement, CreateTableStatement, CreateTableStatementTextRenderer,
     CreateTriggerStatement, DropIndexStatement, DropTableStatement, DropTriggerStatement,
-    ForeignKeyStatement, ProcedureSource, SelectInsertedIdStatement, SqlSeedStatement,
-    sql_procedure_statements_of, Statement, StatementTextRenderer, StatementVisitor,
+    ForeignKeyStatement, InsertStatement, InsertStatementTextRenderer, ProcedureSource,
+    SelectInsertedIdStatement, SqlSeedStatement, sql_procedure_statements_of, Statement,
+    StatementTextRenderer, StatementVisitor,
 };
 
 pub struct SqliteStatementRenderer;
@@ -20,6 +21,14 @@ pub struct SqliteStatementRenderer;
 impl StatementVisitor for SqliteStatementRenderer {
     fn procedures(&self, source: &ProcedureSource) -> Vec<Box<dyn Statement>> {
         sql_procedure_statements_of(source)
+    }
+
+    fn visit_insert(&self, statement: &InsertStatement, _text: &StatementTextRenderer) -> String {
+        let sql = InsertStatementTextRenderer::default().render(statement);
+        match statement.returning_column() {
+            Some(column) => format!("{sql} RETURNING last_insert_rowid() AS {column}"),
+            None => sql,
+        }
     }
 
     fn visit_create_table(
@@ -85,8 +94,9 @@ mod tests {
     use crate::create_table_statement_renderer::SqliteCreateTableStatementRenderer;
     use datasources::{
         Column, ColumnDefault, CreateTableStatement, CreateTableStatementTextRenderer,
-        DefaultStatementTextRenderer, ForeignKey, NotNull, PrimaryKey, ReferentialAction,
-        SelectInsertedIdStatement, SelectStatement, SelectStatementOptions, StatementTextRenderer,
+        DefaultStatementTextRenderer, ForeignKey, InsertStatement, NotNull, Parameter, PrimaryKey,
+        ReferentialAction, SelectInsertedIdStatement, SelectStatement, SelectStatementOptions,
+        StatementTextRenderer,
     };
 
     fn renderer() -> StatementTextRenderer {
@@ -99,6 +109,11 @@ mod tests {
         assert_eq!(
             statements.render(&SelectInsertedIdStatement::new("users", "id")),
             "SELECT last_insert_rowid() AS id"
+        );
+        let insert = InsertStatement::new("users", &[Parameter::new("name", "ada")]).returning("id");
+        assert_eq!(
+            statements.render(&insert),
+            "INSERT INTO users (name) VALUES ($name) RETURNING last_insert_rowid() AS id"
         );
 
         let columns = [

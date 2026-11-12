@@ -291,8 +291,11 @@ def files_for(name: str) -> list[Path]:
     snake = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
     roots = (
         (ROOT / "csharp" / "Datasources", f"{name}.cs", ".cs"),
+        (ROOT / "csharp" / "Providers", f"{name}.cs", ".cs"),
         (ROOT / "typescript" / "datasources" / "src", f"{name}.ts", ".ts"),
+        (ROOT / "typescript" / "providers", f"{name}.ts", ".ts"),
         (ROOT / "rust" / "datasources" / "src", f"{snake}.rs", ".rs"),
+        (ROOT / "rust" / "providers", f"{snake}.rs", ".rs"),
     )
     found = []
     for root, pattern, suffix in roots:

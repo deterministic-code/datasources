@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
     parameters_to_map, split_statements, statement_parameters, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, FirstResultReader, InsertStatement, Native, Parameter, ParameterDirection, Reader, Response,
-    Result, ReturnStatement, Statement, StatementKind, StatementTextRenderer, Value,
+    CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, ParameterDirection, Reader, Response,
+    Result, Statement, StatementTextRenderer, Value,
 };
 use rust_decimal::Decimal;
 use std::collections::HashMap;
@@ -42,21 +42,43 @@ impl PostgresCommand {
         sql: &str,
         params: &HashMap<String, Value>,
     ) -> Result<PostgresExecuteResult> {
-        let (text, values) = to_postgres(sql, params);
-        let boxed: Vec<Box<dyn ToSql + Sync + Send>> = values.iter().map(box_value).collect();
-        let refs: Vec<&(dyn ToSql + Sync)> = boxed.iter().map(|v| v.as_ref() as _).collect();
         let slot = connection.lock_client().await?;
         let client = slot
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let statement = client
-            .prepare_typed(&text, &param_types(&values))
-            .await
-            .map_err(map_err)?;
-        let rows = client.execute(&statement, &refs).await.map_err(map_err)?;
+        let mut rows_affected = 0;
+        let mut result = Value::Null;
+        for part in split_statements(sql) {
+            let names = statement_parameters(&part);
+            let used: HashMap<String, Value> = params
+                .iter()
+                .filter(|(name, _)| {
+                    names
+                        .iter()
+                        .any(|found| found == name.trim_start_matches(['$', '@', ':']))
+                })
+                .map(|(name, value)| (name.clone(), value.clone()))
+                .collect();
+            let (text, values) = to_postgres(&part, &used);
+            let boxed: Vec<Box<dyn ToSql + Sync + Send>> = values.iter().map(box_value).collect();
+            let refs: Vec<&(dyn ToSql + Sync)> = boxed.iter().map(|v| v.as_ref() as _).collect();
+            let statement = client
+                .prepare_typed(&text, &param_types(&values))
+                .await
+                .map_err(map_err)?;
+            if statement.columns().is_empty() {
+                rows_affected += client.execute(&statement, &refs).await.map_err(map_err)? as i64;
+            } else {
+                let rows = client.query(&statement, &refs).await.map_err(map_err)?;
+                if let Some(row) = rows.first() {
+                    result = from_cell(row, 0);
+                }
+                rows_affected += rows.len() as i64;
+            }
+        }
         Ok(PostgresExecuteResult {
-            rows_affected: rows as i64,
-            result: Value::Null,
+            rows_affected,
+            result,
         })
     }
 
@@ -240,38 +262,11 @@ impl Command for PostgresCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
-        if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
+        if self.reads_cell(statement) {
             return self.first_cell(statement, parameters).await;
-        }
-        if let Some(insert) = statement.as_any().downcast_ref::<InsertStatement>() {
-            if insert.returning_column().is_some() {
-                return self.first_cell(statement, parameters).await;
-            }
         }
         let text = self.statements.render(statement);
         self.execute_native(&Native::new(text), parameters).await
-    }
-}
-
-impl PostgresCommand {
-    async fn first_cell(
-        &self,
-        statement: &dyn Statement,
-        parameters: Option<&[Parameter]>,
-    ) -> Result<Response> {
-        let reader = self.execute_reader_statement(statement, parameters).await?;
-        if !reader.next().await? {
-            return Ok(Response::new(
-                Value::Null,
-                0,
-                parameters.map(|list| list.to_vec()),
-            ));
-        }
-        let row = reader
-            .current()
-            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
-        let cell = row.into_values().next().unwrap_or(Value::Null);
-        Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
 }
 

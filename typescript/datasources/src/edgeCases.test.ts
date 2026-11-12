@@ -338,6 +338,10 @@ describe("enrichment edges", () => {
     const creating = new DefaultCreateEnrichmentStrategy<Bag>();
     await expect(creating.createLinked(writer, tags, { id: 0, Tags: [{ id: 1 }] })).rejects.toThrow(/requires/);
     await expect(creating.createLinked(writer, tags, { id: 1, Tags: [{ id: 0 }] })).rejects.toThrow(/requires/);
+    await expect(
+      creating.createChildren(writer, enrichment("Children"), { id: 0, Children: [{ name: "a" }] }),
+    ).rejects.toThrow(/requires/);
+    await creating.createChildren(writer, enrichment("Children"), { id: 0, Children: [] });
 
     const open = new OpenUpdate();
     expect(open.key({ name: "a" }, ["missing"])).toBe("");

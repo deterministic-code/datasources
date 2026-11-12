@@ -14,6 +14,9 @@ public class MysqlStatementRendererTests
         Assert.Equal(
             "SELECT LAST_INSERT_ID() AS id",
             Renderer.Render(new SelectInsertedIdStatement("users", "id")));
+        Assert.Equal(
+            "INSERT INTO users (name) VALUES (:name); SELECT LAST_INSERT_ID() AS id",
+            Renderer.Render(new InsertStatement("users", [new Parameter("name", "ada")]) { Returning = "id" }));
 
         var create = new CreateTableStatement(
             "orders",

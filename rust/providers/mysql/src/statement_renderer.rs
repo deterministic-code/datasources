@@ -29,7 +29,11 @@ impl StatementVisitor for MysqlStatementRenderer {
     }
 
     fn visit_insert(&self, statement: &InsertStatement, _text: &StatementTextRenderer) -> String {
-        InsertStatementTextRenderer::render_with(statement, MysqlDriver::quote, MysqlDriver::parameter)
+        let sql = InsertStatementTextRenderer::render_with(statement, MysqlDriver::quote, MysqlDriver::parameter);
+        match statement.returning_column() {
+            Some(column) => format!("{sql}; SELECT LAST_INSERT_ID() AS {column}"),
+            None => sql,
+        }
     }
 
     fn visit_update(&self, statement: &UpdateStatement, text: &StatementTextRenderer) -> String {
@@ -237,7 +241,7 @@ mod tests {
     use datasources::{
         BulkUpdateRow, BulkUpdateStatement, Column, ColumnDefault, CreateTableStatement,
         CreateTableStatementTextRenderer, DefaultStatementTextRenderer, NotNull, Parameter,
-        SelectInsertedIdStatement, StatementTextRenderer,
+        InsertStatement, SelectInsertedIdStatement, StatementTextRenderer,
     };
 
     fn renderer() -> StatementTextRenderer {
@@ -249,6 +253,11 @@ mod tests {
         assert_eq!(
             renderer().render(&SelectInsertedIdStatement::new("users", "id")),
             "SELECT LAST_INSERT_ID() AS id"
+        );
+        let insert = InsertStatement::new("users", &[Parameter::new("name", "ada")]).returning("id");
+        assert_eq!(
+            renderer().render(&insert),
+            "INSERT INTO users (name) VALUES (:name); SELECT LAST_INSERT_ID() AS id"
         );
         let create = CreateTableStatement::new(
             "orders",

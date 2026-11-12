@@ -4,9 +4,12 @@ public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrateg
 {
     public override async Task CreateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
-        foreach (var related in Children(writer, enrichment, parent))
+        var children = Children(writer, enrichment, parent);
+        if (children.Count == 0) return;
+        var key = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
+        foreach (var related in children)
         {
-            Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
+            Stamp(related, enrichment.RelatedKey, key.ToObject());
             await writer.Create(related);
         }
     }

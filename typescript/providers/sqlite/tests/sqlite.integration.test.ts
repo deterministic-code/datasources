@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   ChangeCasingMapper,
   ConsoleCommandMiddleware,
+  CRUDRepository,
+  createCRUDRepositoryOptions,
   Datasource,
   DatasourceFactory,
+  DictionaryMapper,
   FlatToNestedMapper,
+  InsertStatement,
   Native,
   ReturnStatement,
   MetaDataRowTypeConverter,
@@ -303,6 +307,68 @@ describe("command", () => {
 });
 
 describe("return statement", () => {
+  it("create puts the inserted id on the item", async () => {
+    const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
+    await connection.open();
+    const command = new SqliteCommand(connection);
+    await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+    const native = await command.executeNative(new Native("INSERT INTO items (name) VALUES ('ada')"));
+    expect(native.result).toBeNull();
+    const fields = [{ name: "name", value: "bea" }];
+    const inserted = await command.executeStatement(new InsertStatement("items", fields, "id"), fields);
+    expect(inserted.result).not.toBeNull();
+    expect(inserted.result).toBe(2);
+    const repo = new CRUDRepository(connection, {
+      ...createCRUDRepositoryOptions(Item),
+      ids: ["id"],
+      entity: "items",
+    });
+    const created = await repo.create(Object.assign(new Item(), { name: "cee" }));
+    expect(created.id).toBeGreaterThan(0);
+    const next = await repo.create(Object.assign(new Item(), { name: "dee" }));
+    expect(next.id).toBeGreaterThan(created.id);
+  });
+
+  it("create then child insert uses the parent id", async () => {
+    class Contact {
+      id!: number;
+      name = "";
+    }
+    class Address {
+      id!: number;
+      contactId!: number;
+      line1 = "";
+    }
+    const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
+    await connection.open();
+    const command = new SqliteCommand(connection);
+    await command.executeNative(
+      new Native(
+        "CREATE TABLE contacts (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE addresses (id INTEGER PRIMARY KEY, contact_id INTEGER NOT NULL, line1 TEXT NOT NULL)",
+      ),
+    );
+    const contacts = new CRUDRepository(connection, {
+      ...createCRUDRepositoryOptions(Contact),
+      ids: ["id"],
+      entity: "contacts",
+      createProperties: ["name"],
+    });
+    const addresses = new CRUDRepository(connection, {
+      ...createCRUDRepositoryOptions(Address),
+      ids: ["id"],
+      entity: "addresses",
+      createProperties: ["contactId", "line1"],
+      propertyMappings: new DictionaryMapper([["contactId", "contact_id"]]),
+    });
+    const created = await contacts.create(Object.assign(new Contact(), { name: "ada" }));
+    await addresses.create(Object.assign(new Address(), { contactId: created.id, line1: "12 Engine" }));
+    await using reader = await command.executeReaderNative(
+      new Native("SELECT contact_id FROM addresses"),
+    );
+    expect(await reader.next()).toBe(true);
+    expect(reader.current?.contact_id).toBe(created.id);
+  });
+
   it("selects a scalar", async () => {
     const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
