@@ -64,6 +64,7 @@ describe("StatementParser", () => {
     expect(StatementParser.parse("INSERT INTO users (id, name) VALUES ($id, $name)")).toBeInstanceOf(
       InsertStatement,
     );
+    expect(StatementParser.parse("INSERT INTO Parent () VALUES ()")).toBeInstanceOf(InsertStatement);
     const update = StatementParser.parse("UPDATE users SET name = $name WHERE id = $id") as UpdateStatement;
     expect((update.where as Where).condition).toBeInstanceOf(Operator.Equals);
     const notLike = StatementParser.parse(

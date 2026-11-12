@@ -54,18 +54,24 @@ impl<'a> Cursor<'a> {
         self.expect_word("INTO")?;
         let table = self.ident()?;
         self.expect_char('(')?;
-        let mut columns = vec![self.ident()?];
-        while self.try_char(',') {
+        let mut columns = Vec::new();
+        if !self.try_char(')') {
             columns.push(self.ident()?);
+            while self.try_char(',') {
+                columns.push(self.ident()?);
+            }
+            self.expect_char(')')?;
         }
-        self.expect_char(')')?;
         self.expect_word("VALUES")?;
         self.expect_char('(')?;
-        let mut values = vec![self.raw_expr()?];
-        while self.try_char(',') {
+        let mut values = Vec::new();
+        if !self.try_char(')') {
             values.push(self.raw_expr()?);
+            while self.try_char(',') {
+                values.push(self.raw_expr()?);
+            }
+            self.expect_char(')')?;
         }
-        self.expect_char(')')?;
         if values.len() == columns.len()
             && values
                 .iter()
@@ -617,7 +623,7 @@ impl<'a> Cursor<'a> {
         name.push(first);
         self.bump();
         while let Some(ch) = self.rest().chars().next() {
-            if ch.is_ascii_alphanumeric() || ch == '_' {
+            if ch.is_ascii_alphanumeric() || ch == '_' || ch == '`' {
                 name.push(ch);
                 self.bump();
             } else {

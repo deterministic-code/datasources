@@ -4,6 +4,12 @@ namespace Datasources.Postgres;
 
 internal sealed class PostgresStatementRenderer(StatementTextRenderer text) : StatementRenderer(text)
 {
+    public override string Visit(InsertStatement insert)
+    {
+        var sql = base.Visit(insert);
+        return string.IsNullOrEmpty(insert.Returning) ? sql : $"{sql} RETURNING {insert.Returning}";
+    }
+
     public override string Visit(SelectInsertedIdStatement inserted) =>
         new PostgresSelectInsertedIdStatementTextRenderer().Render(inserted);
 

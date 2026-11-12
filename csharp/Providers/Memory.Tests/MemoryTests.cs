@@ -15,42 +15,42 @@ public class MemoryTests
     [Fact]
     public void FilterHelpers()
     {
-        Assert.Empty(MemoryCommand.ParseFilter(null));
-        Assert.Empty(MemoryCommand.ParseFilter(""));
-        Assert.Equal(new Value.Int(1), MemoryCommand.ParseFilter("{\"id\":1}")["id"]);
-        Assert.Throws<DatasourceException>(() => MemoryCommand.ParseFilter("[]"));
-        Assert.Throws<DatasourceException>(() => MemoryCommand.ParseFilter("1"));
-        Assert.True(MemoryCommand.Matches(new Row { ["id"] = 1 }, new Row()));
-        Assert.False(MemoryCommand.Matches(new Row(), new Row { ["id"] = 1 }));
-        Assert.IsType<Value.Text>(MemoryCommand.JsonValueToValue(new System.Text.Json.Nodes.JsonArray()));
-        Assert.Equal(new Value.Bool(true), MemoryCommand.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(true)));
-        Assert.Equal(new Value.Int(1), MemoryCommand.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(1L)));
-        Assert.Equal(new Value.Float(1.5), MemoryCommand.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(1.5)));
-        Assert.Equal(new Value.Text("x"), MemoryCommand.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create("x")));
+        Assert.Empty(MemoryEngine.ParseFilter(null));
+        Assert.Empty(MemoryEngine.ParseFilter(""));
+        Assert.Equal(new Value.Int(1), MemoryEngine.ParseFilter("{\"id\":1}")["id"]);
+        Assert.Throws<DatasourceException>(() => MemoryEngine.ParseFilter("[]"));
+        Assert.Throws<DatasourceException>(() => MemoryEngine.ParseFilter("1"));
+        Assert.True(MemoryEngine.Matches(new Row { ["id"] = 1 }, new Row()));
+        Assert.False(MemoryEngine.Matches(new Row(), new Row { ["id"] = 1 }));
+        Assert.IsType<Value.Text>(MemoryEngine.JsonValueToValue(new System.Text.Json.Nodes.JsonArray()));
+        Assert.Equal(new Value.Bool(true), MemoryEngine.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(true)));
+        Assert.Equal(new Value.Int(1), MemoryEngine.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(1L)));
+        Assert.Equal(new Value.Float(1.5), MemoryEngine.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create(1.5)));
+        Assert.Equal(new Value.Text("x"), MemoryEngine.JsonValueToValue(System.Text.Json.Nodes.JsonValue.Create("x")));
     }
 
     [Fact]
     public async Task StoreAndConnection()
     {
-        var store = new MemoryStore();
-        store.Seed(new List<Dictionary<string, Value>> { new() { ["id"] = 1 } }, "");
-        store.Seed(new List<Dictionary<string, Value>> { new() { ["id"] = 2 } }, "");
-        store.Seed(new Dictionary<string, List<Dictionary<string, Value>>>
+        var engine = new MemoryEngine();
+        engine.Seed(new List<Dictionary<string, Value>> { new() { ["id"] = 1 } }, "");
+        engine.Seed(new List<Dictionary<string, Value>> { new() { ["id"] = 2 } }, "");
+        engine.Seed(new Dictionary<string, List<Dictionary<string, Value>>>
         {
             ["users"] = [new() { ["id"] = 3 }],
             ["posts"] = [new() { ["id"] = 4 }],
         }, "");
-        store.Seed(new Dictionary<string, List<Dictionary<string, Value>>>
+        engine.Seed(new Dictionary<string, List<Dictionary<string, Value>>>
         {
             ["users"] = [new() { ["id"] = 9 }],
         }, "");
-        Assert.Single(store.GetCollection(""));
-        Assert.Single(store.GetCollection("users"));
-        Assert.Equal(new Value.Int(3), store.GetCollection("users")[0]["id"]);
+        Assert.Single(engine.GetCollection(""));
+        Assert.Single(engine.GetCollection("users"));
+        Assert.Equal(new Value.Int(3), engine.GetCollection("users")[0]["id"]);
 
         var conn = new MemoryConnection(new MemoryConnectionOptions
         {
-            Store = store,
+            Engine = engine,
             Data = new List<Dictionary<string, Value>> { new() { ["id"] = 8 } },
         });
         await conn.Open();
@@ -136,9 +136,9 @@ public class MemoryTests
         ds.CreateRepository<Dictionary<string, Value>>();
         Assert.Equal("memory", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "memory" }).Provider);
 
-        var shared = new MemoryStore();
-        var a = new MemoryConnection(new MemoryConnectionOptions { Store = shared, Data = new List<Dictionary<string, Value>> { new() { ["id"] = 1 } } });
-        var b = new MemoryConnection(new MemoryConnectionOptions { Store = shared });
+        var shared = new MemoryEngine();
+        var a = new MemoryConnection(new MemoryConnectionOptions { Engine = shared, Data = new List<Dictionary<string, Value>> { new() { ["id"] = 1 } } });
+        var b = new MemoryConnection(new MemoryConnectionOptions { Engine = shared });
         await a.Open();
         await b.Open();
         Assert.Single(b.GetCollection());

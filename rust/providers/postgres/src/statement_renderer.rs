@@ -102,7 +102,10 @@ impl StatementVisitor for PostgresStatementRenderer {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        insert
+        match statement.returning_column() {
+            Some(column) => format!("{insert} RETURNING {column}"),
+            None => insert,
+        }
     }
 
     fn visit_bulk_insert(
@@ -424,6 +427,11 @@ mod tests {
         assert_eq!(
             renderer().render(&insert),
             "INSERT INTO users (name) VALUES ($name)"
+        );
+        let returning = insert.returning("id");
+        assert_eq!(
+            renderer().render(&returning),
+            "INSERT INTO users (name) VALUES ($name) RETURNING id"
         );
     }
 

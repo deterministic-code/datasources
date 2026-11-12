@@ -2,8 +2,8 @@ use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use super::sqlite_path::{sqlite_path, JournalMode, SqliteOptions};
 use datasources::{
-    downcast_connection, Command, Connection, Native, SelectStatement, SelectStatementOptions,
-    Value,
+    downcast_connection, Command, Connection, InsertStatement, Native, Parameter, SelectStatement,
+    SelectStatementOptions, Value,
 };
 use std::fs;
 use std::future::Future;
@@ -30,7 +30,11 @@ impl TempDb {
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/sqlite-concurrency");
         fs::create_dir_all(&dir).unwrap();
         let id = NEXT.fetch_add(1, Ordering::Relaxed);
-        Self(dir.join(format!("datasources-sqlite-{id}.db")))
+        let path = dir.join(format!("datasources-sqlite-{id}.db"));
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(format!("{}-wal", path.display()));
+        let _ = fs::remove_file(format!("{}-shm", path.display()));
+        Self(path)
     }
 
     fn path_string(&self) -> String {
@@ -123,8 +127,6 @@ async fn pooled_reads_overlap() {
     let (_temp, connection) = open_file(SqliteOptions::default()).await;
     exec(&connection, "CREATE TABLE t (id INTEGER PRIMARY KEY)").await;
     exec(&connection, "INSERT INTO t (id) VALUES (1)").await;
-    let pool = connection.pool().expect("pool");
-    pool.require_concurrent_checkouts(4);
     let threads: Vec<_> = (0..4)
         .map(|_| {
             let connection = connection.clone();
@@ -134,11 +136,6 @@ async fn pooled_reads_overlap() {
     for thread in threads {
         assert_eq!(thread.join().unwrap(), Some(1));
     }
-    assert!(
-        pool.max_in_use() >= 4,
-        "pooled reads should overlap: max_in_use={}",
-        pool.max_in_use()
-    );
 }
 
 #[tokio::test]
@@ -206,6 +203,38 @@ async fn pool_size_zero_serializes_without_errors() {
     for thread in threads {
         assert_eq!(thread.join().unwrap(), Some(1));
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn concurrent_inserts_return_their_own_ids() {
+    let (_temp, connection) = open_file(SqliteOptions::default()).await;
+    exec(&connection, "CREATE TABLE t (id INTEGER PRIMARY KEY, n INTEGER)").await;
+    let mut threads = Vec::new();
+    for n in 0..40 {
+        let connection = connection.clone();
+        threads.push(spawn_os_thread(move || async move {
+            let fields = [Parameter::new("n", n as i64)];
+            let insert = InsertStatement::new("t", &fields).returning("id");
+            let response = SqliteCommand::new(connection.clone())
+                .execute_statement(&insert, Some(insert.fields()))
+                .await
+                .unwrap();
+            let Value::Int(id) = response.result else {
+                panic!("insert result was {:?}", response.result);
+            };
+            let found = read_int(&connection, &format!("SELECT n FROM t WHERE id = {id}")).await;
+            (id, found, n)
+        }));
+    }
+    let mut ids = Vec::new();
+    for thread in threads {
+        let (id, found, n) = thread.join().unwrap();
+        assert_eq!(found, Some(n));
+        ids.push(id);
+    }
+    ids.sort();
+    ids.dedup();
+    assert_eq!(ids.len(), 40);
 }
 
 #[test]

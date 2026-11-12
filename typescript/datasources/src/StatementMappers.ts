@@ -67,6 +67,7 @@ export class StatementMappers implements IMapper<string, string> {
       return new InsertStatement(
         this.entityMappers.map(query.table),
         query.fields.map((field) => ({ name: this.column(field.name), value: field.value })),
+        query.returning === undefined ? undefined : this.column(query.returning),
       );
     if (query instanceof UpdateStatement && query.table !== undefined)
       return new UpdateStatement(

@@ -143,7 +143,7 @@ public class RepositoryTests
         var obj = new UserRow { id = 0, name = "a" };
         var created = await repo.Create(obj);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
-        Assert.Equal("users.id", command.ExecuteReaderCalls[0].Text);
+        Assert.Empty(command.ExecuteReaderCalls);
         Assert.Equal(9, created.id);
         var updated = await repo.Update(obj);
         Assert.Equal(1, updated.RowsAffected);

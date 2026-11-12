@@ -1,30 +1,24 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
-  DeleteStatement,
-  DefaultStatementTextRenderer,
   Native,
-  InsertStatement,
-  SelectInsertedIdStatement,
-  ExpressionEvaluator,
-  UpdateStatement,
-  Where,
+  StatementTextRenderer,
   type Cells,
   type ICommand,
   type IReader,
   type IStatement,
-  type IWhere,
-  Response,
   type Parameter,
-  type Scalar,
+  Response,
 } from "@deterministic-code/datasources";
 import type { MemoryConnection } from "./connection.ts";
-import type { MemoryRecord } from "./store.ts";
-import { matches, parametersToObject, parseFilter } from "./filter.ts";
+import { MemoryStatementRenderer } from "./MemoryStatementRenderer.ts";
 
 export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
-  constructor(readonly connection: MemoryConnection) {
+  private readonly statements: StatementTextRenderer;
+
+  constructor(readonly connection: MemoryConnection, statements?: StatementTextRenderer) {
     super();
+    this.statements = statements ?? new StatementTextRenderer((t) => new MemoryStatementRenderer(t));
   }
 
   executeReaderNative(text: Native, parameters?: Parameter[]): Promise<IReader<Cells>> {
@@ -35,245 +29,26 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     return this.execute(text.text, parameters);
   }
 
-  async executeReader(
-    text: string,
-    parameters?: Parameter[],
-  ): Promise<IReader<Cells>> {
+  async executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>> {
     return this.run(text, parameters, async (query, params) => {
       this.connection.ensureOpen();
-      const filter = {
-        ...parseFilter(query),
-        ...parametersToObject(params),
-      };
-      const rows = this.connection
-        .getCollection()
-        .filter((row) => matches(row, filter));
-      return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
+      this.connection.engine.execute(query, params);
+      const rows = this.connection.engine.records as Cells[];
+      return { value: new ArrayReader(rows), rows };
     });
   }
 
-  executeReaderStatement = (
-    statement: IStatement,
-    parameters?: Parameter[],
-  ): Promise<IReader<Cells>> => {
-    if (statement instanceof SelectInsertedIdStatement) {
-      return this.run(`${statement.table}.${statement.column}`, parameters, async () => {
-        this.connection.ensureOpen();
-        const id = this.connection.insertedId(statement.table);
-        const rows = id === undefined ? [] : [{ [statement.column]: id }];
-        return { value: new ArrayReader(rows), rows };
-      });
-    }
-    const clause = "where" in statement && statement.where instanceof Where ? statement.where : undefined;
-    if (clause) {
-      return this.run(DefaultStatementTextRenderer.instance.render(statement), parameters, async () => {
-        this.connection.ensureOpen();
-        const evaluator = new ExpressionEvaluator();
-        const rows = this.connection
-          .rows(tableOf(statement), false)
-          .filter((row) => evaluator.evaluate(clause, row as Record<string, Scalar>) === true);
-        return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
-      });
-    }
-    if (
-      "where" in statement &&
-      !looksJson(renderWhere(statement.where)) &&
-      !looksJson(DefaultStatementTextRenderer.instance.render(statement))
-    ) {
-      return this.run(DefaultStatementTextRenderer.instance.render(statement), parameters, async () => {
-        this.connection.ensureOpen();
-        const rows = this.connection.rows(tableOf(statement), false);
-        return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
-      });
-    }
-    return this.executeReader(filterText(statement), parameters);
-  };
+  executeReaderStatement = (statement: IStatement, parameters?: Parameter[]): Promise<IReader<Cells>> =>
+    this.executeReader(this.statements.render(statement), parameters);
 
-  executeStatement = (
-    statement: IStatement,
-    parameters?: Parameter[],
-  ): Promise<Response> =>
-    statement instanceof InsertStatement
-      ? this.write("insert", parameters, tableOf(statement), true)
-      : statement instanceof UpdateStatement
-        ? this.write("update", parameters, tableOf(statement), false, statement.where)
-        : statement instanceof DeleteStatement
-          ? this.write("delete", parameters, tableOf(statement), false, statement.where)
-          : this.execute(DefaultStatementTextRenderer.instance.render(statement), parameters);
+  executeStatement = (statement: IStatement, parameters?: Parameter[]): Promise<Response> =>
+    this.execute(this.statements.render(statement), parameters);
 
-  async execute(
-    text: string,
-    parameters?: Parameter[],
-  ): Promise<Response> {
+  async execute(text: string, parameters?: Parameter[]): Promise<Response> {
     if (!text.trim()) throw new Error("empty command");
     return this.run(text, parameters, async (query, params) => {
-        this.connection.ensureOpen();
-        const op = query.trim().toLowerCase();
-        const obj = parametersToObject(params);
-        if (op === "insert") {
-          const row = { ...obj };
-          const id = insertedId(row, this.connection.getCollection());
-          row.id = id;
-          this.connection.getCollection().push(row);
-          this.connection.rememberInserted(this.connection.collection, id);
-          return { value: new Response(id, 1, params), rows: [] };
-        }
-        if (op === "update") {
-          const whereText =
-            typeof obj.$where === "string" ? obj.$where : undefined;
-          const next = { ...obj };
-          delete next.$where;
-          const filter = whereText ? parseFilter(whereText) : next;
-          const updated = this.applyUpdate(this.connection.getCollection(), next, filter);
-          return { value: new Response(updated.result, updated.rowsAffected, params), rows: [] };
-        }
-        if (op === "delete") {
-          const filter = obj;
-          const deleted = this.applyDelete(this.connection.getCollection(), filter);
-          return { value: new Response(deleted.result, deleted.rowsAffected, params), rows: [] };
-        }
-        throw new Error(`Unsupported Memory command: ${query}`);
-    });
-  }
-
-  private write = (
-    op: string,
-    parameters: Parameter[] | undefined,
-    table: string | undefined,
-    create: boolean,
-    where?: IWhere,
-  ): Promise<Response> =>
-    this.run(op, parameters, async (_query, params) => {
       this.connection.ensureOpen();
-      const rows = this.connection.rows(table, create);
-      const obj = parametersToObject(params);
-      if (op === "insert") {
-        const row = { ...obj };
-        const id = insertedId(row, rows);
-        row.id = id;
-        rows.push(row);
-        this.connection.rememberInserted(table ?? this.connection.collection, id);
-        return { value: new Response(id, 1, params), rows: [] };
-      }
-      if (op === "update") {
-        const updated = this.applyChanged(rows, obj, where, params);
-        return { value: new Response(updated.result, updated.rowsAffected, params), rows: [] };
-      }
-      const deleted = this.removeMatched(rows, obj, where);
-      return { value: new Response(deleted.result, deleted.rowsAffected, params), rows: [] };
+      return { value: this.connection.engine.execute(query, params), rows: [] };
     });
-
-  private applyChanged = (
-    rows: MemoryRecord[],
-    obj: MemoryRecord,
-    where: IWhere | undefined,
-    parameters: Parameter[] | undefined,
-  ): Response => {
-    if (where instanceof Where) {
-      const evaluator = new ExpressionEvaluator();
-      const names = setNames(parameters, where);
-      let rowsAffected = 0;
-      for (const row of rows) {
-        if (evaluator.evaluate(where, row as Record<string, Scalar>) !== true) continue;
-        for (const name of names) if (name in obj) row[name] = obj[name];
-        rowsAffected += 1;
-      }
-      return { result: null, rowsAffected };
-    }
-    const next = { ...obj };
-    delete next.$where;
-    const filter = looksJson(renderWhere(where)) ? parseFilter(renderWhere(where)!) : next;
-    return this.applyUpdate(rows, next, filter);
-  };
-
-  private removeMatched = (
-    rows: MemoryRecord[],
-    obj: MemoryRecord,
-    where: IWhere | undefined,
-  ): Response => {
-    if (where instanceof Where) {
-      const evaluator = new ExpressionEvaluator();
-      const remaining = rows.filter(
-        (row) => evaluator.evaluate(where, row as Record<string, Scalar>) !== true,
-      );
-      const rowsAffected = rows.length - remaining.length;
-      rows.length = 0;
-      rows.push(...remaining);
-      return { result: null, rowsAffected };
-    }
-    const filter = looksJson(renderWhere(where)) ? parseFilter(renderWhere(where)!) : obj;
-    return this.applyDelete(rows, filter);
-  };
-
-  private applyUpdate(
-    collection: MemoryRecord[],
-    obj: MemoryRecord,
-    filter: MemoryRecord,
-  ): Response {
-    let rowsAffected = 0;
-    for (let i = 0; i < collection.length; i += 1) {
-      if (matches(collection[i], filter)) {
-        collection[i] = { ...collection[i], ...obj };
-        rowsAffected += 1;
-      }
-    }
-    return { result: null, rowsAffected };
-  }
-
-  private applyDelete(collection: MemoryRecord[], filter: MemoryRecord): Response {
-    const remaining = collection.filter((row) => !matches(row, filter));
-    const rowsAffected = collection.length - remaining.length;
-    collection.length = 0;
-    collection.push(...remaining);
-    return { result: null, rowsAffected };
   }
 }
-
-const insertedId = (row: MemoryRecord, rows: MemoryRecord[]): number =>
-  typeof row.id === "number"
-    ? row.id
-    : rows.reduce((max, item) => (typeof item.id === "number" && item.id > max ? item.id : max), 0) + 1;
-
-const looksJson = (text?: string): boolean => !!text?.trimStart().startsWith("{");
-
-const renderWhere = (where?: IWhere): string | undefined =>
-  where ? DefaultStatementTextRenderer.instance.render(where) : undefined;
-
-const filterText = (statement: IStatement): string => {
-  const where = "where" in statement ? renderWhere((statement as { where?: IWhere }).where) : undefined;
-  if (looksJson(where)) return where!;
-  const text = DefaultStatementTextRenderer.instance.render(statement);
-  return looksJson(text) || !text.trim() ? text : "";
-};
-
-const tableOf = (statement: IStatement): string | undefined => {
-  if ("table" in statement && typeof statement.table === "string" && statement.table.length > 0)
-    return statement.table;
-  return tableIn(DefaultStatementTextRenderer.instance.render(statement));
-};
-
-const tableIn = (text: string): string | undefined => {
-  const sql = text.trimStart();
-  const lower = sql.toLowerCase();
-  const skip = lower.startsWith("insert into ")
-    ? "insert into ".length
-    : lower.startsWith("delete from ")
-      ? "delete from ".length
-      : lower.startsWith("update ")
-        ? "update ".length
-        : lower.indexOf(" from ") >= 0
-          ? lower.indexOf(" from ") + " from ".length
-          : -1;
-  if (skip < 0 || skip >= sql.length) return undefined;
-  const rest = sql.slice(skip);
-  const end = rest.search(/[\s(]/);
-  const name = end < 0 ? rest : rest.slice(0, end);
-  return name.length > 0 ? name : undefined;
-};
-
-const setNames = (parameters: Parameter[] | undefined, where: IWhere): string[] => {
-  const bound = new Set((where.parameters ?? []).map((parameter) => parameter.name));
-  return (parameters ?? [])
-    .map((parameter) => parameter.name)
-    .filter((name) => !bound.has(name) && !name.endsWith("__where"));
-};

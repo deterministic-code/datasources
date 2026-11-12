@@ -6,7 +6,7 @@ use crate::statement_renderer::MysqlStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, statement_parameters, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, ParameterDirection, Reader, Response, Result, ReturnStatement,
+    CommandMiddlewareHost, DatasourceError, FirstResultReader, InsertStatement, Native, Parameter, ParameterDirection, Reader, Response, Result, ReturnStatement,
     Statement, StatementKind, StatementTextRenderer, Value,
 };
 use mysql_async::prelude::Queryable;
@@ -47,13 +47,18 @@ impl MysqlCommand {
         if params.is_empty() {
             conn.query_drop(sql.as_str()).await.map_err(map_err)?;
         } else {
-            conn.exec_drop(sql, named_params(params))
+            conn.exec_drop(sql.as_str(), named_params(params))
                 .await
                 .map_err(map_err)?;
         }
+        let id = conn.last_insert_id().unwrap_or(0);
         Ok(MysqlExecuteResult {
             rows_affected: conn.affected_rows() as i64,
-            result: Value::Null,
+            result: if id == 0 {
+                Value::Null
+            } else {
+                Value::Int(i64::try_from(id).unwrap_or(i64::MAX))
+            },
         })
     }
 }
@@ -150,7 +155,6 @@ impl Command for MysqlCommand {
                     connection.ensure_open()?;
                     let mapped = parameters_to_map(params.as_deref());
                     let mut rows_affected = 0;
-                    let mut result = Value::Null;
                     for part in split_statements(&sql) {
                         let names = statement_parameters(&part);
                         let used = mapped
@@ -164,10 +168,9 @@ impl Command for MysqlCommand {
                             .collect();
                         let executed = MysqlCommand::execute_sql(&connection, &part, &used).await?;
                         rows_affected += executed.rows_affected;
-                        result = executed.result;
                     }
                     let response = Response::new(
-                        result,
+                        Value::Null,
                         rows_affected,
                         params.map(|list| list.to_vec()),
                     );
@@ -195,6 +198,11 @@ impl Command for MysqlCommand {
         if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
             return self.first_cell(statement, parameters).await;
         }
+        if let Some(insert) = statement.as_any().downcast_ref::<InsertStatement>() {
+            if insert.returning_column().is_some() {
+                return self.inserted(statement, parameters).await;
+            }
+        }
         let text = self.statements.render(statement);
         if parameters.is_some_and(|list| {
             list.iter()
@@ -207,6 +215,47 @@ impl Command for MysqlCommand {
 }
 
 impl MysqlCommand {
+    async fn inserted(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let text = self.statements.render(statement);
+        let connection = self.connection.clone();
+        self.host
+            .run(&text, parameters, move |sql, params| {
+                let connection = connection.clone();
+                async move {
+                    connection.ensure_open()?;
+                    let mapped = parameters_to_map(params.as_deref());
+                    let mut rows_affected = 0;
+                    let mut result = Value::Null;
+                    for part in split_statements(&sql) {
+                        let names = statement_parameters(&part);
+                        let used = mapped
+                            .iter()
+                            .filter(|(name, _)| {
+                                names.iter().any(|found| {
+                                    found == name.trim_start_matches(['$', '@', ':'])
+                                })
+                            })
+                            .map(|(name, value)| (name.clone(), value.clone()))
+                            .collect();
+                        let executed = MysqlCommand::execute_sql(&connection, &part, &used).await?;
+                        rows_affected += executed.rows_affected;
+                        result = executed.result;
+                    }
+                    let response = if rows_affected <= 0 {
+                        Response::new(Value::Null, rows_affected, params.map(|list| list.to_vec()))
+                    } else {
+                        Response::new(result, rows_affected, params.map(|list| list.to_vec()))
+                    };
+                    Ok((response, vec![]))
+                }
+            })
+            .await
+    }
+
     async fn execute_procedure(
         &self,
         sql: &str,

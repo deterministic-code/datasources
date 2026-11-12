@@ -36,13 +36,22 @@ public static class StatementParser
             ExpectWord("INTO");
             var table = Ident();
             Expect('(');
-            var columns = List(Ident);
-            Expect(')');
+            IReadOnlyList<string> columns;
+            if (Try(')')) columns = [];
+            else
+            {
+                columns = List(Ident);
+                Expect(')');
+            }
             ExpectWord("VALUES");
             Expect('(');
-            var values = new List<string> { RawExpr() };
-            while (Try(',')) values.Add(RawExpr());
-            Expect(')');
+            var values = new List<string>();
+            if (!Try(')'))
+            {
+                values.Add(RawExpr());
+                while (Try(',')) values.Add(RawExpr());
+                Expect(')');
+            }
             return values.Count == columns.Count && values.Zip(columns).All(pair => pair.First.Trim() == "$" + pair.Second)
                 ? new InsertStatement(table, columns.Select(name => new Parameter(name, Value.Null.Instance)).ToList())
                 : throw new InvalidOperationException("empty statement");
@@ -415,7 +424,7 @@ public static class StatementParser
             if (i >= text.Length || !char.IsLetter(text[i]))
                 throw new InvalidOperationException("empty statement");
             var start = i++;
-            while (i < text.Length && (char.IsLetterOrDigit(text[i]) || text[i] == '_')) i++;
+            while (i < text.Length && (char.IsLetterOrDigit(text[i]) || text[i] == '_' || text[i] == '`')) i++;
             return text[start..i];
         }
 

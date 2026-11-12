@@ -56,6 +56,19 @@ public class CRUDRepositoryOptionsTests
     }
 
     [Fact]
+    public async Task CopiesInsertedIdFromMappedSqlColumn()
+    {
+        var (repo, command) = Create(new CRUDRepositoryOptions<UserRow>
+        {
+            Entity = "users",
+            PropertyMappings = Columns()
+        });
+        command.Response = new Response(11, 1);
+        var created = await repo.Create(new UserRow { id = 0, name = "a" });
+        Assert.Equal(11, created.id);
+    }
+
+    [Fact]
     public void StatementsUseTheMappedTableAndColumns()
     {
         var statements = new CRUDRepositoryStatements("users", ["id", "name"]);

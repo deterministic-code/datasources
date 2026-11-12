@@ -1,7 +1,7 @@
-import type { MemoryRecord, MemoryStore } from "./store.ts";
+import type { MemoryEngine, MemoryRecord } from "./engine.ts";
 
 export interface MemoryConnectionOptions {
   collection?: string;
-  store?: MemoryStore;
+  engine?: MemoryEngine;
   data?: MemoryRecord[] | Record<string, MemoryRecord[]>;
 }

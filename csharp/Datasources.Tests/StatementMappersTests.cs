@@ -58,6 +58,9 @@ public class StatementMappersTests
             new InsertStatement("User", [new Parameter("Name", "Ada")]), Mapper));
         Assert.Equal("INSERT INTO people (full_name) VALUES ($full_name)", DefaultStatementTextRenderer.Instance.Render(insert));
         Assert.Equal(new Value.Text("Ada"), Assert.Single(insert.Fields).Value);
+        var returning = Assert.IsType<InsertStatement>(mappings.Apply(
+            new InsertStatement("User", [new Parameter("Name", "Ada")]) { Returning = "id" }, Mapper));
+        Assert.Equal("user_id", returning.Returning);
 
         var update = Assert.IsType<UpdateStatement>(mappings.Apply(
             new UpdateStatement("User", [new Parameter("Name", "Ada")], new Where(new Operator.Equals("Name", "Bea"))),

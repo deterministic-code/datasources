@@ -39,14 +39,20 @@ class Cursor {
     this.expectWord("INTO");
     const table = this.ident();
     this.expectChar("(");
-    const columns = [this.ident()];
-    while (this.tryChar(",")) columns.push(this.ident());
-    this.expectChar(")");
+    const columns: string[] = [];
+    if (!this.tryChar(")")) {
+      columns.push(this.ident());
+      while (this.tryChar(",")) columns.push(this.ident());
+      this.expectChar(")");
+    }
     this.expectWord("VALUES");
     this.expectChar("(");
-    const values = [this.rawExpr()];
-    while (this.tryChar(",")) values.push(this.rawExpr());
-    this.expectChar(")");
+    const values: string[] = [];
+    if (!this.tryChar(")")) {
+      values.push(this.rawExpr());
+      while (this.tryChar(",")) values.push(this.rawExpr());
+      this.expectChar(")");
+    }
     const fields: Field[] = columns.map((name) => ({ name, value: null }));
     return values.length === columns.length &&
       values.every((value, index) => value.trim() === `$${columns[index]}`)
@@ -374,7 +380,7 @@ class Cursor {
     this.skip();
     if (this.i >= this.text.length || !/[A-Za-z]/.test(this.at(this.i))) empty();
     const start = this.i++;
-    while (this.i < this.text.length && /[A-Za-z0-9_]/.test(this.at(this.i))) this.i++;
+    while (this.i < this.text.length && /[A-Za-z0-9_`]/.test(this.at(this.i))) this.i++;
     return this.text.slice(start, this.i);
   }
 

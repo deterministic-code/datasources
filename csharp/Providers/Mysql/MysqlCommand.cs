@@ -33,7 +33,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
                 return (new Response(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
             var result = await RunSql(query, paramsList);
-            return (new Response(result.Result, result.RowsAffected, result.Parameters), (IReadOnlyList<Row>)[]);
+            return (new Response(Value.Null.Instance, result.RowsAffected, result.Parameters), (IReadOnlyList<Row>)[]);
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
@@ -45,8 +45,20 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
             ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
                 ExecuteProcedure(name, parameters),
+            InsertStatement { Returning: not null } insert => Inserted(insert, parameters),
             _ => Execute(new Native(statements.Render(statement)), parameters)
         };
+
+    Task<Response> Inserted(InsertStatement insert, IReadOnlyList<Parameter>? parameters) =>
+        Run(statements.Render(insert), parameters, async (query, paramsList) =>
+        {
+            Typed.EnsureOpen();
+            var executed = await RunSql(query, paramsList);
+            var response = executed.RowsAffected <= 0
+                ? new Response(Value.Null.Instance, executed.RowsAffected, executed.Parameters)
+                : new Response(executed.Result, executed.RowsAffected, executed.Parameters);
+            return (response, (IReadOnlyList<Row>)[]);
+        });
 
     async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
     {
@@ -78,6 +90,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
     async Task<MysqlExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
         var rows = 0;
+        Value result = Value.Null.Instance;
         IReadOnlyList<Parameter>? applied = parameters;
         foreach (var part in SplitStatements.Split(sql))
         {
@@ -88,8 +101,10 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             using var command = Bind(part, used);
             rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
             applied = Applied(command, parameters);
+            var id = command.LastInsertedId;
+            result = id <= 0 ? Value.Null.Instance : id;
         }
-        return new MysqlExecuteResult(rows, Value.Null.Instance, applied);
+        return new MysqlExecuteResult(rows, result, applied);
     }
 
     async Task<StreamingReader> Open(string sql, Row parameters)

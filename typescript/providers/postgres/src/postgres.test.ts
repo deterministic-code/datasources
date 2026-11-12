@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, emptyDefaultValueConverter, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, emptyDefaultValueConverter, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, InsertStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
 import { bindParameters, toPostgres } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
@@ -100,6 +100,18 @@ describe("PostgresConnection", () => {
       rowsAffected: 0,
       result: null,
       parameters: undefined,
+    });
+    client.result = { rowCount: 1, rows: [{ id: 7 }] };
+    expect(await command.executeNative(new Native("INSERT INTO items (name) VALUES ('ada') RETURNING id"))).toEqual({
+      rowsAffected: 1,
+      result: null,
+      parameters: undefined,
+    });
+    const name = { name: "name", value: "ada" };
+    expect(await command.executeStatement(new InsertStatement("items", [name], "id"), [name])).toEqual({
+      result: 7,
+      rowsAffected: 1,
+      parameters: [name],
     });
     client.result = { rowCount: null, rows: [{ id: 9 }] };
     expect(await command.executeNative(new Native("UPDATE items SET n = 1"))).toMatchObject({

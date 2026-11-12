@@ -128,14 +128,14 @@ describe("CRUDRepository", () => {
 
   it("adds updates and deletes through builders", async () => {
     const { repo, command } = create();
-    command.response = { result: null, rowsAffected: 1 };
+    command.response = { result: 9, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 9 }]);
     const obj = { id: 0, name: "a" };
     const created = await repo.create(obj);
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO users (name) VALUES ($name)",
     );
-    expect(command.executeReaderCalls[0]?.text).toBe("users.id");
+    expect(command.executeReaderCalls).toEqual([]);
     expect(created.id).toBe(9);
     const updated = await repo.update(obj);
     expect(updated.rowsAffected).toBe(1);
@@ -158,11 +158,22 @@ describe("CRUDRepository", () => {
 
   it("maps create result onto Id when id is absent", async () => {
     const { repo, command } = create({ type: asType(PascalId), ids: ["Id"] });
-    command.response = { result: null, rowsAffected: 1 };
-    command.reader = new MockReader([{ Id: 9 }]);
+    command.response = { result: 9, rowsAffected: 1 };
     const item = Object.assign(new PascalId(), { Id: 0 });
     const created = await repo.create(item);
     expect(created.Id).toBe(9);
+  });
+
+  it("copies inserted id from a mapped sql column", async () => {
+    const { repo, command } = create({
+      propertyMappings: new TransformMapper(
+        (name) => (name === "id" ? "user_id" : name),
+        (name) => (name === "user_id" ? "id" : name),
+      ),
+    });
+    command.response = { result: 11, rowsAffected: 1 };
+    const created = await repo.create({ id: 0, name: "a" });
+    expect(created.id).toBe(11);
   });
 
   it("updates without id columns using a tautology", async () => {
@@ -223,8 +234,7 @@ describe("CRUDRepository", () => {
 
   it("omits null datetime and version on create and writes them on update", async () => {
     const { repo, command } = create({ type: asType(Stamp) });
-    command.response = { result: null, rowsAffected: 1 };
-    command.reader = new MockReader([{ id: 7 }, { id: 7 }]);
+    command.response = { result: 7, rowsAffected: 1 };
     const created = await repo.create({ id: 0, name: "ada", created: null, version: undefined });
     expect(created.id).toBe(7);
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (name) VALUES ($name)");

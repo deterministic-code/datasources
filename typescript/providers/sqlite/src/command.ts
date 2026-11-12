@@ -3,6 +3,7 @@ import {
   CommandMiddlewareHost,
   FirstResultReader,
   DatasourceError,
+  InsertStatement,
   Native,
   ReturnStatement,
   SelectStatement,
@@ -92,9 +93,19 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    return statement instanceof SelectStatement || statement instanceof ReturnStatement
-      ? this.firstCell(statement, parameters)
-      : this.executeNative(new Native(this.statements.render(statement)), parameters);
+    if (statement instanceof SelectStatement || statement instanceof ReturnStatement)
+      return this.firstCell(statement, parameters);
+    if (statement instanceof InsertStatement && statement.returning)
+      return this.inserted(statement, parameters);
+    return this.executeNative(new Native(this.statements.render(statement)), parameters);
+  }
+
+  private async inserted(insert: InsertStatement, parameters?: Parameter[]): Promise<Response> {
+    return this.run(this.statements.render(insert), parameters, async (query, params) => {
+      this.connection.ensureOpen();
+      const { changes, result } = this.apply(query, params);
+      return { value: new Response(changes <= 0 ? null : result, changes, params), rows: [] };
+    });
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
@@ -115,19 +126,27 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new Response(null, 0, params), rows: [] };
       this.connection.ensureOpen();
-      const db = this.connection.require();
-      const named = bound(params);
-      let changes = 0;
-      for (const sql of splitStatements(query)) {
-        const names = new Set(statementParameters(sql));
-        const used = Object.fromEntries(
-          Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
-        );
-        const { text, values } = toSqlite(sql, used);
-        changes += db.prepare(text).run(...values).changes;
-      }
+      const { changes } = this.apply(query, params);
       return { value: new Response(null, changes, params), rows: [] };
     });
+  }
+
+  private apply(query: string, params?: Parameter[]): { changes: number; result: Value } {
+    const db = this.connection.require();
+    const named = bound(params);
+    let changes = 0;
+    let result: Value = null;
+    for (const sql of splitStatements(query)) {
+      const names = new Set(statementParameters(sql));
+      const used = Object.fromEntries(
+        Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
+      );
+      const { text, values } = toSqlite(sql, used);
+      const ran = db.prepare(text).run(...values);
+      changes += ran.changes;
+      if (ran.lastInsertRowid != null) result = ran.lastInsertRowid;
+    }
+    return { changes, result };
   }
 
   private iterate(sql: string, params: Record<string, Scalar>): IterableIterator<Cells> & {

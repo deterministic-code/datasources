@@ -14,6 +14,7 @@ import {
   type IDriver,
   RowTypeConverter,
   CreateTableStatement,
+  InsertStatement,
   Native,
   ReturnStatement,
   SelectStatement,
@@ -44,6 +45,7 @@ class FakeDatabase implements SqliteDatabase {
   rows: Cells[] = [{ id: 1 }];
   bySql?: Record<string, Cells[]>;
   omitRowid = false;
+  zeroRows = false;
   columns?: Array<{ name: string; column: string | null; table: string | null }>;
   rawRows?: Array<Array<Value | null>>;
 
@@ -58,6 +60,7 @@ class FakeDatabase implements SqliteDatabase {
     return {
       run: (params) => {
         this.runs.push({ sql, params });
+        if (this.zeroRows) return { changes: 0 };
         return this.omitRowid ? { changes: 1 } : { changes: 2, lastInsertRowid: 5 };
       },
       all: (params) => {
@@ -232,6 +235,21 @@ describe("SqliteCommand", () => {
       result: null,
       rowsAffected: 1,
     });
+    db.omitRowid = false;
+    expect(await command.executeNative(new Native("INSERT INTO items DEFAULT VALUES"))).toEqual({
+      result: null,
+      rowsAffected: 2,
+    });
+    expect(await command.executeStatement(new InsertStatement("items", [], "id"))).toEqual({
+      result: 5,
+      rowsAffected: 2,
+    });
+    db.zeroRows = true;
+    expect(await command.executeStatement(new InsertStatement("items", [], "id"))).toEqual({
+      result: null,
+      rowsAffected: 0,
+    });
+    db.zeroRows = false;
     db.rows = [{ id: 1, name: "a" }, { id: 2, name: "b" }];
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);

@@ -6,7 +6,7 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Literal } from "./statements/Literal.ts";
-import { DefaultStatementTextRenderer, Operator, Where } from "./statements/index.ts";
+import { DefaultStatementTextRenderer, InsertStatement, Operator, Where } from "./statements/index.ts";
 import type { Value, Cells } from "./converters/Value.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -19,7 +19,7 @@ import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import { asRelated, StoredEnrichment } from "./StoredEnrichment.ts";
-import { execute, executeReader } from "./ICommand.ts";
+import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
@@ -74,17 +74,6 @@ const distinctColumns = (fields: Field[], column: (property: string) => string):
 };
 
 const isCells = (id: Scalar | Cells): id is Cells => typeof id === "object" && id !== null;
-
-const named = (row: Cells, property: string, sqlColumn: string): Cells => {
-  if (property === sqlColumn || !(sqlColumn in row)) return row;
-  const { [sqlColumn]: cell, ...rest } = row;
-  return { ...rest, [property]: cell };
-};
-
-const identified = (row: Cells, column: string): Cells => {
-  const values = Object.values(row);
-  return column in row || values.length !== 1 ? row : { [column]: values[0] };
-};
 
 const scalarOf = (value: Scalar | object | undefined): Scalar | undefined =>
   value === undefined || value === null || typeof value === "object" ? undefined : value;
@@ -179,7 +168,8 @@ export class CRUDRepository<T = Cells>
     await this.write.persist(this.tree, [item], "create");
     if (this.ids.length !== 1) return item;
     const id = this.idValue(item);
-    return id === undefined ? item : (await this.readSingleById(id)) ?? item;
+    if (!assigned(id ?? null)) return item;
+    return (await this.readSingleById(id!)) ?? item;
   };
 
   private updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
@@ -209,34 +199,26 @@ export class CRUDRepository<T = Cells>
       this.column,
     );
     distinctColumns(fields, this.column);
-    const statement = this.crudStatements.insert(fields);
+    const column = this.ids[0];
+    const needsId = this.ids.length === 1 && column !== undefined && !fields.some((field) => field.name === column);
+    const inserted = this.crudStatements.insert(fields);
+    const statement = needsId
+      ? new InsertStatement(inserted.table, inserted.fields, this.crudStatements.selectInsertedId(column).column)
+      : inserted;
     const response = await execute(this.command(), statement, statement.fields);
-    if (this.ids.length === 1 && !fields.some((field) => field.name === this.ids[0]))
-      await this.copyInsertedId(item, fields);
+    if (needsId) this.writeInsertedId(item, { [column]: response.result });
     return response;
   };
 
-  private copyInsertedId = async (target: T, fields: Field[]): Promise<void> => {
-    void fields;
+  private writeInsertedId = (target: T, row: Cells): void => {
     const column = this.ids[0]!;
-    const statement = this.crudStatements.selectInsertedId(column);
-    const sqlColumn = statement.column;
-    const reader = await executeReader(this.command(), statement);
-    try {
-      if (!(await reader.next())) return;
-      const current = reader.current;
-      if (!current) throw new DatasourceError("Reader current must be a row");
-      const row = identified(named(current, column, sqlColumn), column);
-      const cells = this.rowConverter ? this.rowConverter.convert(row) : row;
-      const converted =
-        this.objectConverter instanceof MetaDataRowTypeConverter
-          ? this.objectConverter.convert(cells, this.type)
-          : this.objectConverter!.convert(cells);
-      const value = scalarOf((converted as Props)[column]);
-      if (value !== undefined) (target as Props)[column] = value;
-    } finally {
-      await reader.dispose();
-    }
+    const cells = this.rowConverter ? this.rowConverter.convert(row) : row;
+    const converted =
+      this.objectConverter instanceof MetaDataRowTypeConverter
+        ? this.objectConverter.convert(cells, this.type)
+        : this.objectConverter!.convert(cells);
+    const value = scalarOf((converted as Props)[column]);
+    if (value !== undefined) (target as Props)[column] = value;
   };
 
   private idValue = (item: T): Scalar | undefined => scalarOf((item as Props)[this.ids[0]!]);

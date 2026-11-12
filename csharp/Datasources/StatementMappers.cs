@@ -52,7 +52,10 @@ public sealed class StatementMappers : IMapper<string, string>
         }),
         InsertStatement { Table: { } table } insert => new InsertStatement(
             entityMappers.Map(table),
-            [.. insert.Fields.Select(field => field with { Name = Column(field.Name) })]),
+            [.. insert.Fields.Select(field => field with { Name = Column(field.Name) })])
+        {
+            Returning = insert.Returning is { } column ? Column(column) : null
+        },
         UpdateStatement { Table: { } table } update => new UpdateStatement(
             entityMappers.Map(table),
             [.. update.Fields.Select(field => field with { Name = Column(field.Name) })],

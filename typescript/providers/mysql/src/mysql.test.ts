@@ -104,6 +104,13 @@ describe("MysqlConnection", () => {
     const { connection, client, command } = await opened("mysql://db/app");
     expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
       .toMatchObject({ rowsAffected: 2, result: null });
+    const id = { name: "id", value: 1 };
+    expect(await command.executeStatement(new InsertStatement("items", [id], "id"), [id]))
+      .toMatchObject({ rowsAffected: 2, result: 5 });
+    client.header = { affectedRows: 0, insertId: 9 };
+    expect(await command.executeStatement(new InsertStatement("items", [id], "id"), [id]))
+      .toMatchObject({ rowsAffected: 0, result: null });
+    client.header = { affectedRows: 2, insertId: 5 };
     expect(await command.executeStatement(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])))
       .toMatchObject({ rowsAffected: 2 });
     expect(client.queries.at(-1)?.sql).toBe(`CREATE TABLE users (
@@ -111,7 +118,7 @@ describe("MysqlConnection", () => {
 )`);
     client.arrayResult = true;
     expect(await (await command.executeReaderNative(new Native("SELECT 1"))).next()).toBe(true);
-    expect(await command.executeNative(new Native("   "))).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
+    expect(await command.executeNative(new Native("   "))).toEqual({ result: null, rowsAffected: 0, parameters: undefined });
     client.arrayResult = true;
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
@@ -130,6 +137,8 @@ describe("MysqlConnection", () => {
     expect(client.queries.map((q) => q.sql)).toEqual([
       "SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')",
       "SET time_zone = '+00:00'",
+      "INSERT INTO items (id) VALUES (:id)",
+      "INSERT INTO items (id) VALUES (:id)",
       "INSERT INTO items (id) VALUES (:id)",
       `CREATE TABLE users (
     id INTEGER
@@ -157,7 +166,7 @@ describe("MysqlConnection", () => {
 
     const { command, client, connection } = await opened("x");
     client.arrayResult = true;
-    expect(await command.executeNative(new Native("SELECT 1"))).toMatchObject({ rowsAffected: 1, result: undefined });
+    expect(await command.executeNative(new Native("SELECT 1"))).toMatchObject({ rowsAffected: 1, result: null });
     client.arrayResult = false;
     client.header = {};
     expect(await command.executeNative(new Native("UPDATE items"))).toMatchObject({ rowsAffected: 0 });
@@ -194,8 +203,8 @@ describe("MysqlCommand", () => {
     const { command, client } = await opened();
     client.arrayResult = true;
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
-      .toEqual({ result: undefined, rowsAffected: 1, parameters: [{ name: "id", value: 1 }] });
-    expect(await command.executeNative(new Native(""))).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
+      .toEqual({ result: null, rowsAffected: 1, parameters: [{ name: "id", value: 1 }] });
+    expect(await command.executeNative(new Native(""))).toEqual({ result: null, rowsAffected: 0, parameters: undefined });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
@@ -208,7 +217,7 @@ describe("MysqlCommand", () => {
       .toEqual({ result: 5, rowsAffected: 1, parameters: [n] });
     client.rows = [];
     expect(await command.executeNative(new Native("SELECT 1"))).toEqual({
-      result: undefined,
+      result: null,
       rowsAffected: 0,
       parameters: undefined,
     });
@@ -243,7 +252,7 @@ describe("MysqlCommand", () => {
     client.rows = [{}];
     expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toMatchObject({ result: null });
     expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", []))).toMatchObject({
-      result: undefined,
+      result: null,
     });
     client.arrayResult = false;
     expect(await (await command.executeReaderNative(new Native("SELECT 1"))).next()).toBe(false);

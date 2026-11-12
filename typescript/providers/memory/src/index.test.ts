@@ -22,7 +22,7 @@ import { MemoryCommand } from "./command.ts";
 import { MemoryConnection } from "./connection.ts";
 import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts";
 import { MemoryDriver } from "./MemoryDriver.ts";
-import { MemoryStore } from "./store.ts";
+import { MemoryEngine } from "./engine.ts";
 
 const envKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] as const;
 
@@ -154,20 +154,20 @@ describe("filter helpers", () => {
   });
 });
 
-describe("MemoryStore", () => {
+describe("MemoryEngine", () => {
   it("seeds arrays and named collections once", () => {
-    const store = new MemoryStore();
-    store.seed([{ id: 1 }], "");
-    store.seed([{ id: 2 }], "");
-    store.seed({ users: [{ id: 3 }], posts: [{ id: 4 }] }, "");
-    store.seed({ users: [{ id: 9 }] }, "");
-    expect(store.getCollection("")).toEqual([{ id: 1 }]);
-    expect(store.getCollection("users")).toEqual([{ id: 3 }]);
-    expect(store.getCollection("missing")).toEqual([]);
-    const snap = store.snapshot();
-    store.getCollection("").push({ id: 8 });
-    store.restore(snap);
-    expect(store.getCollection("")).toEqual([{ id: 1 }]);
+    const engine = new MemoryEngine();
+    engine.seed([{ id: 1 }], "");
+    engine.seed([{ id: 2 }], "");
+    engine.seed({ users: [{ id: 3 }], posts: [{ id: 4 }] }, "");
+    engine.seed({ users: [{ id: 9 }] }, "");
+    expect(engine.getCollection("")).toEqual([{ id: 1 }]);
+    expect(engine.getCollection("users")).toEqual([{ id: 3 }]);
+    expect(engine.getCollection("missing")).toEqual([]);
+    engine.begin();
+    engine.getCollection("").push({ id: 8 });
+    engine.abort();
+    expect(engine.getCollection("")).toEqual([{ id: 1 }]);
   });
 });
 
@@ -180,15 +180,15 @@ describe("MemoryConnection", () => {
     expect(connection.isOpen).toBe(false);
   });
 
-  it("uses a named collection and shared store", async () => {
-    const store = new MemoryStore();
+  it("uses a named collection and shared engine", async () => {
+    const engine = new MemoryEngine();
     const first = new MemoryConnection({
-      store,
+      engine,
       collection: "users",
       data: { users: [{ name: "a" }] },
     });
     await first.open();
-    const second = new MemoryConnection({ store, collection: "users" });
+    const second = new MemoryConnection({ engine, collection: "users" });
     await second.open();
     expect(second.getCollection()).toEqual([{ name: "a" }]);
 
@@ -213,6 +213,9 @@ describe("MemoryConnection", () => {
     await connection.close();
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);
     connection.finishAbort();
+    connection.collection = "users";
+    expect(connection.collection).toBe("users");
+    expect(connection.inTransaction).toBe(false);
   });
 });
 
@@ -280,6 +283,15 @@ describe("MemoryCommand and CRUDRepository", () => {
         { name: "$where", value: 1 },
       ]),
     ).toMatchObject({ rowsAffected: 0 });
+    expect(await command.execute("update", [{ name: "name", value: "only" }])).toMatchObject({
+      rowsAffected: 0,
+    });
+    expect(
+      await command.execute("update", [
+        { name: "id", value: 2 },
+        { name: "name", value: "B2" },
+      ]),
+    ).toMatchObject({ rowsAffected: 1 });
 
     expect(
       await command.execute("delete", [{ name: "id", value: 2 }]),
@@ -381,31 +393,130 @@ describe("Memory datasource", () => {
     const inserted = await command.executeReaderStatement(new SelectInsertedIdStatement("people", "id"));
     expect(await inserted.next()).toBe(true);
     expect(inserted.current).toEqual({ id: 6 });
+    const byId = new Where(new Operator.Equals("id", 1));
     const matched = await command.executeReaderStatement(
       new SelectStatement({
         table: "people",
         fields: ["id"],
-        where: new Where(new Operator.Equals("id", 1)),
+        where: byId,
       }),
+      byId.parameters,
     );
     expect(await matched.next()).toBe(true);
+    const inIds = new Where(new Operator.In("id", [5, 6]));
+    const inMatched = await command.executeReaderStatement(
+      new SelectStatement({
+        table: "people",
+        fields: ["id"],
+        where: inIds,
+      }),
+      inIds.parameters,
+    );
+    expect(await inMatched.next()).toBe(true);
+    const notInIds = new Where(new Operator.NotIn("id", [99]));
+    const notInMatched = await command.executeReaderStatement(
+      new SelectStatement({
+        table: "people",
+        fields: ["id"],
+        where: notInIds,
+      }),
+      notInIds.parameters,
+    );
+    expect(await notInMatched.next()).toBe(true);
+    const andWhere = new Where(
+      new Operator.And(new Operator.Equals("id", 5), new Operator.Equals("name", "nope")),
+    );
+    const andMatched = await command.executeReaderStatement(
+      new SelectStatement({
+        table: "people",
+        fields: ["id"],
+        where: andWhere,
+      }),
+      andWhere.parameters,
+    );
+    expect(await andMatched.next()).toBe(false);
+    const missingIn = new Where(new Operator.In("missing", [1]));
+    expect(
+      await (
+        await command.executeReaderStatement(
+          new SelectStatement({ table: "people", fields: ["id"], where: missingIn }),
+          missingIn.parameters,
+        )
+      ).next(),
+    ).toBe(false);
+    const orWhere = new Where(new Operator.Or(new Operator.Equals("id", 5), new Operator.Equals("id", 6)));
+    const orMatched = await command.executeReaderStatement(
+      new SelectStatement({
+        table: "people",
+        fields: ["id"],
+        where: orWhere,
+      }),
+      orWhere.parameters,
+    );
+    expect(await orMatched.next()).toBe(true);
+    await command.executeStatement(
+      new UpdateStatement("", [{ name: "name", value: "z" }], new Where(new Operator.Equals("id", 1))),
+      [{ name: "name", value: "z" }, ...byId.parameters],
+    );
+    await command.executeStatement(
+      new DeleteStatement("", new Where(new Operator.Equals("id", 99))),
+      new Where(new Operator.Equals("id", 99)).parameters,
+    );
+    await command.executeStatement(new UpdateStatement("", [{ name: "name", value: "bee" }]));
+    await command.executeStatement(new DeleteStatement(""));
+    await command.executeStatement(
+      new UpdateStatement("", [{ name: "name", value: "Z" }], new WhereText('{"id":99}')),
+    );
+    await command.executeStatement(new DeleteStatement("", new WhereText('{"id":99}')));
+    await command.executeStatement(new DeleteStatement("people", new WhereText('{"id":999}')));
+    expect(await (await command.executeReader("SELECT id FROM people WHERE id IS NOT NULL")).next()).toBe(true);
+    expect(await (await command.executeReader("SELECT id FROM people WHERE id = 5")).next()).toBe(true);
+    await command.executeStatement(
+      new UpdateStatement("people", [{ name: "name", value: "Z" }], new WhereText("id = 5")),
+      [{ name: "name", value: "Z" }],
+    );
+    await command.executeStatement(
+      new UpdateStatement("people", [{ name: "name", value: "Z" }], new WhereText("id = 5")),
+      [
+        { name: "id", value: 5 },
+        { name: "name", value: "Z" },
+      ],
+    );
+    await command.executeStatement(
+      new UpdateStatement("people", [
+        { name: "id", value: 5 },
+        { name: "name", value: "Z" },
+      ]),
+      [
+        { name: "id", value: 5 },
+        { name: "name", value: "Z" },
+      ],
+    );
     await command.executeStatement(new InsertStatement("people", [{ name: "id", value: 7 }, { name: "name", value: "bea" }]));
     await command.executeStatement(new UpdateStatement("people", [{ name: "name", value: "bee" }]));
+    const bee = new Where(new Operator.Equals("id", 7));
     await command.executeStatement(
-      new UpdateStatement("people", [{ name: "name", value: "bee" }], new Where(new Operator.Equals("id", 7))),
+      new UpdateStatement("people", [{ name: "name", value: "bee" }], bee),
+      [{ name: "name", value: "bee" }, ...bee.parameters, { name: "skip__where", value: 1 }],
     );
     await command.executeStatement(new DeleteStatement("people"));
     await command.executeStatement(new InsertStatement("", [{ name: "name", value: "x" }]));
-    await command.executeReaderStatement({
-      accept: () => "SELECT id FROM people",
-      table: "people",
-      where: new Where(new Operator.Equals("id", 1)),
-    } as SelectStatement);
-    await command.executeReaderStatement({
-      accept: () => "SELECT id FROM people",
-      table: "",
-      where: new Where(new Operator.Equals("id", 1)),
-    } as SelectStatement);
+    await command.executeReaderStatement(
+      {
+        accept: () => "SELECT id FROM people",
+        table: "people",
+        where: byId,
+      } as SelectStatement,
+      byId.parameters,
+    );
+    await command.executeReaderStatement(
+      {
+        accept: () => "SELECT id FROM people",
+        table: "",
+        where: byId,
+      } as SelectStatement,
+      byId.parameters,
+    );
     class OpenWhere extends Where {
       override get parameters() {
         return undefined as unknown as Where["parameters"];
@@ -414,23 +525,28 @@ describe("Memory datasource", () => {
     await command.executeStatement(
       new UpdateStatement("people", [{ name: "name", value: "bee" }], new OpenWhere(new Operator.Equals("id", 1))),
     );
+    await command.executeReader(JSON.stringify({ __inserted: "people" }));
+    await command.executeReader(JSON.stringify({ __table: "people" }));
     const missingId = await command.executeReaderStatement(new SelectInsertedIdStatement("other", "id"));
     expect(await missingId.next()).toBe(false);
     await command.executeReaderStatement(
       new SelectStatement({
         table: "missing",
         fields: ["id"],
-        where: new Where(new Operator.Equals("id", 1)),
+        where: byId,
       }),
+      byId.parameters,
     );
-    await command.executeReaderStatement({
-      accept: () => "nope",
-      where: { accept: () => "id = 1" },
-    } as SelectStatement);
+    await expect(
+      command.executeReaderStatement({
+        accept: () => "nope",
+        where: { accept: () => "id = 1" },
+      } as SelectStatement),
+    ).rejects.toThrow("Unsupported Memory");
     await command.executeReaderStatement({
       accept: () => '{"id":1}',
     } as SelectStatement);
-    await command.executeReaderStatement(new InsertStatement("t", []));
+    expect(await (await command.executeReaderStatement(new InsertStatement("t", []))).next()).toBe(false);
     await command.executeStatement(
       new UpdateStatement("t", [{ name: "name", value: "Z" }], new WhereText('{"id":99}')),
     );

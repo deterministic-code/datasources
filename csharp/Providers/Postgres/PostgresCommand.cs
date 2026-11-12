@@ -47,6 +47,7 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
             ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
                 ExecuteProcedure(name, parameters),
+            InsertStatement { Returning: not null } insert => FirstCell(insert, parameters),
             _ => Execute(new Native(statements.Render(statement)), parameters)
         };
 

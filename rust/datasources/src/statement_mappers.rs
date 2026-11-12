@@ -134,7 +134,11 @@ impl StatementMappers {
                 direction: field.direction,
             })
             .collect();
-        InsertStatement::new(self.entity(insert.table()), &fields)
+        let mut statement = InsertStatement::new(self.entity(insert.table()), &fields);
+        if let Some(column) = insert.returning_column() {
+            statement = statement.returning(self.column(column));
+        }
+        statement
     }
 
     pub fn apply_update(
