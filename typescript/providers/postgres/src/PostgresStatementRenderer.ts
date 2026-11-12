@@ -18,6 +18,7 @@ import {
   DropTriggerStatement,
   ForeignKeyStatement,
   IdentityInsertStatement,
+  type InsertStatement,
   type ProcedureSource,
   SelectInsertedIdStatement,
   sqlProcedureStatementsOf,
@@ -56,6 +57,11 @@ export class PostgresStatementRenderer extends StatementRenderer {
 
   override procedures(source: ProcedureSource) {
     return sqlProcedureStatementsOf(source);
+  }
+
+  protected override visitInsert(statement: InsertStatement): string {
+    const sql = super.visitInsert(statement);
+    return statement.returning ? `${sql} RETURNING ${statement.returning}` : sql;
   }
 
   protected override visitSelectInsertedId(inserted: SelectInsertedIdStatement): string {

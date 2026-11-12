@@ -38,6 +38,9 @@ describe("PostgresStatementRenderer", () => {
     expect(renderer.render(new SelectInsertedIdStatement("users", "id"))).toBe(
       "SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(\"id\") FROM users), 1)) AS id",
     );
+    expect(renderer.render(new InsertStatement("users", [{ name: "name", value: "ada" }], "id"))).toBe(
+      "INSERT INTO users (name) VALUES ($name) RETURNING id",
+    );
 
     const create = new CreateTableStatement(
       "orders",

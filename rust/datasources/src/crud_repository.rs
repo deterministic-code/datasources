@@ -422,35 +422,30 @@ impl<T: Entity> CRUDRepository<T> {
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
         let record = self.readonly.reverse_convert(stored)?;
         let fields = self.insert_params(&record)?;
-        let statement = self.crud_statements.insert(&fields);
+        let needs_id = self.ids.len() == 1 && !fields.iter().any(|field| field.name == self.ids[0]);
+        let statement = if needs_id {
+            let column = self.crud_statements.select_inserted_id(&self.ids[0]).column;
+            self.crud_statements.insert(&fields).returning(column)
+        } else {
+            self.crud_statements.insert(&fields)
+        };
         let response = self
             .readonly
             .command()
             .execute_statement(&statement, Some(statement.fields()))
             .await?;
-        if self.ids.len() == 1 && !fields.iter().any(|field| field.name == self.ids[0]) {
-            self.copy_inserted_id(target, statement.fields()).await?;
+        if needs_id {
+            let column = self.ids[0].clone();
+            let row = [(column.clone(), response.result.clone())]
+                .into_iter()
+                .collect();
+            self.write_inserted_id(target, row)?;
         }
         Ok(response)
     }
 
-    async fn copy_inserted_id(&self, item: &mut Row, fields: &[Parameter]) -> Result<()> {
-        let _ = fields;
+    fn write_inserted_id(&self, item: &mut Row, row: Row) -> Result<()> {
         let column = self.ids[0].clone();
-        let inserted = self.crud_statements.select_inserted_id(&column);
-        let sql_column = inserted.column.clone();
-        let reader = self
-            .readonly
-            .command()
-            .execute_reader_statement(&inserted, None)
-            .await?;
-        if !reader.next().await? {
-            return Ok(());
-        }
-        let current = reader
-            .current()
-            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
-        let row = identified(named(current, &column, &sql_column), &column);
         let cells = match &self.readonly.row_converter {
             Some(converter) => converter.convert(&row)?,
             None => row,
@@ -749,26 +744,6 @@ fn copy_cells<T: Entity>(from: &Row, into: &mut T, names: &[String]) -> Result<(
         }
     }
     Ok(())
-}
-
-fn named(mut row: Row, property: &str, sql_column: &str) -> Row {
-    if property == sql_column {
-        return row;
-    }
-    if let Some(cell) = row.remove(sql_column) {
-        row.insert(property.to_string(), cell);
-    }
-    row
-}
-
-fn identified(row: Row, column: &str) -> Row {
-    if row.contains_key(column) || row.len() != 1 {
-        return row;
-    }
-    let value = row.into_values().next().unwrap_or(Value::Null);
-    let mut named = Row::new();
-    named.insert(column.to_string(), value);
-    named
 }
 
 fn listed(list: &Option<Vec<String>>, key: &str, fallback: bool) -> bool {

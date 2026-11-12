@@ -11,6 +11,6 @@ internal sealed class SqliteTransaction : ITransaction
     public IConnection Connection { get; }
     public IsolationLevel Isolation { get; }
     SqliteConnection Typed => (SqliteConnection)Connection;
-    public Task Commit() => Typed.Transactions.Commit();
-    public Task Abort() => Typed.Transactions.Rollback();
+    public Task Commit() => Typed.Exec("COMMIT");
+    public Task Abort() => Typed.Exec("ROLLBACK");
 }

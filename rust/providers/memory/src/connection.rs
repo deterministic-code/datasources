@@ -1,20 +1,16 @@
 use crate::command::MemoryCommand;
-use crate::store::{MemoryData, MemoryStore};
+use crate::engine::{MemoryData, MemoryEngine};
 use crate::transaction::MemoryTransaction;
 use async_trait::async_trait;
 use datasources::{
-    Command, Connection, DatasourceError, IsolationLevel, Result, Row, Transaction, Value,
+    Command, Connection, DatasourceError, IsolationLevel, Result, Row, Transaction,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 pub(crate) struct MemoryState {
-    pub(crate) store: Arc<MemoryStore>,
-    pub(crate) collection: Mutex<String>,
+    pub(crate) engine: Arc<MemoryEngine>,
     pub(crate) opened: Mutex<bool>,
-    pub(crate) in_transaction: Mutex<bool>,
-    pub(crate) snapshot: Mutex<Option<HashMap<String, Vec<Row>>>>,
-    pub(crate) inserted: Mutex<HashMap<String, Value>>,
     pub(crate) data: Option<MemoryData>,
 }
 
@@ -24,33 +20,28 @@ pub struct MemoryConnection {
 
 impl MemoryConnection {
     pub fn new(
-        store: Arc<MemoryStore>,
         collection: impl Into<String>,
         data: Option<MemoryData>,
     ) -> Self {
+        Self::from_engine(Arc::new(MemoryEngine::new(collection)), data)
+    }
+
+    pub fn from_engine(engine: Arc<MemoryEngine>, data: Option<MemoryData>) -> Self {
         Self {
             state: Arc::new(MemoryState {
-                store,
-                collection: Mutex::new(collection.into()),
+                engine,
                 opened: Mutex::new(false),
-                in_transaction: Mutex::new(false),
-                snapshot: Mutex::new(None),
-                inserted: Mutex::new(HashMap::new()),
                 data,
             }),
         }
     }
 
     pub fn from_options(_: Option<&HashMap<String, String>>) -> Arc<dyn Connection> {
-        Arc::new(MemoryConnection::new(
-            Arc::new(MemoryStore::new()),
-            "",
-            None,
-        ))
+        Arc::new(MemoryConnection::new("", None))
     }
 
     pub fn collection_name(&self) -> String {
-        self.state.collection.lock().unwrap().clone()
+        self.state.engine.collection_name()
     }
 
     pub fn ensure_open(&self) -> Result<()> {
@@ -61,58 +52,22 @@ impl MemoryConnection {
     }
 
     pub fn collection<R>(&self, f: impl FnOnce(&mut Vec<Row>) -> R) -> R {
-        self.state.store.collection(&self.collection_name(), f)
-    }
-
-    pub fn with_rows<R>(
-        &self,
-        table: Option<&str>,
-        create: bool,
-        f: impl FnOnce(&mut Vec<Row>) -> R,
-    ) -> R {
-        let named = table.filter(|name| !name.is_empty());
-        let key = match named {
-            Some(name) if create || self.state.store.has_collection(name) => name.to_string(),
-            _ => self.collection_name(),
-        };
-        self.state.store.collection(&key, f)
+        self.state.engine.collection(&self.collection_name(), f)
     }
 
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn finish_commit(&self) {
-        *self.state.in_transaction.lock().unwrap() = false;
-        *self.state.snapshot.lock().unwrap() = None;
+        self.state.engine.commit();
     }
 
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn finish_abort(&self) {
-        if let Some(snapshot) = self.state.snapshot.lock().unwrap().take() {
-            self.state.store.restore(snapshot);
-        }
-        *self.state.in_transaction.lock().unwrap() = false;
+        self.state.engine.abort();
     }
 
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn in_transaction(&self) -> bool {
-        *self.state.in_transaction.lock().unwrap()
-    }
-
-    pub(crate) fn remember_inserted(&self, table: &str, id: Value) {
-        self.state
-            .inserted
-            .lock()
-            .expect("inserted")
-            .insert(table.to_string(), id);
-    }
-
-    pub(crate) fn inserted(&self, table: &str) -> Value {
-        self.state
-            .inserted
-            .lock()
-            .expect("inserted")
-            .get(table)
-            .cloned()
-            .unwrap_or(Value::Null)
+        self.state.engine.in_transaction()
     }
 }
 
@@ -141,7 +96,7 @@ impl Connection for MemoryConnection {
             return Err(DatasourceError::message("Connection is already open"));
         }
         if let Some(data) = &self.state.data {
-            self.state.store.seed(data, &self.collection_name());
+            self.state.engine.seed(data, &self.collection_name());
         }
         self.collection(|_| {});
         *self.state.opened.lock().unwrap() = true;
@@ -158,8 +113,7 @@ impl Connection for MemoryConnection {
         isolation: Option<IsolationLevel>,
     ) -> Result<Arc<dyn Transaction>> {
         self.ensure_open()?;
-        *self.state.snapshot.lock().unwrap() = Some(self.state.store.snapshot());
-        *self.state.in_transaction.lock().unwrap() = true;
+        self.state.engine.begin();
         Ok(Arc::new(MemoryTransaction {
             state: self.state.clone(),
             isolation: isolation.unwrap_or(IsolationLevel::ReadCommitted),

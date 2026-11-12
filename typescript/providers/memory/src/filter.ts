@@ -1,4 +1,4 @@
-import type { MemoryRecord } from "./store.ts";
+import type { MemoryRecord } from "./engine.ts";
 
 export function parseFilter(text?: string | null): MemoryRecord {
   if (text === undefined || text === null || text.trim() === "") {

@@ -102,6 +102,10 @@ fn maps_writes() {
         "INSERT INTO people (full_name) VALUES ($full_name)"
     );
     assert_eq!(insert.fields()[0].value, Value::Text("Ada".into()));
+    let returning = names.apply_insert(
+        &InsertStatement::new("User", &[Parameter::new("Name", "Ada")]).returning("id"),
+    );
+    assert_eq!(returning.returning_column(), Some("user_id"));
 
     let where_clause = Where::new(Operator::equals("Name", "Bea"));
     let update = names

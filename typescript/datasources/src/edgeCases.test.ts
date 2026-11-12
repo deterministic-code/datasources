@@ -182,8 +182,10 @@ describe("statement and repository edges", () => {
     const writer = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
     const host = new CRUDRepository<Item>(connection, { type: Item, entity: "parents" });
     host.addEnriched({ destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, writer);
+    command.response = { result: null, rowsAffected: 1 };
     const objectId = Object.assign(new Item(), { id: { nested: true } as unknown as number, name: "a" });
     expect(await host.create(objectId)).toBe(objectId);
+    command.response = { result: 9, rowsAffected: 1 };
     const numeric = Object.assign(new Item(), { name: "b" });
     expect(await host.create(numeric)).toBe(numeric);
     const wide = new CRUDRepository<Item>(connection, {
@@ -194,13 +196,33 @@ describe("statement and repository edges", () => {
     wide.addEnriched({ destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, writer);
     expect(await wide.create(new Item())).toBeInstanceOf(Item);
 
+    command.response = { result: 9, rowsAffected: 1 };
     command.reader = new MockReader([undefined as unknown as Cells]);
     await expect(host.create(new Item())).rejects.toThrow("Reader current must be a row");
+    command.response = { result: 9, rowsAffected: 1 };
+    command.reader = new MockReader([{ id: 9, name: "reloaded" }]);
+    const loaded = Object.assign(new Item(), { name: "c" });
+    const reloaded = await host.create(loaded);
+    expect(reloaded).not.toBe(loaded);
+    expect(reloaded.id).toBe(9);
+    expect(reloaded.name).toBe("reloaded");
+    command.reader = new MockReader([]);
+    const missed = Object.assign(new Item(), { name: "c" });
+    expect(await host.create(missed)).toBe(missed);
+    expect(missed.id).toBe(9);
+    command.response = { result: null, rowsAffected: 1 };
+    command.reader = new MockReader([{ id: null }]);
+    const kept = Object.assign(new Item(), { name: "d" });
+    expect(await host.create(kept)).toBe(kept);
+    expect(kept.id).toBe(0);
+    const noId = { name: "e" } as Item;
+    expect(await host.create(noId)).toBe(noId);
 
     const plainSide = mock([{ id: 9 }]);
     const plainRepo = new CRUDRepository<Item>(plainSide.connection, { type: Item, entity: "items" });
     expect((await plainRepo.create(Object.assign(new Item(), { name: "a" }))).id).toBe(9);
     const convertedSide = mock([{ generated: 4 }]);
+    convertedSide.command.response = { result: 4, rowsAffected: 1 };
     const convertedRepo = new CRUDRepository<Item>(convertedSide.connection, {
       type: Item,
       entity: "items",

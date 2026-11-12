@@ -14,6 +14,9 @@ public class PostgresStatementRendererTests
         Assert.Equal(
             "SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(\"id\") FROM users), 1)) AS id",
             Renderer.Render(new SelectInsertedIdStatement("users", "id")));
+        Assert.Equal(
+            "INSERT INTO users (name) VALUES ($name) RETURNING id",
+            Renderer.Render(new InsertStatement("users", [new Parameter("name", "ada")]) { Returning = "id" }));
 
         var create = new CreateTableStatement(
             "orders",

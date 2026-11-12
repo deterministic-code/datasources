@@ -1,8 +1,9 @@
 mod command;
 mod connection;
 mod driver;
+mod engine;
 mod filter;
-mod store;
+mod statement_renderer;
 mod transaction;
 
 pub use driver::MemoryDriver;
@@ -19,7 +20,7 @@ mod tests {
     use crate::command::MemoryCommand;
     use crate::connection::MemoryConnection;
     use crate::filter::{json_to_value, matches, parse_filter};
-    use crate::store::{MemoryData, MemoryStore};
+    use crate::engine::{MemoryData, MemoryEngine};
     use futures_util::TryStreamExt;
     use datasources::{
         Row, create, default, register, reset, CRUDRepository, CRUDRepositoryOptions,
@@ -146,23 +147,22 @@ mod tests {
     #[tokio::test]
     async fn memory_crud_and_transactions() {
         let _guard = super::env_lock();
-        let store = Arc::new(MemoryStore::new());
-        store.seed(&MemoryData::Rows(vec![rec(1, "a")]), "");
-        store.seed(&MemoryData::Rows(vec![rec(2, "b")]), "");
+        let engine = Arc::new(MemoryEngine::new(""));
+        engine.seed(&MemoryData::Rows(vec![rec(1, "a")]), "");
+        engine.seed(&MemoryData::Rows(vec![rec(2, "b")]), "");
         let mut named = HashMap::new();
         named.insert("users".into(), vec![rec(3, "c")]);
         named.insert("posts".into(), vec![rec(4, "d")]);
-        store.seed(&MemoryData::Collections(named.clone()), "");
-        store.seed(&MemoryData::Collections(named), "");
-        assert_eq!(store.collection("", |items| items.len()), 1);
+        engine.seed(&MemoryData::Collections(named.clone()), "");
+        engine.seed(&MemoryData::Collections(named), "");
+        assert_eq!(engine.collection("", |items| items.len()), 1);
         assert_eq!(
-            store.collection("users", |items| items[0]["id"].clone()),
+            engine.collection("users", |items| items[0]["id"].clone()),
             Value::Int(3)
         );
 
-        let conn = Arc::new(MemoryConnection::new(
-            store.clone(),
-            "",
+        let conn = Arc::new(MemoryConnection::from_engine(
+            engine.clone(),
             Some(MemoryData::Rows(vec![rec(8, "x")])),
         ));
         conn.open().await.unwrap();
@@ -258,7 +258,6 @@ mod tests {
         assert!(conn.ensure_open().is_err());
 
         let named_conn = Arc::new(MemoryConnection::new(
-            Arc::new(MemoryStore::new()),
             "users",
             Some(MemoryData::Collections({
                 let mut map = HashMap::new();
@@ -317,11 +316,7 @@ mod tests {
         }
         json_to_value(&JsonValue::Number(serde_json::Number::from(u64::MAX)));
 
-        let closed = Arc::new(MemoryConnection::new(
-            Arc::new(MemoryStore::new()),
-            "",
-            None,
-        ));
+        let closed = Arc::new(MemoryConnection::new("", None));
         assert!(MemoryCommand::new(closed.clone())
             .execute_reader("", None)
             .await
@@ -337,17 +332,13 @@ mod tests {
         assert!(closed.is_open());
         assert_eq!(created.get("id"), Some(&Value::Int(1)));
         assert!(
-            MemoryConnection::new(Arc::new(MemoryStore::new()), "", None)
+            MemoryConnection::new("", None)
                 .start_transaction(None)
                 .await
                 .is_err()
         );
 
-        let empty = Arc::new(MemoryConnection::new(
-            Arc::new(MemoryStore::new()),
-            "",
-            None,
-        ));
+        let empty = Arc::new(MemoryConnection::new("", None));
         empty.open().await.unwrap();
         empty.finish_commit();
         empty.finish_abort();

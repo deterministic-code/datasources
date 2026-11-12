@@ -85,6 +85,11 @@ describe("StatementMappers", () => {
     const insert = mappings.apply(new InsertStatement("User", [{ name: "Name", value: "Ada" }]), mapper) as InsertStatement;
     expect(DefaultStatementTextRenderer.instance.render(insert)).toBe("INSERT INTO people (full_name) VALUES ($full_name)");
     expect(insert.fields[0]?.value).toBe("Ada");
+    const returning = mappings.apply(
+      new InsertStatement("User", [{ name: "Name", value: "Ada" }], "id"),
+      mapper,
+    ) as InsertStatement;
+    expect(returning.returning).toBe("user_id");
 
     const update = mappings.apply(
       new UpdateStatement("User", [{ name: "Name", value: "Ada" }], new Where(new Operator.Equals("Name", "Bea"))),

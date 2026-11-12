@@ -1802,12 +1802,7 @@ async fn table_repository() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let include_id = users_options();
     let repo = CRUDRepository::<Row>::new(connection, include_id).unwrap();
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
-    command
-        .reader_rows
-        .lock()
-        .unwrap()
-        .push(record(&[("id", Value::Int(9))]));
+    *command.response.lock().unwrap() = Response::new(Value::Int(9), 1, None);
     let created = repo.create(obj.clone()).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
@@ -1826,6 +1821,48 @@ async fn table_repository() {
         command.execute_logs.lock().unwrap()[2].0,
         "DELETE FROM users WHERE id = $id"
     );
+}
+
+#[tokio::test]
+async fn create_uses_insert_result_id() {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let repo = CRUDRepository::<Row>::new(connection, users_options()).unwrap();
+    *command.response.lock().unwrap() = Response::new(Value::Int(9), 1, None);
+    let created = repo
+        .create(record(&[("id", Value::Int(0)), ("name", Value::from("a"))]))
+        .await
+        .unwrap();
+    assert_eq!(created["id"], Value::Int(9));
+    assert!(command.reader_logs.lock().unwrap().is_empty());
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO users (name) VALUES ($name)"
+    );
+}
+
+#[tokio::test]
+async fn copies_inserted_id_from_mapped_sql_column() {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = users_options();
+    options.property_mappings = Some(std::sync::Arc::new(TransformMapper::new(
+        |name: String| match name.as_str() {
+            "id" => "user_id".into(),
+            _ => name,
+        },
+        |name: String| match name.as_str() {
+            "user_id" => "id".into(),
+            _ => name,
+        },
+    )));
+    let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
+    *command.response.lock().unwrap() = Response::new(Value::Int(11), 1, None);
+    let created = repo
+        .create(record(&[("id", Value::Int(0)), ("name", Value::from("a"))]))
+        .await
+        .unwrap();
+    assert_eq!(created["id"], Value::Int(11));
 }
 
 #[tokio::test]
@@ -2321,12 +2358,7 @@ async fn create_omits_null_datetime_and_version_and_update_writes_them() {
     options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
-    command
-        .reader_rows
-        .lock()
-        .unwrap()
-        .push(record(&[("id", Value::Int(7))]));
+    *command.response.lock().unwrap() = Response::new(Value::Int(7), 1, None);
     let created_ada = repo
         .create(record(&[
             ("id", Value::Int(0)),
@@ -2450,12 +2482,7 @@ impl TypeConverter<Value, Value> for MysqlStamp {
 #[tokio::test]
 async fn typed_create_keeps_datetime_when_write_row_is_mysql_text() {
     let command = Arc::new(MockCommand::new());
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
-    command
-        .reader_rows
-        .lock()
-        .unwrap()
-        .push(record(&[("id", Value::Int(9))]));
+    *command.response.lock().unwrap() = Response::new(Value::Int(9), 1, None);
     let connection = MockConnection::with_command_provider(command, "memory");
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "stamps".into();

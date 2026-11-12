@@ -1,0 +1,10 @@
+---
+description: Stop instead of guessing the SQL verb from command text
+alwaysApply: true
+---
+
+# Halt on SQL verb sniffing
+
+Do not inspect command text for the statement kind (`StartsWith("INSERT")`, `/^\s*insert/i`, `eq_ignore_ascii_case("INSERT")`, `Contains("RETURNING")` on the SQL string).
+
+Dispatch on the statement (`InsertStatement`, `Returning`, `SelectInsertedIdStatement`). Native string execute does not invent a verb.

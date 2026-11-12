@@ -4,7 +4,7 @@ use crate::statement_renderer::SqliteStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, ReturnStatement, split_statements,
+    DatasourceError, FirstResultReader, InsertStatement, Native, Parameter, Reader, Response, Result, ReturnStatement, split_statements,
     statement_parameters, Statement,
     StatementKind, StatementTextRenderer, Value,
 };
@@ -61,9 +61,38 @@ impl SqliteCommand {
                 .execute(rusqlite::params_from_iter(values.iter()))
                 .map_err(map_err)? as i64
         };
+        drop(statement);
         Ok(SqliteExecuteResult {
             rows_affected,
-            result: Value::Null,
+            result: Value::Int(conn.last_insert_rowid()),
+        })
+    }
+
+    fn execute_parts(
+        connection: &SqliteConnection,
+        sql: &str,
+        map: &HashMap<String, Value>,
+    ) -> Result<SqliteExecuteResult> {
+        let mut rows_affected = 0;
+        let mut result = Value::Null;
+        for part in split_statements(sql) {
+            let names = statement_parameters(&part);
+            let used = map
+                .iter()
+                .filter(|(name, _)| {
+                    names.iter().any(|found| found == name.trim_start_matches(['$', '@', ':']))
+                })
+                .map(|(name, value)| (name.clone(), value.clone()))
+                .collect();
+            let executed = SqliteCommand::execute_sql(connection, &part, &used)?;
+            rows_affected += executed.rows_affected;
+            if executed.rows_affected > 0 {
+                result = executed.result;
+            }
+        }
+        Ok(SqliteExecuteResult {
+            rows_affected,
+            result,
         })
     }
 }
@@ -136,27 +165,11 @@ impl Command for SqliteCommand {
                     }
                     connection.ensure_open()?;
                     let map = parameters_to_map(params.as_deref());
-                    let mut rows_affected = 0;
-                    let mut result = Value::Null;
-                    for part in split_statements(&sql) {
-                        let names = statement_parameters(&part);
-                        let used = map
-                            .iter()
-                            .filter(|(name, _)| {
-                                names.iter().any(|found| {
-                                    found == name.trim_start_matches(['$', '@', ':'])
-                                })
-                            })
-                            .map(|(name, value)| (name.clone(), value.clone()))
-                            .collect();
-                        let executed = SqliteCommand::execute_sql(&connection, &part, &used)?;
-                        rows_affected += executed.rows_affected;
-                        result = executed.result;
-                    }
+                    let executed = SqliteCommand::execute_parts(&connection, &sql, &map)?;
                     Ok((
                         Response::new(
-                            result,
-                            rows_affected,
+                            Value::Null,
+                            executed.rows_affected,
                             params.map(|list| list.to_vec()),
                         ),
                         vec![],
@@ -208,12 +221,54 @@ impl Command for SqliteCommand {
         if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
             return self.first_cell(statement, parameters).await;
         }
+        if let Some(insert) = statement.as_any().downcast_ref::<InsertStatement>() {
+            if insert.returning_column().is_some() {
+                return self.inserted(statement, parameters).await;
+            }
+        }
         let text = self.statements.render(statement);
         self.execute_native(&Native::new(text), parameters).await
     }
 }
 
 impl SqliteCommand {
+    async fn inserted(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let text = self.statements.render(statement);
+        let connection = self.connection.clone();
+        self.host
+            .run(&text, parameters, move |sql, params| {
+                let connection = connection.clone();
+                async move {
+                    if sql.trim().is_empty() {
+                        return Ok((
+                            Response::new(Value::Null, 0, params.map(|list| list.to_vec())),
+                            vec![],
+                        ));
+                    }
+                    connection.ensure_open()?;
+                    let map = parameters_to_map(params.as_deref());
+                    let executed = SqliteCommand::execute_parts(&connection, &sql, &map)?;
+                    Ok((
+                        Response::new(
+                            if executed.rows_affected <= 0 {
+                                Value::Null
+                            } else {
+                                executed.result
+                            },
+                            executed.rows_affected,
+                            params.map(|list| list.to_vec()),
+                        ),
+                        vec![],
+                    ))
+                }
+            })
+            .await
+    }
+
     async fn first_cell(
         &self,
         statement: &dyn Statement,

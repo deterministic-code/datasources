@@ -2,13 +2,11 @@ use crate::connection_string;
 use crate::sqlite_path::ResolvedSqliteOptions;
 use datasources::{DatasourceError, Result};
 use rusqlite::Connection as SqliteDb;
-use std::sync::{Condvar, Mutex};
+use std::sync::Mutex;
 use std::time::Duration;
 
 struct Live {
     in_use: u32,
-    max_in_use: u32,
-    overlap_at: Option<u32>,
 }
 
 pub(crate) struct SqlitePool {
@@ -18,7 +16,6 @@ pub(crate) struct SqlitePool {
     opened: Mutex<u32>,
     closed: Mutex<bool>,
     live: Mutex<Live>,
-    overlap: Condvar,
 }
 
 pub(crate) struct PooledConnection<'a> {
@@ -34,43 +31,17 @@ impl SqlitePool {
             idle: Mutex::new(Vec::new()),
             opened: Mutex::new(0),
             closed: Mutex::new(false),
-            live: Mutex::new(Live {
-                in_use: 0,
-                max_in_use: 0,
-                overlap_at: None,
-            }),
-            overlap: Condvar::new(),
+            live: Mutex::new(Live { in_use: 0 }),
         }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn require_concurrent_checkouts(&self, n: u32) {
-        self.live.lock().expect("sqlite").overlap_at = Some(n);
-    }
-
-    #[cfg(test)]
-    pub(crate) fn max_in_use(&self) -> u32 {
-        self.live.lock().expect("sqlite").max_in_use
     }
 
     fn acquired(&self) {
-        let mut live = self.live.lock().expect("sqlite");
-        live.in_use += 1;
-        if live.in_use > live.max_in_use {
-            live.max_in_use = live.in_use;
-        }
-        if let Some(need) = live.overlap_at {
-            while live.in_use < need {
-                live = self.overlap.wait(live).expect("sqlite");
-            }
-            self.overlap.notify_all();
-        }
+        self.live.lock().expect("sqlite").in_use += 1;
     }
 
     fn released(&self) {
         let mut live = self.live.lock().expect("sqlite");
         live.in_use = live.in_use.saturating_sub(1);
-        self.overlap.notify_all();
     }
 
     pub(crate) fn close(&self) {

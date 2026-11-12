@@ -5,6 +5,7 @@ use crate::parameter::Parameter;
 pub struct InsertStatement {
     table: String,
     fields: Vec<Parameter>,
+    returning: Option<String>,
 }
 
 impl InsertStatement {
@@ -12,7 +13,13 @@ impl InsertStatement {
         Self {
             table: table.as_ref().to_string(),
             fields: fields.to_vec(),
+            returning: None,
         }
+    }
+
+    pub fn returning(mut self, column: impl Into<String>) -> Self {
+        self.returning = Some(column.into());
+        self
     }
 
     pub fn table(&self) -> &str {
@@ -21,6 +28,10 @@ impl InsertStatement {
 
     pub fn fields(&self) -> &[Parameter] {
         &self.fields
+    }
+
+    pub fn returning_column(&self) -> Option<&str> {
+        self.returning.as_deref()
     }
 }
 

@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
     parameters_to_map, split_statements, statement_parameters, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, ParameterDirection, Reader, Response,
+    CommandMiddlewareHost, DatasourceError, FirstResultReader, InsertStatement, Native, Parameter, ParameterDirection, Reader, Response,
     Result, ReturnStatement, Statement, StatementKind, StatementTextRenderer, Value,
 };
 use rust_decimal::Decimal;
@@ -209,7 +209,9 @@ impl Command for PostgresCommand {
                         let executed =
                             PostgresCommand::execute_sql(&connection, &part, &used).await?;
                         rows_affected += executed.rows_affected;
-                        result = executed.result;
+                        if executed.result != Value::Null {
+                            result = executed.result;
+                        }
                     }
                     Ok((
                         Response::new(
@@ -240,6 +242,11 @@ impl Command for PostgresCommand {
     ) -> Result<Response> {
         if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
             return self.first_cell(statement, parameters).await;
+        }
+        if let Some(insert) = statement.as_any().downcast_ref::<InsertStatement>() {
+            if insert.returning_column().is_some() {
+                return self.first_cell(statement, parameters).await;
+            }
         }
         let text = self.statements.render(statement);
         self.execute_native(&Native::new(text), parameters).await

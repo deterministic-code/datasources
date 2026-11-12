@@ -4,6 +4,7 @@ import {
   FirstResultReader,
   DatasourceError,
   ExecuteStoredProcedureStatement,
+  InsertStatement,
   Native,
   ParameterDirection,
   ReturnStatement,
@@ -72,7 +73,33 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       return this.firstCell(statement, parameters);
     if (statement instanceof ExecuteStoredProcedureStatement && statement.name && outputs(parameters).length)
       return this.executeProcedure(this.statements.render(statement), parameters);
+    if (statement instanceof InsertStatement && statement.returning)
+      return this.inserted(statement, parameters);
     return this.executeNative(new Native(this.statements.render(statement)), parameters);
+  }
+
+  private async inserted(insert: InsertStatement, parameters?: Parameter[]): Promise<Response> {
+    return this.run(this.statements.render(insert), parameters, async (query, params) => {
+      this.connection.ensureOpen();
+      const named = bindParameters(params);
+      let rowsAffected = 0;
+      let parameters = params;
+      let result: MysqlExecuteResult["result"] = null;
+      for (const part of splitStatements(query)) {
+        const names = new Set(statementParameters(part));
+        const used = Object.fromEntries(
+          Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
+        );
+        const executed = await this.runSql(part, used, params);
+        rowsAffected += executed.rowsAffected;
+        parameters = executed.parameters ?? params;
+        result = executed.result;
+      }
+      const response = rowsAffected <= 0
+        ? new Response(null, rowsAffected, parameters)
+        : new Response(result ?? null, rowsAffected, parameters);
+      return { value: response, rows: [] };
+    });
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
@@ -96,7 +123,6 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       const named = bindParameters(params);
       let rowsAffected = 0;
       let parameters = params;
-      let result: MysqlExecuteResult["result"];
       for (const part of splitStatements(query)) {
         const names = new Set(statementParameters(part));
         const used = Object.fromEntries(
@@ -105,10 +131,9 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
         const executed = await this.runSql(part, used, params);
         rowsAffected += executed.rowsAffected;
         parameters = executed.parameters ?? params;
-        result = executed.result;
       }
       return {
-        value: new Response(result ?? null, rowsAffected, parameters),
+        value: new Response(null, rowsAffected, parameters),
         rows: [],
       };
     });
@@ -155,9 +180,13 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     parameters?: Parameter[],
   ): Promise<MysqlExecuteResult> {
     const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), params);
-    return Array.isArray(result)
-      ? { rowsAffected: result.length, parameters }
-      : { rowsAffected: result.affectedRows ?? 0, result: null, parameters };
+    if (Array.isArray(result)) return { rowsAffected: result.length, parameters };
+    const id = Number(result.insertId ?? 0);
+    return {
+      rowsAffected: result.affectedRows ?? 0,
+      result: insertedId(id),
+      parameters,
+    };
   }
 
   private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
@@ -170,6 +199,9 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     return result.filter((item): item is Cells[] => Array.isArray(item));
   }
 }
+
+const insertedId = (id: Scalar | undefined): Scalar =>
+  id === undefined || id === null || id === 0 || id === 0n ? null : id;
 
 const cellValue = (cell: Scalar | object | undefined): Scalar => {
   if (cell === null || cell === undefined) return null;

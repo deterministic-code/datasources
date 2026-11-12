@@ -64,6 +64,21 @@ public class SqliteTests
     }
 
     [Fact]
+    public async Task InsertStatementReturningUsesLastInsertRowId()
+    {
+        var conn = new SqliteConnection();
+        await conn.Open();
+        var command = new SqliteCommand(conn);
+        await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+        var native = await command.Execute(Native.N("INSERT INTO items (name) VALUES ('ada')"));
+        Assert.Equal(Value.Null.Instance, native.Result);
+        var fields = new Parameter[] { new("name", "bea") };
+        var inserted = await command.Execute(new InsertStatement("items", fields) { Returning = "id" }, fields);
+        Assert.Equal(new Value.Int(2), inserted.Result);
+        Assert.Equal(1, inserted.RowsAffected);
+    }
+
+    [Fact]
     public void ParsesConnectionStringOptions()
     {
         var parsed = SqlitePath.Parse("sqlite:///./app.sqlite?journal_mode=delete&busy_timeout=1000&pool_size=4&synchronous=normal");

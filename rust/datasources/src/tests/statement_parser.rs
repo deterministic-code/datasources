@@ -54,6 +54,12 @@ fn builds_the_write_trees() {
     let insert =
         StatementParser::parse("INSERT INTO users (id, name) VALUES ($id, $name)").unwrap();
     assert!(insert.as_any().is::<InsertStatement>());
+    assert!(
+        StatementParser::parse("INSERT INTO Parent () VALUES ()")
+            .unwrap()
+            .as_any()
+            .is::<InsertStatement>()
+    );
 
     let update = StatementParser::parse("UPDATE users SET name = $name WHERE id = $id").unwrap();
     let update = update.as_any().downcast_ref::<UpdateStatement>().unwrap();

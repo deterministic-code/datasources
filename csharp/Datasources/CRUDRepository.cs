@@ -157,49 +157,31 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         var extras = EnrichmentSources();
         var fields = Params(record, col => extras.Contains(col) || Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)), extras);
         DistinctColumns(fields);
+        var needsId = ids.Count == 1 && fields.All(field => field.Name != ids[0]);
         var statement = CRUDStatements.Insert(fields);
+        if (needsId)
+            statement = statement with { Returning = CRUDStatements.SelectInsertedId(ids[0]).Column };
         var response = await Command().Execute(statement, statement.Fields);
-        if (ids.Count == 1 && fields.All(field => field.Name != ids[0]))
-            await CopyInsertedId(item, statement.Fields);
+        if (needsId)
+            AssignInsertedId(item, response.Result);
         return response;
     }
 
-    async Task CopyInsertedId(T target, IReadOnlyList<Parameter> fields)
+    void AssignInsertedId(T target, Value value)
     {
         var column = ids[0];
-        var statement = CRUDStatements.SelectInsertedId(column);
-        var sqlColumn = statement.Column;
-        IStatement read = statement;
-        var reader = await Command().ExecuteReader(read, read is IReturnStatement ? fields : null);
-        try
-        {
-            if (!await reader.Next()) return;
-            var row = Identified(Named(reader.Current ?? throw new DatasourceException("Reader current must be a row"), column, sqlColumn), column);
-            var source = ObjectConverter.Convert(RowConverter?.Convert(row) ?? row);
-            if (target is IDictionary dest && source is IDictionary src && src.Contains(column) && src[column] is { } cell && cell is not Value.Null)
-                dest[column] = cell;
-            else if (typeof(T).GetProperty(column) is { CanWrite: true } prop && prop.GetValue(source) is { } value)
-                prop.SetValue(target, value);
-        }
-        finally
-        {
-            if (reader is IAsyncDisposable disposable)
-                await disposable.DisposeAsync();
-        }
+        AssignInsertedRow(target, new Row { [column] = value });
     }
 
-    static Row Named(Row row, string property, string sqlColumn)
+    void AssignInsertedRow(T target, Row row)
     {
-        if (property == sqlColumn || !row.TryGetValue(sqlColumn, out var cell)) return row;
-        var named = new Row(row.Where(pair => pair.Key != sqlColumn));
-        named[property] = cell;
-        return named;
+        var column = ids[0];
+        var source = ObjectConverter.Convert(RowConverter?.Convert(row) ?? row);
+        if (target is IDictionary dest && source is IDictionary src && src.Contains(column) && src[column] is { } cell && cell is not Value.Null)
+            dest[column] = cell;
+        else if (typeof(T).GetProperty(column) is { CanWrite: true } prop && prop.GetValue(source) is { } found)
+            prop.SetValue(target, found);
     }
-
-    static Row Identified(Row row, string column) =>
-        row.ContainsKey(column) || row.Count != 1
-            ? row
-            : new Row { [column] = row.First().Value };
 
     async Task<Response> Save(T item, IWhere? byWhere)
     {

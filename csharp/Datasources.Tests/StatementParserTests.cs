@@ -40,6 +40,7 @@ public sealed class StatementParserTests
     public void BuildsTheWriteTrees()
     {
         Assert.IsType<InsertStatement>(StatementParser.Parse("INSERT INTO users (id, name) VALUES ($id, $name)"));
+        Assert.IsType<InsertStatement>(StatementParser.Parse("INSERT INTO Parent () VALUES ()"));
 
         var update = Assert.IsType<UpdateStatement>(StatementParser.Parse("UPDATE users SET name = $name WHERE id = $id"));
         Assert.IsType<Operator.Equals>(Assert.IsType<Where>(update.Where).Condition);

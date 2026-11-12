@@ -7,6 +7,7 @@ import {
   MockCommand,
   MockConnection,
   MockReader,
+  SelectInsertedIdStatement,
 } from "../index.ts";
 
 describe("MockCommand", () => {
@@ -55,6 +56,8 @@ describe("MockCommand", () => {
       text: "CALL save($id)",
       parameters: fields,
     });
+    await executeReader(command, new SelectInsertedIdStatement("items", "id"));
+    expect(command.executeReaderCalls.at(-1)?.text).toBe("items.id");
   });
 
   it("runs command middleware on mock commands", async () => {

@@ -3,6 +3,7 @@ import {
   CommandMiddlewareHost,
   FirstResultReader,
   DatasourceError,
+  InsertStatement,
   Native,
   ParameterDirection,
   ReturnStatement,
@@ -54,9 +55,11 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    return statement instanceof SelectStatement || statement instanceof ReturnStatement
-      ? this.firstCell(statement, parameters)
-      : this.executeNative(new Native(this.statements.render(statement)), parameters);
+    if (statement instanceof SelectStatement || statement instanceof ReturnStatement)
+      return this.firstCell(statement, parameters);
+    if (statement instanceof InsertStatement && statement.returning)
+      return this.firstCell(statement, parameters);
+    return this.executeNative(new Native(this.statements.render(statement)), parameters);
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
@@ -81,17 +84,19 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
       const named = bindParameters(params);
       let rowsAffected = 0;
       let parameters = params;
+      let result: PostgresExecuteResult["result"] = null;
       for (const part of splitStatements(query)) {
         const names = new Set(statementParameters(part));
         const used = Object.fromEntries(
           Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
         );
-        const result = await this.runSql(part, used, params);
-        rowsAffected += result.rowsAffected;
-        parameters = result.parameters ?? params;
+        const executed = await this.runSql(part, used, params);
+        rowsAffected += executed.rowsAffected;
+        parameters = executed.parameters ?? params;
+        if (executed.result != null) result = executed.result;
       }
       return {
-        value: new Response(null, rowsAffected, parameters),
+        value: new Response(result ?? null, rowsAffected, parameters),
         rows: [],
       };
     });
