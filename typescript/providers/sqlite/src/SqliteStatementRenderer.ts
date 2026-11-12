@@ -7,6 +7,7 @@ import {
   DropTableStatement,
   DropTriggerStatement,
   ForeignKeyStatement,
+  InsertStatement,
   type ProcedureSource,
   SelectInsertedIdStatement,
   sqlProcedureStatementsOf,
@@ -40,6 +41,11 @@ export class SqliteStatementRenderer extends StatementRenderer {
 
   override procedures(source: ProcedureSource) {
     return sqlProcedureStatementsOf(source);
+  }
+
+  protected override visitInsert(insert: InsertStatement): string {
+    const sql = super.visitInsert(insert);
+    return insert.returning ? `${sql} RETURNING last_insert_rowid() AS ${insert.returning}` : sql;
   }
 
   protected override visitSelectInsertedId(inserted: SelectInsertedIdStatement): string {

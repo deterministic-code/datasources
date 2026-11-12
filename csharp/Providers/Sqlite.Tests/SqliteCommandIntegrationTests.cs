@@ -54,6 +54,71 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
+    public async Task CreatePutsInsertedIdOnTheItem()
+    {
+        var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
+        await conn.Open();
+        var command = new SqliteCommand(conn);
+        await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+        var native = await command.Execute(Native.N("INSERT INTO items (name) VALUES ('ada')"));
+        Assert.Equal(Value.Null.Instance, native.Result);
+        var fields = new Parameter[] { new("name", "bea") };
+        var inserted = await command.Execute(new InsertStatement("items", fields) { Returning = "id" }, fields);
+        Assert.NotEqual(Value.Null.Instance, inserted.Result);
+        Assert.Equal(new Value.Int(2), inserted.Result);
+        var repo = new CRUDRepository<Item>(conn, new CRUDRepositoryOptions<Item>
+        {
+            Ids = ["id"],
+            Entity = "items",
+        });
+        var created = await repo.Create(new Item { name = "cee" });
+        Assert.True(created.id > 0);
+        var next = await repo.Create(new Item { name = "dee" });
+        Assert.True(next.id > created.id);
+    }
+
+    sealed class ContactRow
+    {
+        public long id { get; set; }
+        public string name { get; set; } = "";
+    }
+
+    sealed class AddressRow
+    {
+        public long id { get; set; }
+        public long contactId { get; set; }
+        public string line1 { get; set; } = "";
+    }
+
+    [Fact]
+    public async Task CreateThenChildInsertUsesTheParentId()
+    {
+        var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
+        await conn.Open();
+        var command = new SqliteCommand(conn);
+        await command.Execute(Native.N(
+            "CREATE TABLE contacts (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE addresses (id INTEGER PRIMARY KEY, contact_id INTEGER NOT NULL, line1 TEXT NOT NULL)"));
+        var contacts = new CRUDRepository<ContactRow>(conn, new CRUDRepositoryOptions<ContactRow>
+        {
+            Ids = ["id"],
+            Entity = "contacts",
+            CreateProperties = ["name"],
+        });
+        var addresses = new CRUDRepository<AddressRow>(conn, new CRUDRepositoryOptions<AddressRow>
+        {
+            Ids = ["id"],
+            Entity = "addresses",
+            CreateProperties = ["contactId", "line1"],
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string> { ["contactId"] = "contact_id" }),
+        });
+        var created = await contacts.Create(new ContactRow { name = "ada" });
+        await addresses.Create(new AddressRow { contactId = created.id, line1 = "12 Engine" });
+        await using var reader = await command.ExecuteReader(Native.N("SELECT contact_id FROM addresses"));
+        Assert.True(await reader.Next());
+        Assert.Equal(new Value.Int(created.id), reader.Current!["contact_id"]);
+    }
+
+    [Fact]
     public async Task ReturnStatementSelectsScalar()
     {
         var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });

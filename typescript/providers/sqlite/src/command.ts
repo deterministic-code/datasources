@@ -2,11 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   FirstResultReader,
-  DatasourceError,
-  InsertStatement,
   Native,
-  ReturnStatement,
-  SelectStatement,
   StatementTextRenderer,
   parametersToRecord,
   Response,
@@ -93,58 +89,48 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    if (statement instanceof SelectStatement || statement instanceof ReturnStatement)
-      return this.firstCell(statement, parameters);
-    if (statement instanceof InsertStatement && statement.returning)
-      return this.inserted(statement, parameters);
-    return this.executeNative(new Native(this.statements.render(statement)), parameters);
-  }
-
-  private async inserted(insert: InsertStatement, parameters?: Parameter[]): Promise<Response> {
-    return this.run(this.statements.render(insert), parameters, async (query, params) => {
-      this.connection.ensureOpen();
-      const { changes, result } = this.apply(query, params);
-      return { value: new Response(changes <= 0 ? null : result, changes, params), rows: [] };
-    });
-  }
-
-  private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    const reader = await this.executeReaderStatement(statement, parameters);
-    try {
-      if (!(await reader.next())) return new Response(null, 0, parameters);
-      const row = reader.current;
-      /* v8 ignore next */
-      if (!row) throw new DatasourceError("Reader current must be a row");
-      const values = Object.values(row);
-      return new Response(values.length === 0 ? null : values[0], 1, parameters);
-    } finally {
-      await reader.dispose();
-    }
+    return this.readsCell(statement)
+      ? this.firstCell(statement, parameters)
+      : this.executeNative(new Native(this.statements.render(statement)), parameters);
   }
 
   async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
     return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new Response(null, 0, params), rows: [] };
       this.connection.ensureOpen();
-      const { changes } = this.apply(query, params);
-      return { value: new Response(null, changes, params), rows: [] };
+      const { changes, result } = this.apply(query, params);
+      return { value: new Response(result, changes, params), rows: [] };
     });
   }
 
-  private apply(query: string, params?: Parameter[]): { changes: number; result: Value } {
+  private apply(query: string, params?: Parameter[]): { changes: number; result: Scalar } {
     const db = this.connection.require();
     const named = bound(params);
     let changes = 0;
-    let result: Value = null;
+    let result: Scalar = null;
     for (const sql of splitStatements(query)) {
       const names = new Set(statementParameters(sql));
       const used = Object.fromEntries(
         Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
       );
       const { text, values } = toSqlite(sql, used);
-      const ran = db.prepare(text).run(...values);
-      changes += ran.changes;
-      if (ran.lastInsertRowid != null) result = ran.lastInsertRowid;
+      const statement = db.prepare(text) as ColumnStatement;
+      let columns: SqliteColumn[] = [];
+      try {
+        columns = statement.columns?.() ?? [];
+      } catch {
+        columns = [];
+      }
+      if (columns.length) {
+        const row = statement.get?.(...values) as Cells | undefined;
+        if (row) {
+          result = (Object.values(row)[0] as Scalar) ?? null;
+          changes += 1;
+        }
+      } else {
+        const ran = statement.run(...values);
+        changes += ran.changes;
+      }
     }
     return { changes, result };
   }
@@ -167,6 +153,7 @@ type SqliteColumn = { name: string; column: string | null; table: string | null;
 
 type ColumnStatement = SqliteStatement & {
   columns?: () => SqliteColumn[];
+  get?: (...values: Scalar[]) => Cells | undefined;
   raw?: (enabled: boolean) => {
     iterate(params?: Record<string, Scalar>): IterableIterator<Value[]>;
   };

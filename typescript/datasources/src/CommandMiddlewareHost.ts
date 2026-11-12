@@ -2,13 +2,14 @@ import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { Schema } from "./Schema.ts";
 import type { IReader } from "./IReader.ts";
 import type { Parameter } from "./Parameter.ts";
-import type { Response } from "./Response.ts";
 import type { Row } from "./Row.ts";
 import type { Value, Cells } from "./converters/Value.ts";
 import type { IStatement } from "./statements/IStatement.ts";
 import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextRenderer.ts";
 import { Native } from "./statements/Native.ts";
 import { StatementParser } from "./statements/StatementParser.ts";
+import { DatasourceError } from "./DatasourceError.ts";
+import { Response } from "./Response.ts";
 
 const asError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
@@ -47,6 +48,26 @@ export class CommandMiddlewareHost {
       new Native(DefaultStatementTextRenderer.instance.render(statement)),
       parameters,
     );
+  }
+
+  protected readsCell = (statement: IStatement): boolean =>
+    ({
+      SelectStatement: () => true,
+      ReturnStatement: () => true,
+    }[statement.constructor.name] ?? (() => false))();
+
+  protected async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    const reader = await this.executeReaderStatement(statement, parameters);
+    try {
+      if (!(await reader.next())) return new Response(null, 0, parameters);
+      const row = reader.current;
+      /* v8 ignore next */
+      if (!row) throw new DatasourceError("Reader current must be a row");
+      const values = Object.values(row);
+      return new Response(values.length === 0 ? null : values[0], 1, parameters);
+    } finally {
+      await reader.dispose();
+    }
   }
 
   executeReaderStatement(

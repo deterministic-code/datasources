@@ -42,11 +42,16 @@ pub(crate) async fn create_children<T: Entity, TChild: Entity>(
         let key_name = enrichment.map_key()?;
         related.sort_by(|left, right| dict_key(left, key_name).cmp(&dict_key(right, key_name)));
     }
-    let key = parent.cell(&enrichment.source_property);
+    if related.is_empty() {
+        return Ok(());
+    }
+    let key = required(
+        parent,
+        &enrichment.source_property,
+        &enrichment.destination_property,
+    )?;
     for child in &mut related {
-        if let Some(key) = &key {
-            set(child, &enrichment.related_key, key.clone())?;
-        }
+        set(child, &enrichment.related_key, key.clone())?;
         writer.create(child.clone()).await?;
     }
     Ok(())

@@ -6,7 +6,14 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       include: ["src/**/*.ts"],
-      exclude: ["src/index.ts", "src/**/*test.ts", "src/i-mysql-engine.ts", "src/scalar.ts", "src/connection-options.ts"],
+      exclude: [
+        "src/index.ts",
+        "src/**/*test.ts",
+        "src/i-mysql-engine.ts",
+        "src/scalar.ts",
+        "src/connection-options.ts",
+        "src/DefaultValueOptions.ts",
+      ],
       thresholds: {
         lines: 100,
         branches: 100,

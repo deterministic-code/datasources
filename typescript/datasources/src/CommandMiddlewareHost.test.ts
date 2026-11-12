@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { CommandMiddlewareHost } from "./index.ts";
+import {
+  ArrayReader,
+  CommandMiddlewareHost,
+  InsertStatement,
+  Native,
+  Response,
+  ReturnStatement,
+  SelectStatement,
+} from "./index.ts";
+import type { Cells } from "./converters/Value.ts";
+import type { IStatement } from "./statements/IStatement.ts";
+import type { Parameter } from "./Parameter.ts";
+
+class CellHost extends CommandMiddlewareHost {
+  rows: Cells[] = [];
+  natives = 0;
+
+  executeReaderNative = async (): Promise<ArrayReader> => new ArrayReader(this.rows);
+
+  executeNative = async (): Promise<Response> => {
+    this.natives += 1;
+    return new Response(null, 3);
+  };
+
+  executeStatement = (statement: IStatement, parameters?: Parameter[]): Promise<Response> =>
+    this.readsCell(statement)
+      ? this.firstCell(statement, parameters)
+      : this.executeNative(new Native(""), parameters);
+}
 
 describe("CommandMiddlewareHost", () => {
   it("base execute methods require a driver", () => {
@@ -94,5 +122,44 @@ describe("CommandMiddlewareHost", () => {
       }),
     ).rejects.toBe("string-fail");
     expect(captured?.message).toBe("string-fail");
+  });
+
+  it("firstCell reads the first row first column", async () => {
+    const host = new CellHost();
+    host.rows = [{ id: 2, name: "bea" }];
+    expect(await host.executeStatement(new SelectStatement({ table: "items", fields: ["id"] }))).toEqual({
+      result: 2,
+      rowsAffected: 1,
+      parameters: undefined,
+    });
+    expect(
+      await host.executeStatement(new InsertStatement("items", [{ name: "name", value: "bea" }], "id")),
+    ).toEqual({
+      result: null,
+      rowsAffected: 3,
+    });
+    const x = { name: "x", value: -3 };
+    expect(await host.executeStatement(new ReturnStatement("abs", [x]), [x])).toEqual({
+      result: 2,
+      rowsAffected: 1,
+      parameters: [x],
+    });
+    host.rows = [];
+    expect(await host.executeStatement(new SelectStatement({ table: "items", fields: ["id"] }))).toEqual({
+      result: null,
+      rowsAffected: 0,
+      parameters: undefined,
+    });
+    host.rows = [{}];
+    expect(await host.executeStatement(new SelectStatement({ table: "items", fields: ["id"] }))).toEqual({
+      result: null,
+      rowsAffected: 1,
+      parameters: undefined,
+    });
+    expect(await host.executeStatement(new InsertStatement("items", []))).toEqual({
+      result: null,
+      rowsAffected: 3,
+    });
+    expect(host.natives).toBe(2);
   });
 });

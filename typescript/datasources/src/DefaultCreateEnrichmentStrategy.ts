@@ -5,8 +5,11 @@ import type { ICRUDRepository } from "./ICRUDRepository.ts";
 
 export class DefaultCreateEnrichmentStrategy<T> extends CreateEnrichmentStrategy<T> {
   async createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
-    for (const related of this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer)) {
-      this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
+    const children = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer);
+    if (children.length === 0) return;
+    const key = this.requiredKey(parent, enrichment);
+    for (const related of children) {
+      this.stampCell(related, enrichment.relatedKey, key);
       await writer.create(related);
     }
   }

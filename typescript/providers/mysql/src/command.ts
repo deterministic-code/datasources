@@ -2,18 +2,13 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   FirstResultReader,
-  DatasourceError,
   ExecuteStoredProcedureStatement,
-  InsertStatement,
   Native,
   ParameterDirection,
-  ReturnStatement,
-  SelectStatement,
   StatementTextRenderer,
   Response,
   splitStatements,
   statementParameters,
-  statementReader,
   StreamingReader,
   type Cells,
   type ICommand,
@@ -52,12 +47,15 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       const statements = splitStatements(query);
       if (statements.length === 0) return { value: new ArrayReader([]), rows: [] };
       const bound = bindParameters(params);
-      if (statements.some((sql) => /^\s*call\b/i.test(sql))) {
-        const sets: Cells[][] = [];
-        for (const sql of statements) sets.push(...(await this.callResults(sql, bound)));
-        return FirstResultReader.capture(resultSetsReader(sets));
+      const sets: Cells[][] = [];
+      for (const sql of statements) {
+        const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), bound);
+        if (!Array.isArray(result)) continue;
+        if (result.length > 0 && Array.isArray(result[0]))
+          sets.push(...(result as Cells[][]));
+        else sets.push(result as Cells[]);
       }
-      return FirstResultReader.capture(statementReader(statements, (sql) => this.query(sql, bound)));
+      return FirstResultReader.capture(resultSetsReader(sets));
     });
   }
 
@@ -69,51 +67,15 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    if (statement instanceof SelectStatement || statement instanceof ReturnStatement)
-      return this.firstCell(statement, parameters);
-    if (statement instanceof ExecuteStoredProcedureStatement && statement.name && outputs(parameters).length)
+    if (
+      statement.constructor.name === "ExecuteStoredProcedureStatement" &&
+      (statement as ExecuteStoredProcedureStatement).name &&
+      outputs(parameters).length
+    )
       return this.executeProcedure(this.statements.render(statement), parameters);
-    if (statement instanceof InsertStatement && statement.returning)
-      return this.inserted(statement, parameters);
-    return this.executeNative(new Native(this.statements.render(statement)), parameters);
-  }
-
-  private async inserted(insert: InsertStatement, parameters?: Parameter[]): Promise<Response> {
-    return this.run(this.statements.render(insert), parameters, async (query, params) => {
-      this.connection.ensureOpen();
-      const named = bindParameters(params);
-      let rowsAffected = 0;
-      let parameters = params;
-      let result: MysqlExecuteResult["result"] = null;
-      for (const part of splitStatements(query)) {
-        const names = new Set(statementParameters(part));
-        const used = Object.fromEntries(
-          Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
-        );
-        const executed = await this.runSql(part, used, params);
-        rowsAffected += executed.rowsAffected;
-        parameters = executed.parameters ?? params;
-        result = executed.result;
-      }
-      const response = rowsAffected <= 0
-        ? new Response(null, rowsAffected, parameters)
-        : new Response(result ?? null, rowsAffected, parameters);
-      return { value: response, rows: [] };
-    });
-  }
-
-  private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    const reader = await this.executeReaderStatement(statement, parameters);
-    try {
-      if (!(await reader.next())) return new Response(null, 0, parameters);
-      const row = reader.current;
-      /* v8 ignore next */
-      if (!row) throw new DatasourceError("Reader current must be a row");
-      const values = Object.values(row);
-      return new Response(values.length === 0 ? null : values[0], 1, parameters);
-    } finally {
-      await reader.dispose();
-    }
+    return this.readsCell(statement)
+      ? this.firstCell(statement, parameters)
+      : this.executeNative(new Native(this.statements.render(statement)), parameters);
   }
 
   async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
@@ -122,6 +84,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       this.connection.ensureOpen();
       const named = bindParameters(params);
       let rowsAffected = 0;
+      let result: Scalar = null;
       let parameters = params;
       for (const part of splitStatements(query)) {
         const names = new Set(statementParameters(part));
@@ -130,10 +93,11 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
         );
         const executed = await this.runSql(part, used, params);
         rowsAffected += executed.rowsAffected;
+        if (executed.result !== undefined && executed.result !== null) result = executed.result;
         parameters = executed.parameters ?? params;
       }
       return {
-        value: new Response(null, rowsAffected, parameters),
+        value: new Response(result, rowsAffected, parameters),
         rows: [],
       };
     });
@@ -180,28 +144,22 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     parameters?: Parameter[],
   ): Promise<MysqlExecuteResult> {
     const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), params);
-    if (Array.isArray(result)) return { rowsAffected: result.length, parameters };
-    const id = Number(result.insertId ?? 0);
+    if (Array.isArray(result)) {
+      const row = result[0] as Cells | undefined;
+      const values = row ? Object.values(row) : [];
+      return {
+        rowsAffected: result.length,
+        result: values.length === 0 ? null : (values[0] as Scalar),
+        parameters,
+      };
+    }
     return {
       rowsAffected: result.affectedRows ?? 0,
-      result: insertedId(id),
+      result: null,
       parameters,
     };
   }
-
-  private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
-    return this.connection.require().queryRows(MysqlDriver.placeholders(sql), params);
-  }
-
-  private async callResults(sql: string, params?: Record<string, Scalar>): Promise<Cells[][]> {
-    const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), params);
-    if (!Array.isArray(result)) return [[]];
-    return result.filter((item): item is Cells[] => Array.isArray(item));
-  }
 }
-
-const insertedId = (id: Scalar | undefined): Scalar =>
-  id === undefined || id === null || id === 0 || id === 0n ? null : id;
 
 const cellValue = (cell: Scalar | object | undefined): Scalar => {
   if (cell === null || cell === undefined) return null;

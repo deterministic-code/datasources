@@ -63,6 +63,10 @@ class FakeDatabase implements SqliteDatabase {
         if (this.zeroRows) return { changes: 0 };
         return this.omitRowid ? { changes: 1 } : { changes: 2, lastInsertRowid: 5 };
       },
+      get: (params) => {
+        this.alls.push({ sql, params });
+        return (this.bySql?.[sql] ?? this.rows)[0];
+      },
       all: (params) => {
         this.alls.push({ sql, params });
         return this.bySql?.[sql] ?? this.rows;
@@ -240,16 +244,36 @@ describe("SqliteCommand", () => {
       result: null,
       rowsAffected: 2,
     });
+    db.rows = [{ id: 5 }];
+    db.columns = [{ name: "id", column: "id", table: null }];
     expect(await command.executeStatement(new InsertStatement("items", [], "id"))).toEqual({
       result: 5,
-      rowsAffected: 2,
+      rowsAffected: 1,
+      parameters: undefined,
     });
-    db.zeroRows = true;
+    const otherInsert = new (class InsertStatement {
+      table = "items";
+      fields = [] as [];
+      returning = "id";
+      accept = (visitor: { visit(statement: this): string }) => visitor.visit(this);
+    })();
+    expect(otherInsert instanceof InsertStatement).toBe(false);
+    expect(await command.executeStatement(otherInsert)).toEqual({
+      result: 5,
+      rowsAffected: 1,
+      parameters: undefined,
+    });
+    db.rows = [];
     expect(await command.executeStatement(new InsertStatement("items", [], "id"))).toEqual({
       result: null,
       rowsAffected: 0,
+      parameters: undefined,
     });
-    db.zeroRows = false;
+    db.rows = [{}];
+    expect(await command.executeStatement(new InsertStatement("items", [], "id"))).toMatchObject({
+      result: null,
+      rowsAffected: 1,
+    });
     db.rows = [{ id: 1, name: "a" }, { id: 2, name: "b" }];
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
@@ -282,6 +306,7 @@ describe("SqliteCommand", () => {
     db.rows = [{}];
     expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toMatchObject({ result: null });
     db.omitRowid = false;
+    db.columns = undefined;
     expect(await command.executeStatement(new CreateTableStatement("items", [{ name: "id", type: "INTEGER" }]))).toMatchObject({
       result: null,
       rowsAffected: 2,

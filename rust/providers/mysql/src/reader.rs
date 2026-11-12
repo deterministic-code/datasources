@@ -155,43 +155,53 @@ async fn drive(
     ans_tx: &UnboundedSender<Answer>,
 ) -> Result<()> {
     let _ = ans_tx.send(Answer::Ready);
-    if statements.is_empty() {
+    let sets = result_sets(conn, statements, params).await?;
+    if sets.is_empty() {
         return idle(&mut ask_rx, ans_tx).await;
     }
-    let mut index = 0;
-    loop {
-        if is_call(&statements[index]) {
-            let sets = call_sets(conn, &statements[index], params).await?;
-            if serve_sets(&sets, &mut ask_rx, ans_tx).await? {
-                return Ok(());
-            }
-        } else {
-            let mut stream = conn
-                .exec_stream(MysqlDriver::placeholders(&statements[index]), named_params(params))
-                .await
-                .map_err(map_err)?;
-            loop {
-                match ask_rx.recv().await {
-                    Some(Ask::Next) => {
-                        let row = pull(Pin::new(&mut stream)).await.map_err(map_err)?;
-                        let _ = ans_tx.send(Answer::Row(row.map(row_record)));
-                    }
-                    Some(Ask::NextResult) => break,
-                    _ => {
-                        drain(Pin::new(&mut stream)).await.map_err(map_err)?;
-                        return Ok(());
-                    }
-                }
-            }
-            drain(Pin::new(&mut stream)).await.map_err(map_err)?;
-        }
-        index += 1;
-        if index >= statements.len() {
-            let _ = ans_tx.send(Answer::More(false));
-            return Ok(());
-        }
-        let _ = ans_tx.send(Answer::More(true));
+    if serve_sets(&sets, &mut ask_rx, ans_tx).await? {
+        return Ok(());
     }
+    idle(&mut ask_rx, ans_tx).await
+}
+
+async fn result_sets(
+    conn: &mut Conn,
+    statements: &[String],
+    params: &HashMap<String, Value>,
+) -> Result<Vec<Vec<Row>>> {
+    let mut sets = Vec::new();
+    for sql in statements {
+        let mut found = iter_sets(conn, sql, params).await?;
+        if is_call(sql) {
+            found.retain(|rows| !rows.is_empty());
+        }
+        sets.extend(found);
+    }
+    Ok(sets)
+}
+
+async fn iter_sets(
+    conn: &mut Conn,
+    sql: &str,
+    params: &HashMap<String, Value>,
+) -> Result<Vec<Vec<Row>>> {
+    let mut result = conn
+        .exec_iter(MysqlDriver::placeholders(sql), named_params(params))
+        .await
+        .map_err(map_err)?;
+    let mut sets = Vec::new();
+    while let Some(mut stream) = result.stream().await.map_err(map_err)? {
+        let columns = stream.columns_ref().len();
+        let mut rows = Vec::new();
+        while let Some(row) = pull(Pin::new(&mut stream)).await.map_err(map_err)? {
+            rows.push(row_record(row));
+        }
+        if columns > 0 {
+            sets.push(rows);
+        }
+    }
+    Ok(sets)
 }
 
 fn is_call(sql: &str) -> bool {
@@ -204,28 +214,6 @@ fn is_call(sql: &str) -> bool {
             .as_bytes()
             .get(4)
             .is_some_and(|byte| byte.is_ascii_whitespace() || *byte == b'(')
-}
-
-async fn call_sets(
-    conn: &mut Conn,
-    sql: &str,
-    params: &HashMap<String, Value>,
-) -> Result<Vec<Vec<Row>>> {
-    let mut result = conn
-        .exec_iter(MysqlDriver::placeholders(sql), named_params(params))
-        .await
-        .map_err(map_err)?;
-    let mut sets = Vec::new();
-    while let Some(mut stream) = result.stream().await.map_err(map_err)? {
-        let mut rows = Vec::new();
-        while let Some(row) = pull(Pin::new(&mut stream)).await.map_err(map_err)? {
-            rows.push(row_record(row));
-        }
-        if !rows.is_empty() {
-            sets.push(rows);
-        }
-    }
-    Ok(sets)
 }
 
 async fn serve_sets(
@@ -247,9 +235,9 @@ async fn serve_sets(
             Some(Ask::NextResult) => {
                 set += 1;
                 row = 0;
-                if set < sets.len() {
-                    let _ = ans_tx.send(Answer::More(true));
-                } else {
+                let more = set < sets.len();
+                let _ = ans_tx.send(Answer::More(more));
+                if !more {
                     return Ok(false);
                 }
             }
@@ -281,11 +269,3 @@ where
         .transpose()
 }
 
-async fn drain<S, T, E>(stream: Pin<&mut S>) -> std::result::Result<(), E>
-where
-    S: Stream<Item = std::result::Result<T, E>> + Unpin + ?Sized,
-{
-    let mut stream = stream;
-    while pull(stream.as_mut()).await?.is_some() {}
-    Ok(())
-}

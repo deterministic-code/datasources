@@ -1,5 +1,7 @@
 import {
   AlterTableStatement,
+  BulkDeleteStatement,
+  BulkInsertStatement,
   BulkUpdateStatement,
   ColumnDefault,
   CreateBulkCreateStoredProcedureStatement,
@@ -7,23 +9,35 @@ import {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateIndexStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
   CreateUpdateStoredProcedureStatement,
   DefaultStatementTextRenderer,
+  DeleteStatement,
   DropIndexStatement,
   DropRoutineStatement,
+  DropTableStatement,
+  eq,
   ForeignKey,
+  ForeignKeyStatement,
+  NestedSelectBuilder,
   NotNull,
   PrimaryKey,
   ReferentialAction,
+  InsertStatement,
   SelectInsertedIdStatement,
   SelectStatement,
+  SqlSeedStatement,
   StatementTextRenderer,
+  UpdateStatement,
+  Where,
 } from "@deterministic-code/datasources";
 import { describe, expect, it } from "vitest";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
+import { MysqlDriver } from "./MysqlDriver.ts";
 import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 
 describe("MysqlStatementRenderer", () => {
@@ -32,6 +46,9 @@ describe("MysqlStatementRenderer", () => {
   it("renders inserted id and create table", () => {
     expect(renderer.render(new SelectInsertedIdStatement("users", "id"))).toBe(
       "SELECT LAST_INSERT_ID() AS id",
+    );
+    expect(renderer.render(new InsertStatement("users", [{ name: "name", value: "ada" }], "id"))).toBe(
+      "INSERT INTO users (name) VALUES (:name); SELECT LAST_INSERT_ID() AS id",
     );
 
     const create = new CreateTableStatement(
@@ -85,7 +102,7 @@ describe("MysqlStatementRenderer", () => {
       { fields: [{ name: "label", value: "b" }], ids: [{ name: "id", value: 2 }] },
     ]);
     expect(renderer.render(update)).toBe(
-      "UPDATE parents JOIN (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label",
+      "UPDATE parents JOIN (SELECT :label__0 AS label, :id__0 AS id UNION ALL SELECT :label__1 AS label, :id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label",
     );
   });
 
@@ -94,19 +111,85 @@ describe("MysqlStatementRenderer", () => {
       renderer.render(
         new AlterTableStatement("users", { kind: "alterColumn", column: { name: "id", type: "int", identity: true } }),
       ),
-    ).toBe("ALTER TABLE `users` MODIFY COLUMN `id` INT AUTO_INCREMENT");
+    ).toBe("ALTER TABLE users MODIFY COLUMN id INT AUTO_INCREMENT");
     expect(
       renderer.render(
         new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT" } }),
       ),
-    ).toBe("ALTER TABLE `users` ADD COLUMN `email` TEXT");
+    ).toBe("ALTER TABLE users ADD COLUMN email TEXT");
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", {
+          kind: "addColumn",
+          column: { name: "age", type: "int", default: new ColumnDefault("0"), notNull: new NotNull() },
+        }),
+      ),
+    ).toContain("DEFAULT");
     expect(renderer.render(new DropIndexStatement("ix_users_email", "users"))).toBe(
-      "DROP INDEX `ix_users_email` ON `users`",
+      "DROP INDEX ix_users_email ON users",
     );
     expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id"))).toBe(
-      "CREATE TRIGGER `tr_users` BEFORE UPDATE ON `users`\nFOR EACH ROW SET NEW.`updated` = (UTC_TIMESTAMP(3))",
+      "CREATE TRIGGER tr_users BEFORE UPDATE ON users\nFOR EACH ROW SET NEW.updated = (UTC_TIMESTAMP(3))",
     );
     expect(renderer.render(new DropRoutineStatement("sp_users"))).toBe("DROP PROCEDURE IF EXISTS sp_users");
+    const dialect = new MysqlDriver().statementRenderer;
+    expect(dialect.render(new BulkInsertStatement("users", ["id"], [[{ name: "id", value: 1 }]]))).toContain("INSERT");
+    expect(dialect.render(new BulkDeleteStatement("users", ["id"], [[{ name: "id", value: 1 }]]))).toContain("DELETE");
+    expect(dialect.render(new DeleteStatement("users", new Where("id", eq, 1)))).toContain("DELETE");
+    expect(dialect.render(new UpdateStatement("users", [{ name: "n", value: 1 }], new Where("id", eq, 1)))).toContain("UPDATE");
+    expect(dialect.render(new DropTableStatement("users"))).toContain("DROP TABLE");
+    expect(dialect.render(new CreateIndexStatement("ix_users_id", "users", ["id"]))).toContain("INDEX");
+    expect(dialect.render(new ForeignKeyStatement("orders", "fk_orders_user", ["user_id"], "users", ["id"]))).toContain(
+      "FOREIGN KEY",
+    );
+    expect(dialect.render(new ForeignKeyStatement("orders", "fk_orders_user", ["user_id"], "users", ["id"], "drop"))).toContain(
+      "DROP FOREIGN KEY",
+    );
+    expect(
+      dialect.render(new SqlSeedStatement("users", [{ column: "id", field: { type: "integer" }, value: 1 }])),
+    ).toContain("INSERT");
+    expect(
+      dialect.render(
+        new SqlSeedStatement("users", [{ column: "id", field: { type: "integer" }, value: 1 }], "delete"),
+      ),
+    ).toContain("DELETE");
+    expect(
+      dialect.render(
+        new SqlSeedStatement("order", [
+          { column: "flag", field: { type: "boolean" }, value: "True" },
+          { column: "when", field: { type: "datetime", defaultValue: "UtcNow" }, value: null },
+          { column: "local", field: { type: "datetime", defaultValue: "Now" }, value: null },
+          { column: "uid", field: { type: "uuid", defaultValue: "NewId" }, value: null },
+          { column: "on", field: { type: "boolean", defaultValue: "true" }, value: null },
+          { column: "off", field: { type: "boolean", defaultValue: "false" }, value: null },
+          { column: "note", field: { type: "string", defaultValue: "hi" }, value: null },
+          { column: "empty", field: { type: "string" }, value: null },
+          { column: "ok", field: { type: "boolean" }, value: true },
+          { column: "yes", field: { type: "boolean" }, value: "true" },
+          { column: "one", field: { type: "boolean" }, value: 1 },
+          { column: "no", field: { type: "boolean" }, value: false },
+          { column: "blob", field: { type: "binary" }, value: "ab" },
+        ]),
+      ),
+    ).toContain("INSERT");
+    expect(dialect.render(new CreateTriggerStatement("order", "select", "updated", "id"))).toContain("TRIGGER");
+    expect(
+      dialect.render(
+        new CreateNestedReadStoredProcedureStatement(
+          "ReadContactsByEmail",
+          new NestedSelectBuilder().build({
+            name: "Contact",
+            key: "Id",
+            properties: ["Id", "Email"],
+            relations: [],
+          }),
+          [{ path: "Contact.Email", parameter: { name: "email", type: "varchar" } }],
+        ),
+      ),
+    ).toContain("CREATE PROCEDURE");
+    expect(dialect.render(new SelectStatement({ table: "order", fields: ["id"], where: new Where("id", eq, 1) }))).toContain(
+      "SELECT",
+    );
   });
 
   it("renders create/read/update stored procedure statements", () => {
@@ -210,17 +293,22 @@ describe("MysqlStatementRenderer", () => {
     ).toContain("IN id BIGINT");
     expect(
       renderer.render(
-        new CreateDeleteStoredProcedureStatement("DeleteUsersByKey", "users", ["id"], [], "id", "INT", [], []),
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByKey", "users", ["id"], [{ name: "id", type: "INT" }], "id", "INT", [], []),
       ),
     ).toContain("WHERE t.id = id");
+    expect(() =>
+      renderer.render(
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByKeyMissing", "users", ["id"], [], "id", "INT", [], []),
+      ),
+    ).toThrow('missing parameter "id"');
     expect(
       renderer.render(
-        new CreateReadStoredProcedureStatement("ReadUsersByName", "users", ["id", "name"], [], "id", "INT", [], ["name"]),
+        new CreateReadStoredProcedureStatement("ReadUsersByName", "users", ["id", "name"], [{ name: "name", type: "INT" }], "id", "INT", [], ["name"]),
       ),
     ).toContain("IN name INT");
     expect(
       renderer.render(
-        new CreateDeleteStoredProcedureStatement("DeleteUsersByName", "users", ["id"], [], "id", "INT", [], ["name"]),
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByName", "users", ["id"], [{ name: "name", type: "INT" }], "id", "INT", [], ["name"]),
       ),
     ).toContain("IN name INT");
     const payload = { name: "payload", type: "JSON" };
@@ -247,12 +335,24 @@ describe("MysqlStatementRenderer", () => {
         new CreateBulkDeleteStoredProcedureStatement(
           "BulkDeleteUsersByKeyType",
           "users",
-          [],
+          [{ name: "id", type: "INT" }],
           { name: "payload", type: "JSON" },
           "id",
           "INT",
         ),
       ),
     ).toContain("id INT PATH '$.id'");
+    expect(() =>
+      renderer.render(
+        new CreateBulkDeleteStoredProcedureStatement(
+          "BulkDeleteUsersByKeyTypeMissing",
+          "users",
+          [],
+          { name: "payload", type: "JSON" },
+          "id",
+          "INT",
+        ),
+      ),
+    ).toThrow('missing key column "id"');
   });
 });

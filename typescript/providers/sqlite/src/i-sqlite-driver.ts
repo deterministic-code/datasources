@@ -5,6 +5,7 @@ export interface SqliteStatement {
     changes: number;
     lastInsertRowid?: Value;
   };
+  get?(params?: Record<string, Scalar>): Cells | undefined;
   all(params?: Record<string, Scalar>): Cells[];
   iterate(params?: Record<string, Scalar>): IterableIterator<Cells>;
 }

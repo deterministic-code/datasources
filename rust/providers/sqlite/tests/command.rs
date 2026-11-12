@@ -1,5 +1,5 @@
 use datasources::{
-    default, Casing, ChangeCasingMapper, FlatToNestedMapper,
+    default, Casing, ChangeCasingMapper, FlatToNestedMapper, InsertStatement,
     MappedRow, MappedValue,
     Mapper, Native, Parameter, Row, RowTypeConverter, Schema, SchemaColumn, TransformMapper, TypeMap, TypeMapField,
     TypeMapGroup, Value,
@@ -275,6 +275,35 @@ async fn run_execute_reader_and_return_name_values() {
     assert_eq!(items[1].get("value"), Some(&Value::from("en")));
     assert_eq!(items[2].get("name"), Some(&Value::from("size")));
     assert_eq!(items[2].get("value"), Some(&Value::from("lg")));
+}
+
+#[tokio::test]
+async fn execute_insert_statement_returning_sets_result() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute_native(
+            &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
+            None,
+        )
+        .await
+        .unwrap();
+    let native = command
+        .execute_native(&Native::new("INSERT INTO items (name) VALUES ('ada')"), None)
+        .await
+        .unwrap();
+    assert_eq!(native.result, Value::Null);
+    let fields = [Parameter::new("name", "bea")];
+    let insert = InsertStatement::new("items", &fields).returning("id");
+    let inserted = command
+        .execute_statement(&insert, Some(insert.fields()))
+        .await
+        .unwrap();
+    assert_ne!(inserted.result, Value::Null);
+    assert_eq!(inserted.result, Value::Int(2));
 }
 
 #[tokio::test]

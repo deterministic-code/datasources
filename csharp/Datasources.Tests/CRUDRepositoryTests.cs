@@ -193,6 +193,34 @@ public class CRUDRepositoryTests
     }
 
     [Fact]
+    public async Task CreateChildrenRequiresParentId()
+    {
+        var connection = await Setup();
+        var childrenRepo = Open<Child>(connection);
+        var error = await Assert.ThrowsAsync<DatasourceException>(() =>
+            new DefaultCreateEnrichmentStrategy<Parent>().CreateChildren(
+                childrenRepo,
+                new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
+                new Parent { Children = [new Child { Label = "a" }] }));
+        Assert.Contains("requires \"Id\"", error.Message);
+        Assert.Empty(await childrenRepo.Read().ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateChildrenStampsParentIdAndCreates()
+    {
+        var connection = await Setup();
+        var childrenRepo = Open<Child>(connection);
+        await new DefaultCreateEnrichmentStrategy<Parent>().CreateChildren(
+            childrenRepo,
+            new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
+            new Parent { Id = 7, Children = [new Child { Label = "a" }] });
+        var child = Assert.Single(await childrenRepo.Read().ToListAsync());
+        Assert.Equal(7, child.ParentId);
+        Assert.Equal("a", child.Label);
+    }
+
+    [Fact]
     public async Task RoundTripsStringAndObjectDictionaries()
     {
         var connection = await Setup();

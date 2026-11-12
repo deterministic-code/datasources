@@ -1,13 +1,14 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
+use crate::datasource_error::DatasourceError;
 use crate::native::Native;
 use crate::schema::Schema;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
 use crate::response::Response;
 use crate::result::Result;
-use crate::statement::Statement;
 use crate::statement_parser::StatementParser;
+use crate::{ReturnStatement, Statement, StatementKind, Value};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -69,5 +70,32 @@ pub trait Command: Send + Sync {
             parameters,
         )
         .await
+    }
+
+    fn reads_cell(&self, statement: &dyn Statement) -> bool {
+        statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>()
+    }
+
+    async fn first_cell(
+        &self,
+        statement: &dyn Statement,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let reader = self.execute_reader_statement(statement, parameters).await?;
+        let response = if !reader.next().await? {
+            Ok(Response::new(
+                Value::Null,
+                0,
+                parameters.map(|list| list.to_vec()),
+            ))
+        } else {
+            let row = reader
+                .current()
+                .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
+            let cell = row.into_values().next().unwrap_or(Value::Null);
+            Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
+        };
+        let _ = reader.close().await;
+        response
     }
 }

@@ -2505,3 +2505,63 @@ async fn typed_create_keeps_datetime_when_write_row_is_mysql_text() {
         Utc.with_ymd_and_hms(2024, 1, 2, 3, 4, 5).unwrap()
     );
 }
+
+#[tokio::test]
+async fn create_children_requires_parent_id_and_does_not_create() {
+    let writer = MockRepository::new();
+    let enrichment = Enrichment::new(
+        "children",
+        "id",
+        "parent_id",
+        None,
+        EnrichmentPropertyType::List,
+    );
+    let mut parent = record(&[
+        ("id", Value::Int(0)),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[record(&[(
+                "label",
+                Value::from("a"),
+            )])]),
+        ),
+    ]);
+    let error = crate::default_create_enrichment_strategy::create_children(
+        &writer,
+        &enrichment,
+        &mut parent,
+    )
+    .await
+    .unwrap_err();
+    assert!(error.to_string().contains("requires \"id\""));
+    assert!(writer.items.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn create_children_stamps_parent_id_and_creates() {
+    let writer = MockRepository::new();
+    let enrichment = Enrichment::new(
+        "children",
+        "id",
+        "parent_id",
+        None,
+        EnrichmentPropertyType::List,
+    );
+    let mut parent = record(&[
+        ("id", Value::Int(7)),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[record(&[(
+                "label",
+                Value::from("a"),
+            )])]),
+        ),
+    ]);
+    crate::default_create_enrichment_strategy::create_children(&writer, &enrichment, &mut parent)
+        .await
+        .unwrap();
+    let items = writer.items.lock().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].get("parent_id"), Some(&Value::Int(7)));
+    assert_eq!(items[0].get("label"), Some(&Value::from("a")));
+}

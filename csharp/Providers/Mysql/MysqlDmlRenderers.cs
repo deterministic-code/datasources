@@ -4,6 +4,12 @@ namespace Datasources.Mysql;
 
 internal sealed class MysqlInsertStatementTextRenderer : InsertStatementTextRenderer
 {
+    public override string Render(InsertStatement statement)
+    {
+        var sql = base.Render(statement);
+        return string.IsNullOrEmpty(statement.Returning) ? sql : $"{sql}; SELECT LAST_INSERT_ID() AS {statement.Returning}";
+    }
+
     protected override string Quote(string name) => MysqlDriver.Quote(name);
     protected override string Parameter(string name) => MysqlDriver.Parameter(name);
 }

@@ -47,27 +47,8 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
             ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
                 ExecuteProcedure(name, parameters),
-            InsertStatement { Returning: not null } insert => FirstCell(insert, parameters),
             _ => Execute(new Native(statements.Render(statement)), parameters)
         };
-
-    async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
-    {
-        var reader = await ExecuteReader(statement, parameters);
-        try
-        {
-            if (!await reader.Next())
-                return new Response(Value.Null.Instance, 0, parameters);
-            var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
-            var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
-            return new Response(cell, 1, parameters);
-        }
-        finally
-        {
-            if (reader is IAsyncDisposable disposable)
-                await disposable.DisposeAsync();
-        }
-    }
 
     Task<Response> ExecuteProcedure(string name, IReadOnlyList<Parameter>? parameters) =>
         Run(name, parameters, async (_, list) =>
@@ -92,6 +73,7 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
     async Task<PostgresExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
         var rows = 0;
+        Value result = Value.Null.Instance;
         IReadOnlyList<Parameter>? applied = parameters;
         foreach (var part in SplitStatements.Split(sql))
         {
@@ -111,10 +93,16 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
                             Direction = DataDirection.ReturnValue,
                             Value = parameter.Value.ToObject() ?? DBNull.Value
                         });
-            rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
+            await using var reader = await command.ExecuteReaderAsync();
+            do
+            {
+                if (reader.FieldCount > 0 && await reader.ReadAsync())
+                    result = Value.From(reader.IsDBNull(0) ? null : reader.GetValue(0));
+            } while (await reader.NextResultAsync());
+            rows += Math.Max(reader.RecordsAffected, 0);
             applied = Applied(command, parameters, rewritten.Bound);
         }
-        return new PostgresExecuteResult(rows, Value.Null.Instance, applied);
+        return new PostgresExecuteResult(rows, result, applied);
     }
 
     async Task<StreamingReader> Open(string sql, Row parameters)

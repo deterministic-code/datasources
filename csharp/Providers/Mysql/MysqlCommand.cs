@@ -33,7 +33,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
                 return (new Response(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
             var result = await RunSql(query, paramsList);
-            return (new Response(Value.Null.Instance, result.RowsAffected, result.Parameters), (IReadOnlyList<Row>)[]);
+            return (new Response(result.Result, result.RowsAffected, result.Parameters), (IReadOnlyList<Row>)[]);
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
@@ -45,38 +45,8 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
             ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
                 ExecuteProcedure(name, parameters),
-            InsertStatement { Returning: not null } insert => Inserted(insert, parameters),
             _ => Execute(new Native(statements.Render(statement)), parameters)
         };
-
-    Task<Response> Inserted(InsertStatement insert, IReadOnlyList<Parameter>? parameters) =>
-        Run(statements.Render(insert), parameters, async (query, paramsList) =>
-        {
-            Typed.EnsureOpen();
-            var executed = await RunSql(query, paramsList);
-            var response = executed.RowsAffected <= 0
-                ? new Response(Value.Null.Instance, executed.RowsAffected, executed.Parameters)
-                : new Response(executed.Result, executed.RowsAffected, executed.Parameters);
-            return (response, (IReadOnlyList<Row>)[]);
-        });
-
-    async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
-    {
-        var reader = await ExecuteReader(statement, parameters);
-        try
-        {
-            if (!await reader.Next())
-                return new Response(Value.Null.Instance, 0, parameters);
-            var row = reader.Current ?? throw new DatasourceException("Reader current must be a row");
-            var cell = row.Count == 0 ? Value.Null.Instance : row.First().Value;
-            return new Response(cell, 1, parameters);
-        }
-        finally
-        {
-            if (reader is IAsyncDisposable disposable)
-                await disposable.DisposeAsync();
-        }
-    }
 
     Task<Response> ExecuteProcedure(string name, IReadOnlyList<Parameter>? parameters) =>
         Run(name, parameters, async (_, list) =>
@@ -99,10 +69,14 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
                 ? null
                 : parameters.Where(parameter => names.Contains(parameter.Name.TrimStart('$', '@', ':'))).ToArray();
             using var command = Bind(part, used);
-            rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
+            await using var reader = await command.ExecuteReaderAsync();
+            do
+            {
+                if (reader.FieldCount > 0 && await reader.ReadAsync())
+                    result = Value.From(reader.IsDBNull(0) ? null : reader.GetValue(0));
+            } while (await reader.NextResultAsync());
+            rows += Math.Max(reader.RecordsAffected, 0);
             applied = Applied(command, parameters);
-            var id = command.LastInsertedId;
-            result = id <= 0 ? Value.Null.Instance : id;
         }
         return new MysqlExecuteResult(rows, result, applied);
     }
@@ -113,6 +87,22 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         try
         {
             var reader = await command.ExecuteReaderAsync();
+            async Task<bool> NextSet()
+            {
+                while (await reader.NextResultAsync())
+                    if (reader.FieldCount > 0)
+                        return true;
+                return false;
+            }
+            if (reader.FieldCount == 0 && !await NextSet())
+                return new StreamingReader(
+                    () => Task.FromResult<Row?>(null),
+                    () => Task.FromResult(false),
+                    async () =>
+                    {
+                        await reader.DisposeAsync();
+                        await command.DisposeAsync();
+                    });
             return new StreamingReader(
                 async () =>
                 {
@@ -122,7 +112,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
                         row[reader.GetName(i)] = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
                     return row;
                 },
-                () => reader.NextResultAsync(),
+                NextSet,
                 async () =>
                 {
                     await reader.DisposeAsync();
