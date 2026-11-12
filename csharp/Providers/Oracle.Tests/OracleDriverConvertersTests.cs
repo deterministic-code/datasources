@@ -5,55 +5,74 @@ namespace Datasources.Oracle.Tests;
 
 public class OracleDriverConvertersTests
 {
+    public static readonly Conversion[] TypeConverter =
+    [
+        new("string", "string", "CLOB"),
+        new("character", "character", "CHAR(1)"),
+        new("integer", "integer", "NUMBER(10)"),
+        new("unsignedinteger", "unsignedinteger", "NUMBER(10)"),
+        new("smallinteger", "smallinteger", "NUMBER(5)"),
+        new("unsignedsmallinteger", "unsignedsmallinteger", "NUMBER(5)"),
+        new("biginteger", "biginteger", "NUMBER(19)"),
+        new("unsignedbiginteger", "unsignedbiginteger", "NUMBER(20)"),
+        new("float", "float", "BINARY_DOUBLE"),
+        new("decimal", "decimal", "NUMBER"),
+        new("boolean", "boolean", "NUMBER(1)"),
+        new("datetime", "datetime", "TIMESTAMP"),
+        new("binary", "binary", "BLOB"),
+        new("uuid", "uuid", "VARCHAR2(36)"),
+        new("reference", "reference", "NUMBER(10)"),
+        new("string", new SpecField { Type = "string", Size = 64 }, "VARCHAR2(64)"),
+        new("character", new SpecField { Type = "character", Size = 4 }, "CHAR(4)"),
+        new("decimal", new SpecField { Type = "decimal", Size = new[] { 10, 2 } }, "NUMBER(10, 2)"),
+        new("binary", new SpecField { Type = "binary", Size = 16 }, "RAW(16)"),
+        new("nope", "nope", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] ReverseTypeConverter =
+    [
+        new("integer", "NUMBER(10)", "integer"),
+        new("nope", "nope", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] DefaultValueConverter =
+    [
+        new("datetime", "Now", "LOCALTIMESTAMP"),
+        new("datetime", "UtcNow", "SYS_EXTRACT_UTC(SYSTIMESTAMP)"),
+        new("uuid", "NewId", "SYS_GUID()"),
+        new("uuid", "Empty", "'00000000-0000-0000-0000-000000000000'"),
+        new("binary", "Hex('ab')", "HEXTORAW('ab')"),
+        new("boolean", "true", "1"),
+        new("boolean", "false", "0"),
+        new("string", "hi", "'hi'"),
+        new("integer", "7", "7"),
+        new("reference", "1", null),
+        new("nope", "x", typeof(InvalidOperationException)),
+    ];
+
+    public static readonly Conversion[] ReverseDefaultValueConverter =
+    [
+        new("datetime", "LOCALTIMESTAMP", "Now"),
+        new("datetime", "SYS_EXTRACT_UTC(SYSTIMESTAMP)", "UtcNow"),
+        new("uuid", "SYS_GUID()", "NewId"),
+        new("binary", "HEXTORAW('ab')", "Hex('ab')"),
+        new("string", "'hi'", "String"),
+    ];
+
     [Fact]
-    public void TypeConverter()
+    public void ConvertsTypes()
     {
-        var driver = new OracleDriver();
-        var types = Assert.IsType<TypeMap>(driver.TypeConverter);
-        Assert.Equal("CLOB", types.Convert("string"));
-        Assert.Equal("CHAR(1)", types.Convert("character"));
-        Assert.Equal("NUMBER(10)", types.Convert("integer"));
-        Assert.Equal("NUMBER(10)", types.Convert("unsignedinteger"));
-        Assert.Equal("NUMBER(5)", types.Convert("smallinteger"));
-        Assert.Equal("NUMBER(5)", types.Convert("unsignedsmallinteger"));
-        Assert.Equal("NUMBER(19)", types.Convert("biginteger"));
-        Assert.Equal("NUMBER(20)", types.Convert("unsignedbiginteger"));
-        Assert.Equal("BINARY_DOUBLE", types.Convert("float"));
-        Assert.Equal("NUMBER", types.Convert("decimal"));
-        Assert.Equal("NUMBER(1)", types.Convert("boolean"));
-        Assert.Equal("TIMESTAMP", types.Convert("datetime"));
-        Assert.Equal("BLOB", types.Convert("binary"));
-        Assert.Equal("VARCHAR2(36)", types.Convert("uuid"));
-        Assert.Equal("NUMBER(10)", types.Convert("reference"));
-        Assert.Equal("VARCHAR2(64)", types.Convert(new SpecField { Type = "string", Size = 64 }));
-        Assert.Equal("CHAR(4)", types.Convert(new SpecField { Type = "character", Size = 4 }));
-        Assert.Equal("NUMBER(10, 2)", types.Convert(new SpecField { Type = "decimal", Size = new[] { 10, 2 } }));
-        Assert.Equal("RAW(16)", types.Convert(new SpecField { Type = "binary", Size = 16 }));
-        Assert.Equal("integer", types.ReverseConvert("NUMBER(10)"));
-        Assert.Throws<InvalidOperationException>(() => types.Convert("nope"));
-        Assert.Throws<InvalidOperationException>(() => types.ReverseConvert("nope"));
+        var types = Assert.IsType<TypeMap>(new OracleDriver().TypeConverter);
+        Conversion.Types(TypeConverter, types.Convert, types.Convert);
+        Conversion.ReverseTypes(types, ReverseTypeConverter);
     }
 
     [Fact]
-    public void DefaultValueConverter()
+    public void ConvertsDefaults()
     {
         var defaults = new OracleDriver().DefaultValueConverter;
-        Assert.Equal("LOCALTIMESTAMP", defaults.Convert("datetime", "Now"));
-        Assert.Equal("SYS_EXTRACT_UTC(SYSTIMESTAMP)", defaults.Convert("datetime", "UtcNow"));
-        Assert.Equal("SYS_GUID()", defaults.Convert("uuid", "NewId"));
-        Assert.Equal("'00000000-0000-0000-0000-000000000000'", defaults.Convert("uuid", "Empty"));
-        Assert.Equal("HEXTORAW('ab')", defaults.Convert("binary", "Hex('ab')"));
-        Assert.Equal("1", defaults.Convert("boolean", "true"));
-        Assert.Equal("0", defaults.Convert("boolean", "false"));
-        Assert.Equal("'hi'", defaults.Convert("string", "hi"));
-        Assert.Equal("7", defaults.Convert("integer", "7"));
-        Assert.Null(defaults.Convert("reference", "1"));
-        Assert.Equal("Now", defaults.ReverseConvert("datetime", "LOCALTIMESTAMP"));
-        Assert.Equal("UtcNow", defaults.ReverseConvert("datetime", "SYS_EXTRACT_UTC(SYSTIMESTAMP)"));
-        Assert.Equal("NewId", defaults.ReverseConvert("uuid", "SYS_GUID()"));
-        Assert.Equal("Hex('ab')", defaults.ReverseConvert("binary", "HEXTORAW('ab')"));
-        Assert.Equal("String", defaults.ReverseConvert("string", "'hi'"));
-        Assert.Throws<InvalidOperationException>(() => defaults.Convert("nope", "x"));
+        Conversion.Defaults(defaults, DefaultValueConverter);
+        Conversion.Defaults(defaults, ReverseDefaultValueConverter, reverse: true);
     }
 
     [Fact]
