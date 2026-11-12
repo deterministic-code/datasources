@@ -7,6 +7,7 @@ describe("BoolConverter", () => {
     expect(converter.convert(1)).toBe(true);
     expect(converter.convert(0)).toBe(false);
     expect(converter.convert("x")).toBe("x");
+    expect(converter.convert("true")).toBe("true");
     expect(converter.reverseConvert(true)).toBe(1);
     expect(converter.reverseConvert(false)).toBe(0);
     expect(converter.reverseConvert("x")).toBe("x");

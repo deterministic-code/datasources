@@ -99,12 +99,12 @@ public class PostgresTests
             ["Login"] = "ada",
             ["Created"] = "2020-01-02T03:04:05.000Z",
         });
-        Assert.Equal(new Value.Guid(id), row["Key"]);
+        Assert.Equal(new Value.Text(id.ToString()), row["Key"]);
         Assert.Equal(new Value.Bool(true), row["Active"]);
         Assert.Equal(new Value.Text("ada"), row["Login"]);
         Assert.True(row["Created"] is Value.DateTime);
         var stored = converter.ReverseConvert(row);
-        Assert.Equal(new Value.Guid(id), stored["Key"]);
+        Assert.Equal(new Value.Text(id.ToString()), stored["Key"]);
         Assert.Equal(new Value.Bool(true), stored["Active"]);
         Assert.Equal(new Value.Text("ada"), stored["Login"]);
         Assert.Equal(new Value.Text("2020-01-02T03:04:05.000Z"), stored["Created"]);

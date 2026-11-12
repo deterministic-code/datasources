@@ -81,6 +81,9 @@ mod foreign_key_type;
 #[path = "../tests/generate_sql.rs"]
 mod generate_sql;
 #[cfg(test)]
+#[path = "../tests/driver_converters.rs"]
+mod driver_converters;
+#[cfg(test)]
 #[path = "../tests/typed_list_enrichment.rs"]
 mod typed_list_enrichment;
 

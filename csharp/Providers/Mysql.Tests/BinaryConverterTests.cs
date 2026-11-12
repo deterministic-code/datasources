@@ -14,6 +14,9 @@ public class BinaryConverterTests
         Assert.Same(bytes, converter.ReverseConvert(bytes));
         Assert.Equal(
             new byte[] { 1, 2, 3, 4 },
+            ((Value.Binary)converter.Convert("AQIDBA==")).Item);
+        Assert.Equal(
+            new byte[] { 1, 2, 3, 4 },
             ((Value.Binary)converter.ReverseConvert("AQIDBA==")).Item);
     }
 }

@@ -14,5 +14,14 @@ describe("SqlServerDriver converters", () => {
     expect(driver.defaultValueConverter.convert("uuid", "NewId")).toBe("NEWID()");
     expect(driver.defaultValueConverter.convert("datetime", "Now")).toBe("GETDATE()");
     expect(driver.defaultValueConverter.convert("binary", "Hex('ab')")).toBe("0xab");
+    expect(driver.typeConverter.convert("integer")).toBe("INT");
+    expect(driver.typeConverter.convert("uuid")).toBe("UNIQUEIDENTIFIER");
+    expect(driver.typeConverter.convert("datetime")).toBe("DATETIME2");
+    expect(driver.defaultValueConverter.convert("boolean", "true")).toBe("1");
+    expect(driver.defaultValueConverter.reverseConvert("uuid", "NEWID()")).toBe("NewId");
+    expect(driver.defaultValueConverter.reverseConvert("binary", "0xab")).toBe("Hex('ab')");
+    expect(Object.keys(driver.rowTypeConverters)).toEqual([]);
+    expect(() => driver.typeConverter.convert("nope")).toThrow(/Unknown spec field type/);
   });
 });
+

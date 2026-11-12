@@ -35,6 +35,9 @@ mod repository_spec;
 #[cfg(test)]
 #[path = "../tests/generate_sql.rs"]
 mod generate_sql_tests;
+#[cfg(test)]
+#[path = "../tests/driver_converters.rs"]
+mod driver_converters;
 
 #[cfg(test)]
 mod tests {

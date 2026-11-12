@@ -17,6 +17,9 @@ mod stored_procedure_statement_renderer;
 pub use driver::OracleDriver;
 
 #[cfg(test)]
+mod driver_converters;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use datasources::{create, register, reset, BuiltDatasource, Datasource};
