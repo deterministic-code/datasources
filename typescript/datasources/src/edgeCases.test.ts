@@ -380,12 +380,19 @@ describe("enrichment edges", () => {
     const typed = new Address();
     creatingOpen["stampCell"](typed, "contactId", 9);
     expect(typed.contactId).toBe(9);
+    class Generated {
+      contactId!: number;
+      line1 = "";
+    }
+    const generated = new Generated();
+    creatingOpen["stampCell"](generated, "contactId", 4);
+    expect(generated.contactId).toBe(4);
     class View {
       line1 = "";
     }
     const omitted = new View();
     creatingOpen["stampCell"](omitted, "addressTypeId", 3);
-    expect("addressTypeId" in omitted).toBe(false);
+    expect((omitted as View & { addressTypeId: number }).addressTypeId).toBe(3);
     creatingOpen["stampCell"](createFlat, "parent_id", undefined);
     creatingOpen["stampCell"](createFlat, "parent_id", null);
     creatingOpen["stampCell"](createFlat, "parent_id", { nested: true });
