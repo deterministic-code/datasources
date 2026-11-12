@@ -186,7 +186,7 @@ fn copy_field<'a>(
     let partial = partial.begin_nth_field(index).map_err(reflect)?;
     let partial = if is_column(shape) {
         match peek_value(value) {
-            Some(cell) if cell != Value::Null => set_value(partial, &cell, shape, true)?,
+            Some(cell) if cell != Value::Null => write_some(partial, shape, &cell)?,
             _ if shape.type_identifier.contains("DateTime") => {
                 set_value(partial, &Value::DateTime(chrono::DateTime::<chrono::Utc>::default()), shape, true)?
             }
@@ -202,6 +202,24 @@ fn copy_field<'a>(
         set_destination(partial, shape, payload_from_peek(value))?
     };
     partial.end().map_err(reflect)
+}
+
+fn write_some<'a>(
+    partial: Partial<'a>,
+    shape: &'static facet::Shape,
+    cell: &Value,
+) -> Result<Partial<'a>> {
+    match shape.def {
+        Def::Option(option) => set_value(
+            partial.begin_some().map_err(reflect)?,
+            cell,
+            option.t(),
+            true,
+        )?
+        .end()
+        .map_err(reflect),
+        _ => set_value(partial, cell, shape, true),
+    }
 }
 
 fn payload_from_peek(value: Peek<'_, '_>) -> Vec<Row> {
@@ -410,6 +428,69 @@ mod tests {
         let album = set_payload_on_struct(&Album::default(), "tags", vec![row]).unwrap();
         assert!(album.tags[0].uuid.is_nil());
         assert_eq!(album.tags[0].label, "home");
+    }
+
+    #[derive(Clone, Debug, PartialEq, Facet)]
+    struct Play {
+        id: i64,
+        finished: Option<chrono::DateTime<chrono::Utc>>,
+        states: Vec<Kid>,
+    }
+
+    impl Default for Play {
+        fn default() -> Self {
+            Self {
+                id: 0,
+                finished: None,
+                states: vec![],
+            }
+        }
+    }
+
+    impl SchemaObject for Play {}
+
+    #[test]
+    fn list_fill_keeps_optional_datetime_on_the_parent() {
+        use crate::entity::assign_related;
+
+        let finished = chrono::DateTime::parse_from_rfc3339("2026-11-12T02:10:13.828Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let mut play = Play {
+            id: 4,
+            finished: Some(finished),
+            ..Play::default()
+        };
+        assign_related(
+            &mut play,
+            "states",
+            vec![Kid {
+                id: 1,
+                label: "open".into(),
+                extra: None,
+            }],
+        )
+        .unwrap();
+        assert_eq!(play.id, 4);
+        assert_eq!(play.finished, Some(finished));
+        assert_eq!(play.states[0].label, "open");
+
+        let mut open = Play {
+            id: 4,
+            ..Play::default()
+        };
+        assign_related(
+            &mut open,
+            "states",
+            vec![Kid {
+                id: 1,
+                label: "open".into(),
+                extra: None,
+            }],
+        )
+        .unwrap();
+        assert!(open.finished.is_none());
+        assert_eq!(open.states[0].id, 1);
     }
 
     #[test]
