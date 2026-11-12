@@ -27,6 +27,7 @@ mod tests {
         assert_eq!(converter.convert(&Value::from("10")).unwrap(), Value::Int(10));
         assert_eq!(converter.convert(&Value::from("0")).unwrap(), Value::Int(0));
         assert!(converter.convert(&Value::from("")).is_err());
+        assert!(converter.convert(&Value::from("1.0")).is_err());
         assert_eq!(converter.convert(&Value::Int(7)).unwrap(), Value::Int(7));
         assert_eq!(converter.reverse_convert(&Value::Int(7)).unwrap(), Value::Int(7));
     }
