@@ -3,6 +3,7 @@ name = "contacts-crud-enriched-medium-rest"
 version = "0.1.0"
 edition = "2021"
 autobins = false
+default-run = "contacts-crud-enriched-medium-rest"
 
 [[bin]]
 name = "contacts-crud-enriched-medium-rest"
