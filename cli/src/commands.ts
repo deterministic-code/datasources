@@ -94,7 +94,6 @@ const cargoAdd = (names: Provider[], local?: LocalInstall): Proc[] => [
     command: "cargo",
     args: local ? ["add", "--path", resolve(local.repo, `rust/providers/${name}`)] : ["add", catalog[name].cargo],
   })),
-  ...(local ? [{ command: "cargo", args: ["add", "--path", resolve(local.repo, "rust/datasources-tests")] }] : []),
 ];
 
 const cargoRemove = (names: Provider[]): Proc[] =>

@@ -207,7 +207,7 @@ describe("setup", () => {
     ).toBe(0);
     expect(rustIo.ran).toContain(`cargo add --path ${join(repo, "rust/datasources")}`);
     expect(rustIo.ran).toContain(`cargo add --path ${join(repo, "rust/providers/sqlite")}`);
-    expect(rustIo.ran).toContain(`cargo add --path ${join(repo, "rust/datasources-tests")}`);
+    expect(rustIo.ran).not.toContain(`cargo add --path ${join(repo, "rust/datasources-tests")}`);
 
     const npmIo = deps(mem(["package.json"], { [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }) }).fs);
     expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], npmIo)).toBe(0);
@@ -229,7 +229,7 @@ describe("setup", () => {
     const addIo = deps(mem(["Cargo.toml"], { [join(cwd, "Cargo.toml")]: "[package]\nname = \"app\"\n" }).fs);
     expect(await exec(["add", "--local", "--cwd", cwd, "--languages", "rust", "--datasources", "mysql"], addIo)).toBe(0);
     expect(addIo.ran).toContain(`cargo add --path ${join(repo, "rust/providers/mysql")}`);
-    expect(addIo.ran).toContain(`cargo add --path ${join(repo, "rust/datasources-tests")}`);
+    expect(addIo.ran).not.toContain(`cargo add --path ${join(repo, "rust/datasources-tests")}`);
   });
 
   it("inits migraters for checked SQL dialects and skips json-only", async () => {

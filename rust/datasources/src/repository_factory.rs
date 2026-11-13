@@ -282,61 +282,69 @@ mod tests {
         assert_eq!(readonly.entity_type(), TypeId::of::<Row>());
     }
 
-    #[test]
-    fn bind_registers_on_construct() {
+    fn with_binders(body: impl FnOnce()) {
+        static LOCK: Mutex<()> = Mutex::new(());
+        let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
         RepositoryFactory::reset_binders();
-        let crud = Arc::new(StubRepository::new("crud"));
-        let read = as_readonly(Arc::new(StubRepository::new("read")));
-        RepositoryFactory::bind(move |factory| {
-            factory.register_named(
-                "Contact",
-                "contacts",
-                {
-                    let crud = Arc::clone(&crud);
-                    move |_| Ok(Arc::clone(&crud) as Arc<dyn ICRUDRepository>)
-                },
-                {
-                    let read = Arc::clone(&read);
-                    move |_| Arc::clone(&read)
-                },
-            );
-        });
-        let factory = RepositoryFactory::new();
-        let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
-        let created = factory
-            .create_named::<Row>("contacts", Arc::clone(&connection))
-            .unwrap();
-        assert_eq!(created.entity_type(), TypeId::of::<Row>());
+        body();
         RepositoryFactory::reset_binders();
     }
 
     #[test]
-    fn bind_registers_on_access() {
-        RepositoryFactory::reset_binders();
-        let crud = Arc::new(StubRepository::new("crud"));
-        let read = as_readonly(Arc::new(StubRepository::new("read")));
-        RepositoryFactory::bind(move |factory| {
-            factory.register_named(
-                "Contact",
-                "contacts",
-                {
-                    let crud = Arc::clone(&crud);
-                    move |_| Ok(Arc::clone(&crud) as Arc<dyn ICRUDRepository>)
-                },
-                {
-                    let read = Arc::clone(&read);
-                    move |_| Arc::clone(&read)
-                },
-            );
+    fn bind_registers_on_construct() {
+        with_binders(|| {
+            let crud = Arc::new(StubRepository::new("crud"));
+            let read = as_readonly(Arc::new(StubRepository::new("read")));
+            RepositoryFactory::bind(move |factory| {
+                factory.register_named(
+                    "Contact",
+                    "contacts",
+                    {
+                        let crud = Arc::clone(&crud);
+                        move |_| Ok(Arc::clone(&crud) as Arc<dyn ICRUDRepository>)
+                    },
+                    {
+                        let read = Arc::clone(&read);
+                        move |_| Arc::clone(&read)
+                    },
+                );
+            });
+            let factory = RepositoryFactory::new();
+            let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
+            let created = factory
+                .create_named::<Row>("contacts", Arc::clone(&connection))
+                .unwrap();
+            assert_eq!(created.entity_type(), TypeId::of::<Row>());
         });
-        let factory = RepositoryFactory::new();
-        let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
-        let created = factory
-            .access("contacts", Arc::clone(&connection))
-            .create()
-            .unwrap();
-        assert_eq!(created.entity_type(), TypeId::of::<Row>());
-        RepositoryFactory::reset_binders();
+    }
+
+    #[test]
+    fn bind_registers_on_access() {
+        with_binders(|| {
+            let crud = Arc::new(StubRepository::new("crud"));
+            let read = as_readonly(Arc::new(StubRepository::new("read")));
+            RepositoryFactory::bind(move |factory| {
+                factory.register_named(
+                    "Contact",
+                    "contacts",
+                    {
+                        let crud = Arc::clone(&crud);
+                        move |_| Ok(Arc::clone(&crud) as Arc<dyn ICRUDRepository>)
+                    },
+                    {
+                        let read = Arc::clone(&read);
+                        move |_| Arc::clone(&read)
+                    },
+                );
+            });
+            let factory = RepositoryFactory::new();
+            let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
+            let created = factory
+                .access("contacts", Arc::clone(&connection))
+                .create()
+                .unwrap();
+            assert_eq!(created.entity_type(), TypeId::of::<Row>());
+        });
     }
 
     #[test]
