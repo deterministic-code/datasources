@@ -1,0 +1,107 @@
+version: 1.0.0
+types:
+  - gender:
+      fields:
+        - name:
+            is_unique: true
+  - email_type:
+      fields:
+        - name:
+            is_unique: true
+  - phone_type:
+      fields:
+        - name:
+            is_unique: true
+  - contact_base:
+      mapping: contacts
+      indexes:
+        - contact_base_gender_type_id_index:
+            fields: [gender_type_id]
+            is_unique: false
+  - address_base:
+      mapping: addresses
+      indexes:
+        - address_base_contact_id_index:
+            fields: [contact_id]
+            is_unique: false
+  - phone_base:
+      mapping: phones
+      fields:
+        - number:
+            is_unique: true
+      indexes:
+        - contact_id_phone_type_id_index:
+            fields:
+              - contact_id
+              - phone_type_id
+            is_unique: true
+        - phone_base_phone_type_id_index:
+            fields: [phone_type_id]
+            is_unique: false
+  - email_base:
+      mapping: emails
+      indexes:
+        - contact_id_email_type_id_index:
+            fields:
+              - contact_id
+              - email_type_id
+            is_unique: true
+        - email_base_email_type_id_index:
+            fields: [email_type_id]
+            is_unique: false
+  - contact_attribute:
+      indexes:
+        - contact_attribute_contact_id_name_index:
+            fields: [contact_id, name]
+            is_unique: false
+  - email_attribute:
+      indexes:
+        - email_attribute_email_id_index:
+            fields: [email_id]
+            is_unique: false
+  - phone_attribute:
+      indexes:
+        - phone_attribute_phone_id_index:
+            fields: [phone_id]
+            is_unique: false
+  - label:
+      fields:
+        - name:
+            is_unique: true
+  - contact_label:
+      indexes:
+        - contact_label_contact_id_label_id_index:
+            fields: [contact_id, label_id]
+            is_unique: true
+        - contact_label_label_id_index:
+            fields: [label_id]
+            is_unique: false
+  - address_attribute:
+      indexes:
+        - address_attribute_address_id_index:
+            fields: [address_id]
+            is_unique: false
+  - address_label:
+      indexes:
+        - address_label_address_id_label_id:
+            fields: [address_id, label_id]
+            is_unique: true
+        - address_label_label_id_index:
+            fields: [label_id]
+            is_unique: false
+  - email_label:
+      indexes:
+        - email_label_email_id_label_id:
+            fields: [email_id, label_id]
+            is_unique: true
+        - email_label_label_id_index:
+            fields: [label_id]
+            is_unique: false
+  - phone_label:
+      indexes:
+        - phone_label_phone_id_label_id:
+            fields: [phone_id, label_id]
+            is_unique: true
+        - phone_label_label_id_index:
+            fields: [label_id]
+            is_unique: false

@@ -169,6 +169,37 @@ describe("generate-stored-procedures datasource.use_stored_procedures", () => {
     assert.ok(up.includes("CREATE OR REPLACE"));
   });
 
+  it("names procedures from datasource.yaml mapping", async () => {
+    const mapped = {
+      reader: memoryReader({
+        "types.yaml": `types:
+  - contact_base:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - given_name:
+            type: string
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+`,
+        "datasource.yaml": `types:
+  - contact_base:
+      mapping: contacts
+`,
+      }),
+      settings: postgresOn,
+    };
+    const up = body(
+      (await generateStoredProcedures(mapped, ["postgres"])).find((entry) =>
+        entry.filename.endsWith("_stored_procedures_up.sql"),
+      ),
+    );
+    assert.ok(up.includes("bulk_create_contacts"));
+    assert.equal(up.includes("bulk_create_contact_bases"), false);
+  });
+
   it("emits nothing when the flag is absent", async () => {
     const files = await generateStoredProcedures(ctx({}), ["postgres"]);
     assert.deepEqual(files, []);

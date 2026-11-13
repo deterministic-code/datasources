@@ -2,7 +2,7 @@ use crate::by_groups;
 use crate::casing::PackCasing;
 use crate::generate_entry::GenerateEntry;
 use crate::procedure_fields;
-use crate::schema::{self, SqlTable};
+use crate::schema::{self, table_stem, SqlTable};
 use crate::spec;
 use crate::sql_dialect;
 use crate::write_inclusion;
@@ -120,7 +120,7 @@ pub fn for_table(
     let type_ = t.as_type();
     let overlay = schema::overlay_of(t);
     let source = ProcedureSource {
-        plural: casing.plural_stem(&t.name),
+        plural: casing.plural_stem(&table_stem(t)),
         table: t.table_name.clone(),
         columns: t.fields.iter().map(|f| column(&f.name)).collect(),
         create_parameters: procedure_fields::create_params(t).into_iter().map(|f| param(&f)).collect(),

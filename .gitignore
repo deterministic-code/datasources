@@ -11,6 +11,8 @@ target/
 bin/
 !cli/bin/
 !cli/bin/**
+!performance/**/src/bin/
+!performance/**/src/bin/**
 obj/
 TestResults/
 *.user
@@ -28,6 +30,13 @@ coverage.info
 file:*
 scripts/artifacts/
 samples/**/sql/
+performance/**/sql/
+performance/**/generated/
+performance/**/node_modules/
+performance/**/app.sqlite
+performance/**/.env
+performance/**/.migraters.yaml
+performance/**/package-lock.json
 csharp/artifacts/
 dest-cli/
 dest/

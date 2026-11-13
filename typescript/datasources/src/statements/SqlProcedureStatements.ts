@@ -55,16 +55,6 @@ export const sqlProcedureStatementsOf = (source: ProcedureSource): IStatement[] 
 };
 
 export const procedureNameOf = (statement: IStatement): string => {
-  if (
-    statement instanceof CreateCreateStoredProcedureStatement ||
-    statement instanceof CreateReadStoredProcedureStatement ||
-    statement instanceof CreateUpdateStoredProcedureStatement ||
-    statement instanceof CreateDeleteStoredProcedureStatement ||
-    statement instanceof CreateBulkCreateStoredProcedureStatement ||
-    statement instanceof CreateBulkUpdateStoredProcedureStatement ||
-    statement instanceof CreateBulkDeleteStoredProcedureStatement
-  ) {
-    return statement.name;
-  }
+  if ("name" in statement && typeof statement.name === "string") return statement.name;
   throw new Error("procedure statement has no name");
 };

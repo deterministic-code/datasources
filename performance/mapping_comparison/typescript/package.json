@@ -1,0 +1,23 @@
+{
+  "name": "mapping-comparison",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/perf.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-code-generators": "file:../../../typescript/code-generators",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",
+    "@deterministic-code/deterministic-generators-common": "^0.1.0",
+    "@deterministic-code/generators-common": "^0.0.1",
+    "@deterministic-code/migraters": "^0.0.19"
+  }
+}

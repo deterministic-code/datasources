@@ -116,6 +116,7 @@ describe("StatementTextRenderer naming", () => {
     ]);
     expect(new StatementTextRenderer().procedures(source())).toEqual([]);
     expect(new StatementTextRenderer(() => ({ visit: () => "" }) as unknown as StatementRenderer).procedures(source())).toEqual([]);
+    expect(procedureNameOf({ name: "create_users" } as import("./IStatement.ts").IStatement)).toBe("create_users");
     expect(() => procedureNameOf(new SelectStatement({ table: "users", fields: ["id"] }))).toThrow("procedure statement has no name");
   });
 });
