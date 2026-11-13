@@ -1,12 +1,12 @@
 import type { IStatement, ProcedureByGroup, ProcedureSource } from "@deterministic-code/datasources";
-import { procedureNameOf } from "@deterministic-code/datasources";
+import { CreateTableStatement, procedureNameOf, sqlProcedureStatementsOf } from "@deterministic-code/datasources";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import { pkName } from "@deterministic-code/generators-common/spec-types";
 import { createCasing, type PackCasing } from "./default-casing.ts";
 import { byGroupsFromDatasource } from "./datasource-by-fields.ts";
-import { dialectDriver, renderSql, schemaRenderer, type SqlDialect } from "./sql-dialect.ts";
+import { renderSql, schemaRenderer, type SqlDialect } from "./sql-dialect.ts";
 import {
   buildLiveTables,
   datasourceSettings,
@@ -15,13 +15,13 @@ import {
   overlayOf,
   sqlTablesFrom,
   tableIdentity,
+  tableStem,
   type LiveTable,
 } from "./sql-schema.ts";
 import { createParamFields, pkFieldOf, updateParamFields } from "./procedures/helpers.ts";
 import { writeInclusionOf } from "./write-inclusion.ts";
 import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
 import { dropRoutineStatementOf } from "../statements.ts";
-import { CreateTableStatement } from "@deterministic-code/datasources";
 
 const withNl = (text: string, naming: import("@deterministic-code/datasources").StatementNaming, dialect: SqlDialect): string => {
   const out = schemaRenderer(dialect, naming).applyKeywords(text);
@@ -32,7 +32,7 @@ const pad = (n: number): string => String(n).padStart(4, "0");
 
 /** Create / read / update / delete / bulk procedure statements for one live table. */
 export const procedureStatementsForTable = (
-  dialect: SqlDialect,
+  _dialect: SqlDialect,
   t: LiveTable,
   casing: PackCasing,
   groups: string[][],
@@ -78,7 +78,7 @@ export const procedureStatementsForTable = (
     };
   });
   const source: ProcedureSource = {
-    plural: casing.pluralStem(t.name),
+    plural: casing.pluralStem(tableStem(t)),
     table: t.tableName,
     columns: table.fields.map((f) => columnName(f.name)),
     createParameters: createParamFields(table).map(param),
@@ -98,7 +98,7 @@ export const procedureStatementsForTable = (
     generatedKey: pk.type === "uuid",
     routineName: casing.routineName,
   };
-  return dialectDriver(dialect).statementRenderer!.procedures(source);
+  return sqlProcedureStatementsOf(source);
 };
 
 /** Stored-procedure migration — empty when the driver does not render routines. */

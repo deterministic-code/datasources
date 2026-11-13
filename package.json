@@ -19,6 +19,8 @@
     "e2e-matrix": "node scripts/e2e-matrix.mjs",
     "test:perf": "node scripts/perf-matrix.mjs",
     "test:perf:reads": "node scripts/perf-matrix.mjs --reads",
+    "test:perf:mapping": "bash scripts/perf-mapping-comparison.sh",
+    "test:perf:mapping:local": "bash scripts/perf-mapping-comparison.sh --local",
     "prepare": "git config core.hooksPath .githooks",
     "setup": "npm run setup --prefix cli --",
     "cli": "npm run cli --prefix cli --",

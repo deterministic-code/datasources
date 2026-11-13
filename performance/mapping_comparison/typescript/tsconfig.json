@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "strictPropertyInitialization": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": ["src/**/*.ts", "generated/repositories/**/*.ts", "generated/types/**/*.ts"]
+}

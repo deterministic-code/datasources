@@ -64,7 +64,7 @@ public static class GenerateProcedures
         }).ToList();
         var source = new ProcedureSource
         {
-            Plural = casing.PluralStem(t.Name),
+            Plural = casing.PluralStem(SqlSchema.TableStem(t)),
             Table = t.TableName,
             Columns = t.Fields.Select(f => Column(f.Name)).ToList(),
             CreateParameters = ProcedureFields.CreateParams(t).Select(Param).ToList(),
