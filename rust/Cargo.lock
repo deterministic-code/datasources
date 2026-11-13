@@ -544,7 +544,7 @@ checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
 name = "datasources"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -563,7 +563,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-code-generators"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "datasources",
  "deterministic_generators_common",
@@ -576,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-dynamodb"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",
@@ -586,7 +586,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-json"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",
@@ -598,7 +598,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-memory"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",
@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-mongodb"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",
@@ -620,7 +620,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-mysql"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -641,7 +641,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-oracle"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",
@@ -652,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-postgres"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-sqlite"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "chrono",
@@ -695,7 +695,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-sqlserver"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",
@@ -706,7 +706,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-tests"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -722,7 +722,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-xml"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",
@@ -732,7 +732,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-yaml"
-version = "0.1.25"
+version = "0.1.65"
 dependencies = [
  "async-trait",
  "ctor",

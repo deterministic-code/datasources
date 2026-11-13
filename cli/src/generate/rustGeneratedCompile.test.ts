@@ -78,6 +78,11 @@ const writeCrate = (
   typesOnly: boolean,
 ): Record<string, string> => {
   mkdirSync(join(crateDir, "src"), { recursive: true });
+  mkdirSync(join(crateDir, ".cargo"), { recursive: true });
+  writeFileSync(
+    join(crateDir, ".cargo/config.toml"),
+    `[resolver]\nincompatible-rust-versions = "fallback"\n`,
+  );
   writeFileSync(
     join(crateDir, "Cargo.toml"),
     `[package]\nname = "generated_compile"\nversion = "0.0.0"\nedition = "2021"\npublish = false\n\n[dependencies]\ndatasources = { path = "${datasourcesPath}" }\n\n[lints.rust]\nwarnings = "deny"\n`,
@@ -104,7 +109,8 @@ const writeCrate = (
 };
 
 const cargoCheck = (crateDir: string): void => {
-  const result = spawnSync("cargo", ["check", "--manifest-path", join(crateDir, "Cargo.toml")], {
+  const result = spawnSync("cargo", ["check"], {
+    cwd: crateDir,
     encoding: "utf8",
     env: { ...process.env, CARGO_TARGET_DIR: targetDir },
   });
