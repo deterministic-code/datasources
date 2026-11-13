@@ -1,0 +1,10 @@
+---
+description: Stop instead of changing types just to satisfy tests
+alwaysApply: true
+---
+
+# Halt on changing types for tests
+
+HALT IMMEDIATELY if a test, generate, version, e2e, or compile failure would be “fixed” by editing `types.yaml`, datasource types, view types, dictionary shapes, fields, references, tags, or includes — without first notifying the user and getting explicit approval.
+
+Do not drop, rename, retarget, or weaken authored types to silence an error. Fix the code, test, or generator instead. If a type change seems required, stop and say so.

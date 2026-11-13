@@ -20,7 +20,7 @@
     "@deterministic-code/datasources": "file:../typescript/datasources",
     "@deterministic-code/datasources-code-generators": "file:../typescript/code-generators",
     "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
-    "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
+    "@deterministic-code/generators-common": "github:deterministic-code/generators-common#2b502616b95be8a282863ef43f481d59f02bf8fc",
     "@deterministic-code/rust-generators": "github:deterministic-code/generators-rust#main",
     "@deterministic-code/typescript-generators": "github:deterministic-code/generators-typescript#main",
     "@inquirer/prompts": "^7.8.0",
@@ -34,5 +34,8 @@
     "esbuild": "^0.25.12",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"
+  },
+  "overrides": {
+    "@deterministic-code/generators-common": "github:deterministic-code/generators-common#2b502616b95be8a282863ef43f481d59f02bf8fc"
   }
 }
