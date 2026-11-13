@@ -151,7 +151,6 @@ describe("commands", () => {
       ["add", "--path", resolve(root, "rust/datasources")],
       ["add", "tokio", "--features", "macros,rt-multi-thread"],
       ["add", "--path", resolve(root, "rust/providers/sqlite")],
-      ["add", "--path", resolve(root, "rust/datasources-tests")],
       ...builds,
       npmLocal,
     ]);
