@@ -3,6 +3,7 @@ import { createCasing } from "@deterministic-code/datasources-code-generators/sq
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { Paths } from "@deterministic-code/generators-common/paths";
 import {
+  columnFields,
   identityColumns,
   isCollectionField,
   isReadonlyLookup,
@@ -55,7 +56,9 @@ export const planRepositories = (
   }
   const viewByTable = new Map<string, Type>();
   for (const type of spec.types) {
-    if (type.tags.includes("view_type") && type.inherits !== undefined) viewByTable.set(type.inherits, type);
+    if (type.tags.includes("view_type") && type.inherits !== undefined && type.inherits !== "dictionary") {
+      viewByTable.set(type.inherits, type);
+    }
   }
   const abstractParent = (table: DatasourceTable): boolean => {
     const inherited = spec.types.some((type) => type.inherits === table.name && type.tags.includes("datasource_type"));
@@ -82,7 +85,7 @@ export const planRepositories = (
     const asView = types.get(table.name);
     return asView?.tags.includes("view_type") === true && asView.inherits !== undefined && included.has(asView.inherits);
   };
-  const models = spec.datasource.flatMap((table): RepositoryModel[] => {
+  const tableModels = spec.datasource.flatMap((table): RepositoryModel[] => {
     const authored = viewByTable.get(table.name) ?? types.get(table.name);
     if (skip(table, authored)) return [];
     const shape = expanded.get(authored!.name);
@@ -159,6 +162,74 @@ export const planRepositories = (
       },
     ];
   });
+  const usedMaps = new Set(
+    spec.types.flatMap((type) => type.fields.filter((field) => field.isMap === true).map((field) => field.base)),
+  );
+  const dictionaries = spec.types.flatMap((dict): RepositoryModel[] => {
+    if (dict.inherits !== "dictionary") return [];
+    if (usedMaps.has(dict.name)) return [];
+    const key = dict.fields.find((field) => field.name === "key");
+    const keyRef = referenceOf(key?.references);
+    if (keyRef === undefined) return [];
+    const table = spec.datasource.find((item) => item.name === keyRef.type);
+    if (table === undefined) throw new Error(`${dict.name}: no matching type in types.yaml`);
+    const overlays = new Map(table.fields.map((field) => [field.name, field]));
+    const columns = columnFields(dict.fields).filter(
+      (field) => field.name === "key" || (field.name === "value" && field.kind === "primitive"),
+    );
+    const sqlName = (field: TypeField): string => {
+      const ref = referenceOf(field.references);
+      const yamlName = ref?.field ?? field.name;
+      return CreateTableStatement.columnName(overlays.get(yamlName)?.mapping ?? yamlName, naming.naming);
+    };
+    const overlayFor = (field: TypeField) =>
+      field.name === "key"
+        ? { name: sqlName(field), isFixedId: true }
+        : overlays.get(referenceOf(field.references)?.field ?? field.name);
+    const ids = ["key"];
+    const schema = columns.flatMap((field) => {
+      if (field.type.length === 0) return [];
+      return [{
+        from: property(field.name),
+        type: field.type,
+        nullable: field.isNullable === true,
+        hasDefault: field.defaultValue !== undefined && field.defaultValue !== null,
+        isId: field.name === "key",
+      }];
+    });
+    const mapped = columns.flatMap((field) => {
+      const from = property(field.name);
+      const to = sqlName(field);
+      return from === to ? [] : [{ from, to }];
+    });
+    const tableType = types.get(table.name);
+    const readonly =
+      isReadonlyLookup(dict) || (tableType !== undefined && isReadonlyLookup(tableType));
+    const shape = expanded.get(dict.name);
+    if (shape === undefined) throw new Error(`${dict.name}: no expanded type`);
+    return [
+      {
+        specName: dict.name,
+        typeName: typeName(dict.name),
+        typeHome: "view",
+        table: CreateTableStatement.tableName(table.mapping ?? table.name, naming.naming),
+        propertyMappings: mapped,
+        ids: ids.map(property),
+        readProperties: columns.map((field) => property(field.name)),
+        createProperties: columns
+          .filter((field) => writeInclusionOf(field, ids, overlayFor(field)).includeInCreate)
+          .map((field) => property(field.name)),
+        updateProperties: columns
+          .filter((field) => writeInclusionOf(field, ids, overlayFor(field)).includeInUpdate)
+          .map((field) => property(field.name)),
+        schema,
+        optimisticConcurrency: readonly ? undefined : concurrencyToken(table, shape, property),
+        enrichments: [],
+        readonly,
+      },
+    ];
+  });
+  const models = [...tableModels, ...dictionaries];
   guardCycles(models);
   return models.sort((left, right) => left.specName.localeCompare(right.specName));
 };

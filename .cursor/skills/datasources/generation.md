@@ -107,7 +107,7 @@ types:
 
 Tag a type `readonly_lookup` when the generated repository is read-only. Create, update, and delete stay off that class. Rows for a `datasource_type` with that tag come from `datasource_seeds.yaml`, not from repository writes.
 
-A `view_type` that does not inherit a base type (`inherits` is missing, or is `dictionary`) is not a table. Generate emits no SQL and no repository for it. A view that inherits a datasource type overlays that parent table.
+A `view_type` that does not inherit a base type (`inherits` is missing, or is `dictionary`) is not a table. Generate emits no SQL for it. A dictionary view always gets a type in `types/view/`. Generate emits a repository for an unused dictionary only when `key.references` names a table; without those references, generate emits the view type only. A host field `settings: game_settings_map{}` stays enrichment on the host repository. A view that inherits a datasource type overlays that parent table.
 
 ##### C#
 

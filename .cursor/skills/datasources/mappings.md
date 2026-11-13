@@ -183,7 +183,7 @@ var finalManualEntities = convertedRows.Select(row => new User
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L10-L152)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L10-L149)
 
 ```rust
 let ada = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();

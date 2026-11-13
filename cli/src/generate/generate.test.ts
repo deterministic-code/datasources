@@ -2016,14 +2016,314 @@ types:
     expect(store.files[join(cwd, "generated/repositories/noteRepository.ts")]).toBeUndefined();
   });
 
-  it("does not emit a repository for a dictionary view", async () => {
+  it("does not emit a repository for a used dictionary view", async () => {
     const spec = await DeterministicParser(
       memoryReader({ "types.yaml": typesYaml, "datasource.yaml": defaultDatasourceYaml }),
     ).parse({ "backend.datasources": "sqlite" });
     const names = planRepositories(spec, "csharp", { "backend.datasources": "sqlite" }).map((model) => model.specName);
-    expect(names).not.toContain("card_labels");
     expect(names).not.toContain("contact_preferences_map");
     expect(names).not.toContain("contact_settings_map");
+  });
+
+  it("emits a type and repository for an unused dictionary with table references", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - setting:
+      tags: [datasource_type]
+      fields:
+        - name:
+            type: string
+            is_id: true
+        - value:
+            type: string
+  - settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: setting.name
+        - value:
+            type: string
+            references: setting.value
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const model = planRepositories(spec, "csharp", settings).find((item) => item.specName === "settings_map");
+    expect(model?.typeHome).toBe("view");
+    expect(model?.table).toBe("settings");
+    expect(model?.ids).toEqual(["Key"]);
+    expect(model?.readProperties).toEqual(["Key", "Value"]);
+    expect(model?.propertyMappings).toEqual(expect.arrayContaining([{ from: "Key", to: "name" }]));
+    const types = await deterministic.generateTypes({ dialect: "csharp", reader: memoryReader(files), settings });
+    const repos = await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(files), settings });
+    expect(textOf(types, "View/SettingsMap.cs")).toContain("class SettingsMap");
+    expect(textOf(types, "View/SettingsMap.cs")).toContain("Key");
+    expect(textOf(types, "View/SettingsMap.cs")).toContain("Value");
+    expect(textOf(repos, "SettingsMapsRepository.cs")).toContain("CRUDRepository<Backend.Types.View.SettingsMap>");
+  });
+
+  it("emits a type and no repository for an unused dictionary without key references", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - card_labels:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+        - value:
+            type: string
+  - note:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const names = planRepositories(spec, "csharp", settings).map((model) => model.specName);
+    expect(names).not.toContain("card_labels");
+    const types = await deterministic.generateTypes({ dialect: "csharp", reader: memoryReader(files), settings });
+    expect(textOf(types, "View/CardLabel.cs")).toContain("class CardLabel");
+    expect(textOf(types, "View/CardLabel.cs")).toContain("Key");
+    expect(textOf(types, "View/CardLabel.cs")).toContain("Value");
+  });
+
+  it("plans a readonly unused dictionary over matching column names", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - setting:
+      tags: [datasource_type]
+      fields:
+        - key:
+            type: string
+            is_id: true
+        - value:
+            type: string
+  - settings_map:
+      tags: [view_type, readonly_lookup]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: setting.key
+            default_value: k
+        - value:
+            type: string
+            references: setting.value
+            default_value: v
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const model = planRepositories(spec, "typescript", settings).find((item) => item.specName === "settings_map");
+    expect(model?.readonly).toBe(true);
+    expect(model?.optimisticConcurrency).toBeUndefined();
+    expect(model?.propertyMappings).toEqual([]);
+    expect(model?.schema).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ from: "key", hasDefault: true }),
+        expect.objectContaining({ from: "value", hasDefault: true }),
+      ]),
+    );
+  });
+
+  it("skips empty-typed dictionary columns and requires an expanded dictionary type", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - setting:
+      tags: [datasource_type]
+      fields:
+        - key:
+            type: string
+            is_id: true
+        - value:
+            type: string
+  - settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: setting.key
+        - value:
+            type: string
+            references: setting.value
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const dict = spec.types.find((type) => type.name === "settings_map");
+    const value = dict?.fields.find((field) => field.name === "value");
+    if (value === undefined) throw new Error("missing value");
+    value.type = "";
+    const model = planRepositories(spec, "typescript", settings).find((item) => item.specName === "settings_map");
+    expect(model?.schema.map((column) => column.from)).toEqual(["key"]);
+    spec.expandedTypes = spec.expandedTypes.filter((type) => type.name !== "settings_map");
+    expect(() => planRepositories(spec, "typescript", settings)).toThrow("settings_map: no expanded type");
+  });
+
+  it("marks an unused dictionary readonly when the table is a readonly lookup", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - setting:
+      tags: [datasource_type, readonly_lookup]
+      fields:
+        - key:
+            type: string
+            is_id: true
+        - value:
+            type: string
+  - settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: setting.key
+        - value:
+            type: string
+            references: setting.value
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    expect(planRepositories(spec, "typescript", settings).find((item) => item.specName === "settings_map")?.readonly).toBe(
+      true,
+    );
+  });
+
+  it("maps unused dictionary value columns through datasource mappings", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - setting:
+      tags: [datasource_type]
+      fields:
+        - key:
+            type: string
+            is_id: true
+        - payload:
+            type: string
+  - settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: setting.key
+        - value:
+            type: string
+            references: setting.payload
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - setting:
+      fields:
+        - payload:
+            mapping: value_text
+`,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const model = planRepositories(spec, "typescript", settings).find((item) => item.specName === "settings_map");
+    expect(model?.propertyMappings).toEqual(expect.arrayContaining([{ from: "value", to: "value_text" }]));
+  });
+
+  it("plans an unused dictionary value without references and rejects a missing table", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - setting:
+      tags: [datasource_type]
+      fields:
+        - key:
+            type: string
+            is_id: true
+        - value:
+            type: string
+  - settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: setting.key
+        - value:
+            type: string
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const model = planRepositories(spec, "typescript", settings).find((item) => item.specName === "settings_map");
+    expect(model?.readProperties).toEqual(["key", "value"]);
+    expect(model?.propertyMappings).toEqual([]);
+    const key = spec.types.find((type) => type.name === "settings_map")?.fields.find((field) => field.name === "key");
+    if (key === undefined) throw new Error("missing key");
+    key.references = "missing.key";
+    expect(() => planRepositories(spec, "typescript", settings)).toThrow("settings_map: no matching type in types.yaml");
+  });
+
+  it("stamps optimistic concurrency on an unused dictionary repository", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - setting:
+      tags: [datasource_type]
+      fields:
+        - key:
+            type: string
+            is_id: true
+        - value:
+            type: string
+        - version:
+            type: integer
+  - settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: setting.key
+        - value:
+            type: string
+            references: setting.value
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - setting:
+      use_optimistic_concurrency: true
+      fields:
+        - version:
+            is_optimistic_concurrency: true
+`,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const model = planRepositories(spec, "typescript", settings).find((item) => item.specName === "settings_map");
+    expect(model?.readonly).toBe(false);
+    expect(model?.optimisticConcurrency).toEqual({ property: "version", increment: false });
   });
 
   it("does not emit a repository for a view_type that does not inherit a base type", async () => {

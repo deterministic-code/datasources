@@ -32,3 +32,5 @@ csharp/artifacts/
 dest-cli/
 dest/
 docs/evals/workspace/
+
+publish.txt
