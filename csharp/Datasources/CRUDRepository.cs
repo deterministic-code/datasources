@@ -155,7 +155,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var record = await LookupRow(item);
         var extras = EnrichmentSources();
-        var fields = Params(record, col => extras.Contains(col) || Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)), extras);
+        var fields = Params(record, col =>
+            extras.Contains(col)
+            || (Listed(createProperties, col, true) && (!ids.Contains(col) || Assigned(record, col))), extras);
         DistinctColumns(fields);
         var needsId = ids.Count == 1 && fields.All(field => field.Name != ids[0]);
         var statement = CRUDStatements.Insert(fields);

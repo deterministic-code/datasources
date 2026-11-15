@@ -270,11 +270,8 @@ impl<T: Entity> CRUDRepository<T> {
         let fields = self.fields(
             record,
             |key, value| {
-                listed(
-                    &self.create_properties,
-                    key,
-                    !self.ids.iter().any(|id| id == key) || assigned(value),
-                )
+                listed(&self.create_properties, key, true)
+                    && (!self.ids.iter().any(|id| id == key) || assigned(value))
             },
             true,
         )?;

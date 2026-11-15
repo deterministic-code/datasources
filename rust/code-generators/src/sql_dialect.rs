@@ -49,6 +49,12 @@ pub fn require(language: &str) -> Result<String> {
     Ok(language.to_string())
 }
 
+fn ends_with_batch_separator(sql: &str) -> bool {
+    sql.lines()
+        .last()
+        .is_some_and(|line| line.trim().eq_ignore_ascii_case("GO"))
+}
+
 pub fn render_sql(dialect: &str, statement: &dyn Statement) -> Result<String> {
     let sql = driver_of(dialect)?
         .statement_renderer()
@@ -56,9 +62,8 @@ pub fn render_sql(dialect: &str, statement: &dyn Statement) -> Result<String> {
         .render(statement)
         .trim_end()
         .to_string();
-    Ok(if sql.is_empty() {
-        String::new()
-    } else if sql.ends_with(';') || sql.ends_with('/') {
+    Ok(if sql.is_empty() || sql.ends_with(';') || sql.ends_with('/') || ends_with_batch_separator(&sql)
+    {
         sql
     } else {
         format!("{sql};")

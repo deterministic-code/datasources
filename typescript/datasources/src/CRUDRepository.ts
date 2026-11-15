@@ -191,7 +191,10 @@ export class CRUDRepository<T = Cells>
     const extras = this.objectSources();
     const fields = fieldsOf(
       record,
-      (col) => extras.has(col) || listed(this.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null)),
+      (col) =>
+        extras.has(col)
+        || (listed(this.createProperties, col, true)
+          && (!this.ids.includes(col) || assigned(record[col] ?? null))),
       extras,
       this.cell,
       this.enrichmentInto,

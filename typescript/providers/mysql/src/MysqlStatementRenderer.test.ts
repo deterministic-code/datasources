@@ -315,6 +315,12 @@ describe("MysqlStatementRenderer", () => {
     expect(
       renderer.render(new CreateBulkCreateStoredProcedureStatement("BulkCreateUsers", "users", [payload], payload, "id", "INT")),
     ).toContain("JSON_TABLE");
+    const createSql = renderer.render(
+      new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id", "name"], [{ name: "name", type: "TEXT" }], "id", "INT", ["name"]),
+    );
+    expect(createSql).toMatch(/\nGO\nCREATE PROCEDURE/);
+    expect(createSql.trimEnd()).toMatch(/END;$/);
+    expect(createSql.trimEnd()).not.toMatch(/GO;?$/);
     expect(
       renderer.render(new CreateBulkUpdateStoredProcedureStatement("BulkUpdateUsers", "users", [payload], payload, "id", "INT")),
     ).toContain("JSON_TABLE");

@@ -57,6 +57,33 @@ describe("bulk write strategies", () => {
     expect(command.executeCalls[5]?.text).toBe("DELETE FROM parents WHERE id = $id");
   });
 
+  it("batch create omits unassigned id listed in createProperties", async () => {
+    const connection = new MockConnection(undefined, "memory");
+    const command = new MockCommand(connection);
+    connection.command = command;
+    const repo = new BulkCRUDRepository<Parent>(
+      connection,
+      {
+        type: Parent,
+        entity: "parents",
+        ids: ["id"],
+        createProperties: ["id", "label"],
+      },
+      new BatchCommandIBulkWriteStrategy<Parent>(),
+    );
+    await repo.createBulk([
+      Object.assign(new Parent(), { label: "a" }),
+      Object.assign(new Parent(), { id: 0, label: "b" }),
+    ]);
+    expect(command.executeCalls[0]?.text).toBe(
+      "INSERT INTO parents (label) VALUES ($label__0), ($label__1)",
+    );
+    await repo.createBulk([Object.assign(new Parent(), { id: 9, label: "c" })]);
+    expect(command.executeCalls[1]?.text).toBe(
+      "INSERT INTO parents (id, label) VALUES ($id__0, $label__0)",
+    );
+  });
+
   it("batch commands joins statements", async () => {
     const { repo, command } = open(Parent, new BatchCommandIBulkWriteStrategy<Parent>());
     await repo.createBulk([

@@ -23,7 +23,7 @@ fn openjson(columns: &[RoutineParameter]) -> String {
 impl SqlServerStoredProcedureStatementRenderer {
     pub fn render_create(&self, statement: &CreateCreateStoredProcedureStatement) -> String {
         format!(
-            "CREATE OR ALTER PROCEDURE {}\n{}\nAS\nBEGIN\n  INSERT INTO {} ({})\n  VALUES ({});\n  SELECT CAST(SCOPE_IDENTITY() AS BIGINT) AS {};\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {}\n{}\nAS\nBEGIN\n  INSERT INTO {} ({})\n  VALUES ({});\n  SELECT CAST(SCOPE_IDENTITY() AS BIGINT) AS {};\nEND;",
             statement.name(),
             params(statement.parameters()),
             statement.table(),
@@ -42,7 +42,7 @@ impl SqlServerStoredProcedureStatementRenderer {
             .collect::<Vec<_>>()
             .join(",\n");
         format!(
-            "CREATE OR ALTER PROCEDURE {}\n{}\nAS\nBEGIN\n  {};\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {}\n{}\nAS\nBEGIN\n  {};\nEND;",
             statement.name(),
             signature,
             select
@@ -53,7 +53,7 @@ impl SqlServerStoredProcedureStatementRenderer {
         let cols = statement.columns().join(", ");
         if statement.by_properties().is_empty() {
             return format!(
-                "CREATE OR ALTER PROCEDURE {}\nAS\nBEGIN\n  SELECT {cols} FROM {} ORDER BY {};\nEND;\nGO",
+                "CREATE OR ALTER PROCEDURE {}\nAS\nBEGIN\n  SELECT {cols} FROM {} ORDER BY {};\nEND;",
                 statement.name(),
                 statement.table(),
                 statement.key(),
@@ -62,7 +62,7 @@ impl SqlServerStoredProcedureStatementRenderer {
         let signature = statement.by_properties().iter().map(|c| format!("@{c} {}", type_of(statement.parameters(), c))).collect::<Vec<_>>().join(", ");
         let pred = statement.by_properties().iter().map(|c| format!("{c} = @{c}")).collect::<Vec<_>>().join(" AND ");
         format!(
-            "CREATE OR ALTER PROCEDURE {} {signature}\nAS\nBEGIN\n  SELECT {cols} FROM {} WHERE {pred};\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {} {signature}\nAS\nBEGIN\n  SELECT {cols} FROM {} WHERE {pred};\nEND;",
             statement.name(),
             statement.table(),
         )
@@ -78,7 +78,7 @@ impl SqlServerStoredProcedureStatementRenderer {
         let by = if statement.by_properties().is_empty() { vec![statement.key().to_string()] } else { statement.by_properties().to_vec() };
         let pred = by.iter().map(|c| format!("{c} = @{c}")).collect::<Vec<_>>().join(" AND ");
         format!(
-            "CREATE OR ALTER PROCEDURE {}\n{}\nAS\nBEGIN\n  UPDATE {}\n  SET\n{}\n  WHERE {pred};\n  SELECT @@ROWCOUNT AS affected;\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {}\n{}\nAS\nBEGIN\n  UPDATE {}\n  SET\n{}\n  WHERE {pred};\n  SELECT @@ROWCOUNT AS affected;\nEND;",
             statement.name(),
             params(statement.parameters()),
             statement.table(),
@@ -91,7 +91,7 @@ impl SqlServerStoredProcedureStatementRenderer {
         let signature = by.iter().map(|c| format!("@{c} {}", type_of(statement.parameters(), c))).collect::<Vec<_>>().join(", ");
         let pred = by.iter().map(|c| format!("{c} = @{c}")).collect::<Vec<_>>().join(" AND ");
         format!(
-            "CREATE OR ALTER PROCEDURE {} {signature}\nAS\nBEGIN\n  DELETE FROM {} WHERE {pred};\n  SELECT @@ROWCOUNT AS affected;\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {} {signature}\nAS\nBEGIN\n  DELETE FROM {} WHERE {pred};\n  SELECT @@ROWCOUNT AS affected;\nEND;",
             statement.name(),
             statement.table(),
         )
@@ -100,7 +100,7 @@ impl SqlServerStoredProcedureStatementRenderer {
     pub fn render_bulk_create(&self, statement: &CreateBulkCreateStoredProcedureStatement) -> String {
         let cols = statement.columns().iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(", ");
         format!(
-            "CREATE OR ALTER PROCEDURE {}\n  @{} NVARCHAR(MAX),\n  @ids NVARCHAR(MAX) OUTPUT\nAS\nBEGIN\n  INSERT INTO {} ({cols})\n  SELECT {cols}\n  FROM OPENJSON(@{}) WITH ({});\n  SET @ids = (SELECT {} FROM {} WHERE {} >= SCOPE_IDENTITY() FOR JSON PATH);\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {}\n  @{} NVARCHAR(MAX),\n  @ids NVARCHAR(MAX) OUTPUT\nAS\nBEGIN\n  INSERT INTO {} ({cols})\n  SELECT {cols}\n  FROM OPENJSON(@{}) WITH ({});\n  SET @ids = (SELECT {} FROM {} WHERE {} >= SCOPE_IDENTITY() FOR JSON PATH);\nEND;",
             statement.name(),
             statement.payload().name,
             statement.table(),
@@ -115,7 +115,7 @@ impl SqlServerStoredProcedureStatementRenderer {
     pub fn render_bulk_update(&self, statement: &CreateBulkUpdateStoredProcedureStatement) -> String {
         let sets = statement.columns().iter().filter(|c| c.name != statement.key()).map(|c| format!("t.{} = payload_rows.{}", c.name, c.name)).collect::<Vec<_>>().join(", ");
         format!(
-            "CREATE OR ALTER PROCEDURE {}\n  @{} NVARCHAR(MAX)\nAS\nBEGIN\n  UPDATE t SET {sets}\n  FROM {} t\n  JOIN OPENJSON(@{}) WITH ({}) AS payload_rows\n    ON t.{} = payload_rows.{};\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {}\n  @{} NVARCHAR(MAX)\nAS\nBEGIN\n  UPDATE t SET {sets}\n  FROM {} t\n  JOIN OPENJSON(@{}) WITH ({}) AS payload_rows\n    ON t.{} = payload_rows.{};\nEND;",
             statement.name(),
             statement.payload().name,
             statement.table(),
@@ -128,7 +128,7 @@ impl SqlServerStoredProcedureStatementRenderer {
 
     pub fn render_bulk_delete(&self, statement: &CreateBulkDeleteStoredProcedureStatement) -> String {
         format!(
-            "CREATE OR ALTER PROCEDURE {}\n  @{} NVARCHAR(MAX)\nAS\nBEGIN\n  DELETE t FROM {} t\n  JOIN OPENJSON(@{}) WITH ({} {} '$.{}') AS payload_rows\n    ON t.{} = payload_rows.{};\nEND;\nGO",
+            "CREATE OR ALTER PROCEDURE {}\n  @{} NVARCHAR(MAX)\nAS\nBEGIN\n  DELETE t FROM {} t\n  JOIN OPENJSON(@{}) WITH ({} {} '$.{}') AS payload_rows\n    ON t.{} = payload_rows.{};\nEND;",
             statement.name(),
             statement.payload().name,
             statement.table(),
