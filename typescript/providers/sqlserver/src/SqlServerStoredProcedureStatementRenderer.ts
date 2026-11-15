@@ -31,8 +31,7 @@ BEGIN
   INSERT INTO ${statement.table} (${statement.parameters.map((p) => p.name).join(", ")})
   VALUES (${statement.parameters.map((p) => `@${p.name}`).join(", ")});
   SELECT CAST(SCOPE_IDENTITY() AS BIGINT) AS ${statement.key};
-END;
-GO`;
+END;`;
   }
 
   renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
@@ -45,8 +44,7 @@ ${signature}
 AS
 BEGIN
   ${select};
-END;
-GO`;
+END;`;
   }
 
   renderRead(statement: CreateReadStoredProcedureStatement): string {
@@ -56,8 +54,7 @@ GO`;
 AS
 BEGIN
   SELECT ${cols} FROM ${statement.table} ORDER BY ${statement.key};
-END;
-GO`;
+END;`;
     }
     const signature = statement.byProperties
       .map((c) => `@${c} ${typeOf(param(statement.parameters, c, statement.name))}`)
@@ -67,8 +64,7 @@ GO`;
 AS
 BEGIN
   SELECT ${cols} FROM ${statement.table} WHERE ${pred};
-END;
-GO`;
+END;`;
   }
 
   renderUpdate(statement: CreateUpdateStoredProcedureStatement): string {
@@ -88,8 +84,7 @@ BEGIN
 ${sets.join(",\n")}
   WHERE ${pred};
   SELECT @@ROWCOUNT AS affected;
-END;
-GO`;
+END;`;
   }
 
   renderDelete(statement: CreateDeleteStoredProcedureStatement): string {
@@ -103,8 +98,7 @@ AS
 BEGIN
   DELETE FROM ${statement.table} WHERE ${pred};
   SELECT @@ROWCOUNT AS affected;
-END;
-GO`;
+END;`;
   }
 
   renderBulkCreate(statement: CreateBulkCreateStoredProcedureStatement): string {
@@ -118,8 +112,7 @@ BEGIN
   SELECT ${cols}
   FROM OPENJSON(@${statement.payload.name}) WITH (${openjson(statement.columns)});
   SET @ids = (SELECT ${statement.key} FROM ${statement.table} WHERE ${statement.key} >= SCOPE_IDENTITY() FOR JSON PATH);
-END;
-GO`;
+END;`;
   }
 
   renderBulkUpdate(statement: CreateBulkUpdateStoredProcedureStatement): string {
@@ -135,8 +128,7 @@ BEGIN
   FROM ${statement.table} t
   JOIN OPENJSON(@${statement.payload.name}) WITH (${openjson(statement.columns)}) AS payload_rows
     ON t.${statement.key} = payload_rows.${statement.key};
-END;
-GO`;
+END;`;
   }
 
   renderBulkDelete(statement: CreateBulkDeleteStoredProcedureStatement): string {
@@ -147,7 +139,6 @@ BEGIN
   DELETE t FROM ${statement.table} t
   JOIN OPENJSON(@${statement.payload.name}) WITH (${statement.key} ${SqlServerDriver.nativeParam({ name: statement.key, type: statement.keyType })} '$.${statement.key}') AS payload_rows
     ON t.${statement.key} = payload_rows.${statement.key};
-END;
-GO`;
+END;`;
   }
 }

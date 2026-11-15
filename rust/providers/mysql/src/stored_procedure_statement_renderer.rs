@@ -33,7 +33,7 @@ fn json_columns(columns: &[RoutineParameter]) -> String {
 
 fn procedure(name: &str, signature: &str, body: &str) -> String {
     format!(
-        "DROP PROCEDURE IF EXISTS {name};\nGO\nCREATE PROCEDURE {name}({signature})\nBEGIN\n{body}\nEND;\nGO"
+        "DROP PROCEDURE IF EXISTS {name};\nGO\nCREATE PROCEDURE {name}({signature})\nBEGIN\n{body}\nEND;"
     )
 }
 

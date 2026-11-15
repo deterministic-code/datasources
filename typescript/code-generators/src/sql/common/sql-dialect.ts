@@ -85,9 +85,14 @@ export const ensureDialect = async (language: string): Promise<SqlDialect> => {
 export const schemaRenderer = (dialect: string, naming: StatementNaming) =>
   dialectDriver(dialect).statementRenderer!.withNaming(naming);
 
+const endsWithBatchSeparator = (sql: string): boolean => {
+  const last = sql.split("\n").pop()?.trim() ?? "";
+  return /^GO$/i.test(last);
+};
+
 export const renderSql = (dialect: string, statement: IStatement): string => {
   const sql = dialectDriver(dialect).statementRenderer!.render(statement).trimEnd();
-  return sql === "" ? "" : /[;/]$/.test(sql) ? sql : `${sql};`;
+  return sql === "" || /[;/]$/.test(sql) || endsWithBatchSeparator(sql) ? sql : `${sql};`;
 };
 
 export const dialectsFromSettings = (

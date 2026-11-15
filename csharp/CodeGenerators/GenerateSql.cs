@@ -26,7 +26,14 @@ public static class GenerateSql
     public static string Render(string dialect, IStatement statement)
     {
         var sql = Driver(dialect).StatementRenderer!.Render(statement).TrimEnd();
-        return sql == "" ? "" : sql.EndsWith(';') || sql.EndsWith('/') ? sql : $"{sql};";
+        if (sql == "" || sql.EndsWith(';') || sql.EndsWith('/') || EndsWithBatchSeparator(sql)) return sql;
+        return $"{sql};";
+    }
+
+    static bool EndsWithBatchSeparator(string sql)
+    {
+        var last = sql.Split('\n')[^1].Trim();
+        return last.Equals("GO", StringComparison.OrdinalIgnoreCase);
     }
 
     static string RequireName(string dialect) =>

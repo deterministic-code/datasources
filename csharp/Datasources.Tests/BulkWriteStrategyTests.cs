@@ -39,6 +39,37 @@ public class BulkWriteStrategyTests
         Assert.Equal("DELETE FROM parents WHERE id = $id", command.ExecuteCalls[5].Text);
     }
 
+    sealed class AddressRow
+    {
+        public int Id { get; set; }
+        public string Label { get; set; } = "";
+    }
+
+    [Fact]
+    public async Task BatchCreateOmitsUnassignedIdListedInCreateProperties()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var repo = new BulkCRUDRepository<AddressRow>(
+            connection,
+            new CRUDRepositoryOptions<AddressRow>
+            {
+                Entity = "addresses",
+                Ids = ["Id"],
+                CreateProperties = ["Id", "Label"],
+            },
+            new BatchCommandIBulkWriteStrategy<AddressRow>());
+        await repo.Create([new AddressRow { Label = "a" }, new AddressRow { Id = 0, Label = "b" }]);
+        Assert.Equal(
+            "INSERT INTO addresses (Label) VALUES ($Label__0), ($Label__1)",
+            command.ExecuteCalls[0].Text);
+        await repo.Create([new AddressRow { Id = 9, Label = "c" }]);
+        Assert.Equal(
+            "INSERT INTO addresses (Id, Label) VALUES ($Id__0, $Label__0)",
+            command.ExecuteCalls[1].Text);
+    }
+
     [Fact]
     public async Task BatchCommandIBulkWriteStrategyJoinsStatements()
     {

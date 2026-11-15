@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { generate as generateSql } from "@deterministic-code/datasources-code-generators/sql/generate-sql";
+import { generate as generateStoredProcedures } from "@deterministic-code/datasources-code-generators/sql/generate-stored-procedures";
 import "./register-sql-generate.ts";
 
 const typesYaml = `types:
@@ -114,6 +115,36 @@ seeds:
     assert.ok(up, "expected mysql/migrations/0001_initial_up.sql");
     const sql = "contents" in up ? String(up.contents) : up.content;
     assert.match(sql, /INSERT INTO genders[\s\S]*;\nGO\nINSERT INTO genders/);
+  });
+
+  it("joins stored procedures without GO; or consecutive GO", async () => {
+    const files = await generateStoredProcedures(
+      {
+        reader: memoryReader({
+          "types.yaml": `types:
+  - user:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - email:
+            type: string
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+`,
+        }),
+        settings: { "datasource.use_stored_procedures": "true" },
+      },
+      ["mysql"],
+    );
+    const up = files.find((entry) => entry.filename.endsWith("mysql/migrations/0002_stored_procedures_up.sql"));
+    assert.ok(up, "expected stored procedures up migration");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    assert.match(sql, /CREATE PROCEDURE create_users/);
+    assert.match(sql, /bulk_create_users/);
+    assert.doesNotMatch(sql, /GO;/);
+    assert.doesNotMatch(sql, /\nGO\nGO\n/);
   });
 
   it("infers a reference column type from the parent id", async () => {

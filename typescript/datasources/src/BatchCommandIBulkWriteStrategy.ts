@@ -144,7 +144,12 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
   private mappedInsert = (item: T): Inserted => {
     const record = this.reverse(item);
     const statement = this.statements().insert(
-      this.fields(record, (col) => listed(this.options.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null))),
+      this.fields(
+        record,
+        (col) =>
+          listed(this.options.createProperties, col, true)
+          && (!this.ids.includes(col) || assigned(record[col] ?? null)),
+      ),
     );
     return { table: statement.table, fields: statement.fields };
   };

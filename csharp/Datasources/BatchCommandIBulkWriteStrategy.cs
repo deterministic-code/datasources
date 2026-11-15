@@ -95,7 +95,8 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     (string Table, IReadOnlyList<Parameter> Fields) MappedInsert(T item)
     {
         var record = Reverse(item);
-        var statement = Statements().Insert(Fields(record, col => Listed(Options.CreateProperties, col, !Ids.Contains(col) || Assigned(record, col))));
+        var statement = Statements().Insert(Fields(record, col =>
+            Listed(Options.CreateProperties, col, true) && (!Ids.Contains(col) || Assigned(record, col))));
         return (statement.Table, statement.Fields);
     }
 

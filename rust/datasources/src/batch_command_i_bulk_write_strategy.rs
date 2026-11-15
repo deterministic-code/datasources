@@ -161,11 +161,8 @@ impl BatchCommandIBulkWriteStrategy {
         let fields = self.fields(
             &record,
             |key, value| {
-                listed(
-                    &create,
-                    key,
-                    !ids.iter().any(|id| id == key) || assigned(value),
-                )
+                listed(&create, key, true)
+                    && (!ids.iter().any(|id| id == key) || assigned(value))
             },
             true,
         )?;

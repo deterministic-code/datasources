@@ -31,8 +31,7 @@ GO
 CREATE PROCEDURE ${name}(${signature})
 BEGIN
 ${body}
-END;
-GO`;
+END;`;
 
 export class MysqlStoredProcedureStatementRenderer {
   renderCreate(statement: CreateCreateStoredProcedureStatement): string {

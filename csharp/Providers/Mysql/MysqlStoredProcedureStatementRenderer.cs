@@ -23,7 +23,6 @@ internal sealed class MysqlStoredProcedureStatementRenderer
         BEGIN
         {body}
         END;
-        GO
         """;
 
     public string Render(CreateCreateStoredProcedureStatement statement)

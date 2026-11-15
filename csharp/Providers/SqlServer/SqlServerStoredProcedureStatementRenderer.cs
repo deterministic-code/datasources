@@ -22,7 +22,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
           VALUES ({string.Join(", ", statement.Parameters.Select(parameter => $"@{parameter.Name}"))});
           SELECT CAST(SCOPE_IDENTITY() AS BIGINT) AS {statement.Key};
         END;
-        GO
         """;
 
     public string Render(CreateNestedReadStoredProcedureStatement statement)
@@ -37,7 +36,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
             BEGIN
               {select};
             END;
-            GO
             """;
     }
 
@@ -51,7 +49,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
                 BEGIN
                   SELECT {cols} FROM {SqlServerDriver.Quote(statement.Table)} ORDER BY {statement.Key};
                 END;
-                GO
                 """;
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
             $"@{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
@@ -62,7 +59,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
             BEGIN
               SELECT {cols} FROM {SqlServerDriver.Quote(statement.Table)} WHERE {pred};
             END;
-            GO
             """;
     }
 
@@ -87,7 +83,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
               WHERE {pred};
               SELECT @@ROWCOUNT AS affected;
             END;
-            GO
             """;
     }
 
@@ -104,7 +99,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
               DELETE FROM {SqlServerDriver.Quote(statement.Table)} WHERE {pred};
               SELECT @@ROWCOUNT AS affected;
             END;
-            GO
             """;
     }
 
@@ -122,7 +116,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
               FROM OPENJSON(@{statement.Payload.Name}) WITH ({OpenJson(statement.Columns)});
               SET @ids = (SELECT {statement.Key} FROM {SqlServerDriver.Quote(statement.Table)} WHERE {statement.Key} >= SCOPE_IDENTITY() FOR JSON PATH);
             END;
-            GO
             """;
     }
 
@@ -139,7 +132,6 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
               JOIN OPENJSON(@{statement.Payload.Name}) WITH ({OpenJson(statement.Columns)}) AS payload_rows
                 ON t.{statement.Key} = payload_rows.{statement.Key};
             END;
-            GO
             """;
     }
 
@@ -153,6 +145,5 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
           JOIN OPENJSON(@{statement.Payload.Name}) WITH ({statement.Key} {SqlServerDriver.NativeSpec(statement.KeyType)} '$.{statement.Key}') AS payload_rows
             ON t.{statement.Key} = payload_rows.{statement.Key};
         END;
-        GO
         """;
 }
