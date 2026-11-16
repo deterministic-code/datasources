@@ -295,6 +295,37 @@ types:
     expect(loaded.files["types.yaml"]).toMatch(/extra:/);
   });
 
+  it("keeps one base when two children define the same type identically", async () => {
+    const dir = "app";
+    const child = (name: string) => `version: 1.0.0
+types:
+  - base:
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - ${name}:
+      inherits: base
+      fields: []
+`;
+    const loaded = await loadSpec(
+      mem(["types.yaml", "a.yaml", "b.yaml"], {
+        [join(dir, "types.yaml")]: `version: 1.0.0
+includes:
+  - file: a.yaml
+  - file: b.yaml
+types: []
+`,
+        [join(dir, "a.yaml")]: child("a"),
+        [join(dir, "b.yaml")]: child("b"),
+      }),
+      dir,
+    );
+    expect(loaded.files["types.yaml"].match(/- base:/g)).toHaveLength(1);
+    expect(loaded.files["types.yaml"]).toMatch(/- a:/);
+    expect(loaded.files["types.yaml"]).toMatch(/- b:/);
+  });
+
   it("skips a version directory without a diff", async () => {
     const dir = "app";
     const loaded = await loadSpec(

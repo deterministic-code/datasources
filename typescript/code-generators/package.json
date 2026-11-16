@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@deterministic-code/datasources": "*",
-    "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
+    "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#48eb1be39c0f2add808897e33dfcb62dda34de92",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
     "pluralize": "^8.0.0",
     "yaml": "^2.6.0"
