@@ -15,6 +15,7 @@ use std::time::Instant;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let process_started = Instant::now();
     datasources_providers::register();
     let provider = env("PROVIDER", "sqlite");
     let rows = env("PERF_ROWS", "25000").parse::<i64>().expect("rows");
@@ -137,6 +138,7 @@ async fn main() -> Result<()> {
         .iter()
         .map(|row| related_len(row, "emails"))
         .sum::<usize>();
+    let startup_ms = process_started.elapsed().as_secs_f64() * 1000.0;
     let create_started = Instant::now();
     let mut at = 0;
     while at < seeded.len() {
@@ -212,6 +214,7 @@ async fn main() -> Result<()> {
             "provider": provider,
             "rows": rows,
             "chunk": chunk.min(rows as usize),
+            "startupMs": startup_ms,
             "createMs": create_ms,
             "createPerSec": if create_ms == 0.0 { 0.0 } else { rows as f64 / (create_ms / 1000.0) },
             "counts": counts,

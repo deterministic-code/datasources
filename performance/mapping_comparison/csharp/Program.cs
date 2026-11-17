@@ -3,6 +3,7 @@ using System.Text.Json;
 using Backend.Types.View;
 using Datasources;
 
+var processClock = Stopwatch.StartNew();
 var provider = Environment.GetEnvironmentVariable("PROVIDER") ?? "sqlite";
 var rows = int.Parse(Environment.GetEnvironmentVariable("PERF_ROWS") ?? "25000");
 var chunk = int.Parse(Environment.GetEnvironmentVariable("PERF_CHUNK") ?? "500");
@@ -98,6 +99,7 @@ try
     contactsBulk.AddEnriched(new("Emails", "Id", "ContactId", Type: EnrichmentPropertyType.List), emailsBulk);
 
     var seeded = SeedContacts(rows);
+    var startupMs = processClock.Elapsed.TotalMilliseconds;
     var createMs = await Time(() => Each(seeded, batch => contactsBulk.Create(batch)));
     var counts = new
     {
@@ -151,6 +153,7 @@ try
         provider,
         rows,
         chunk = Math.Min(chunk, rows),
+        startupMs,
         createMs,
         createPerSec = createMs == 0 ? 0 : rows / (createMs / 1000),
         counts,
