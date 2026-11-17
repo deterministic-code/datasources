@@ -52,6 +52,10 @@ if [ -n "$dotnet" ]; then build_image datasources-e2e-dotnet e2e-dotnet.Dockerfi
 if [ -n "$rust" ]; then build_image datasources-e2e-rust e2e-rust.Dockerfile; fi
 
 mkdir -p "${HOME}/.cache/datasources-npm" "${HOME}/.cache/datasources-nuget" "${HOME}/.cache/datasources-cargo"
+reports_dir="$repo/performance/mapping_comparison/reports"
+mkdir -p "$reports_dir"
+jsonl="$reports_dir/mapping-comparison.jsonl"
+: > "$jsonl"
 
 parallel=${PERF_MAPPING_PARALLEL:-1}
 
@@ -172,13 +176,18 @@ for dir in "$@"; do
       start=$(date +%s)
       printf 'perf-mapping: %s start %s\n' "$(date +%H:%M:%S)" "$dir"
       code=0
+      log="$status_dir/$token.log"
       {
+        container_start=$(python3 -c 'import time; print(int(time.time() * 1000))')
         docker compose build app || exit $?
+        container_end=$(python3 -c 'import time; print(int(time.time() * 1000))')
+        printf '{"phase":"container","language":"%s","containerBuildMs":%s}\n' "${dir##*/}" "$((container_end - container_start))"
         docker compose up -d --wait mysql postgres || exit $?
         run_scripts || exit $?
-      } 2>&1 | while IFS= read -r line || [ -n "$line" ]; do
+      } 2>&1 | tee "$log" | while IFS= read -r line || [ -n "$line" ]; do
         printf '%s\n' "$dir: $line"
       done | e2e_watch || code=$?
+      grep -E '^\{' "$log" >> "$jsonl" || true
       if [ "$code" -eq 0 ]; then
         printf 'perf-mapping: %s done %s %ss\n' "$(date +%H:%M:%S)" "$dir" "$(($(date +%s) - start))"
       fi
@@ -191,3 +200,5 @@ for dir in "$@"; do
 done
 
 await_idle
+node "$repo/scripts/perf-mapping-report.mjs" "$jsonl" "$reports_dir"
+

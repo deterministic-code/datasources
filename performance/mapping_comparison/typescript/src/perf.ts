@@ -17,6 +17,7 @@ import { Address, address } from "../generated/types/view/address.ts";
 import { Contact, contact } from "../generated/types/view/contact.ts";
 import { Email, email } from "../generated/types/view/email.ts";
 
+const processStarted = performance.now();
 const provider = process.env.PROVIDER ?? "sqlite";
 const rows = Number(process.env.PERF_ROWS ?? 25000);
 const chunk = Number(process.env.PERF_CHUNK ?? 500);
@@ -300,6 +301,7 @@ try {
   );
 
   const seeded = seedContacts(rows);
+  const startupMs = performance.now() - processStarted;
   const createStarted = performance.now();
   await each(seeded, (batch) => contactsBulk.createBulk(batch));
   const createMs = performance.now() - createStarted;
@@ -375,6 +377,7 @@ try {
       provider,
       rows,
       chunk: Math.min(chunk, rows),
+      startupMs,
       createMs,
       createPerSec: createMs === 0 ? 0 : rows / (createMs / 1000),
       counts,
