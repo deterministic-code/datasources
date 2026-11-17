@@ -3,12 +3,12 @@ use datasources::{
     encode_rows, default, BatchCommandIBulkWriteStrategy, BulkCRUDRepository,
     CRUDRepositoryOptions, ChangeCasingMapper, Connection, Casing, DictionaryMapper, Enrichment,
     EnrichmentPropertyType, IReadonlyRepository, Mapper, Native, ReadonlyRepository,
-    ReadonlyRepositoryMappingOptions, Result, Row, RowTypeConverter, Schema, SchemaColumn,
+    ReadonlyRepositoryMappingOptions, Result, Row, Schema, SchemaColumn,
     StoredProcedureBulkWriteStrategy, Value,
 };
 use futures_util::TryStreamExt;
 use mapping_comparison::datasources_providers;
-use mapping_comparison::generated::{Address, Contact, Email};
+use mapping_comparison::generated::{Address, Contact, Email, Repositories};
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Instant;
@@ -138,11 +138,12 @@ async fn main() -> Result<()> {
         .map(|row| related_len(row, "emails"))
         .sum::<usize>();
     let create_started = Instant::now();
-    each(&mut seeded, chunk, |batch| {
-        let repo = Arc::clone(&contacts_bulk);
-        async move { repo.create_bulk(batch).await.map(|_| ()) }
-    })
-    .await?;
+    let mut at = 0;
+    while at < seeded.len() {
+        let end = (at + chunk).min(seeded.len());
+        contacts_bulk.create_bulk(&mut seeded[at..end]).await?;
+        at = end;
+    }
     let create_ms = create_started.elapsed().as_secs_f64() * 1000.0;
     let counts = json!({
         "contacts": count(&connection, "contacts").await?,
@@ -182,22 +183,23 @@ async fn main() -> Result<()> {
         Arc::clone(&dictionary_emails),
         None,
     );
+    let dictionary_contacts = Arc::new(dictionary_contacts);
 
     let reads = json!({
-        "default": profile(read_iters, rows, || async {
-            let loaded: Vec<Contact> = IReadonlyRepository::read(&default_repo, None, None)
-                .try_collect()
-                .await?;
-            check(&loaded, rows, "default")?;
-            Ok(())
+        "default": profile(read_iters, rows, || {
+            let repo = Arc::clone(&default_repo);
+            async move {
+                check(&load_contacts(repo.as_ref()).await?, rows, "default")?;
+                Ok(())
+            }
         })
         .await?,
-        "dictionary": profile(read_iters, rows, || async {
-            let loaded: Vec<Contact> = IReadonlyRepository::read(&dictionary_contacts, None, None)
-                .try_collect()
-                .await?;
-            check(&loaded, rows, "dictionary")?;
-            Ok(())
+        "dictionary": profile(read_iters, rows, || {
+            let repo = Arc::clone(&dictionary_contacts);
+            async move {
+                check(&load_contacts(repo.as_ref()).await?, rows, "dictionary")?;
+                Ok(())
+            }
         })
         .await?,
     });
@@ -247,9 +249,6 @@ fn repo(
     options.read_properties = columns.iter().map(|column| (*column).to_string()).collect();
     options.create_properties = Some(columns.iter().map(|column| (*column).to_string()).collect());
     options.update_properties = options.create_properties.clone();
-    options.row_converter = Some(RowTypeConverter::new(
-        columns.iter().map(|column| (*column).to_string()).collect(),
-    ));
     options.schema = Schema::new(
         columns
             .iter()
@@ -355,12 +354,20 @@ fn seed_contacts(total: i64) -> Vec<Row> {
                 .map(|j| {
                     stamp_row(
                         0,
-                        format!("a{id}-{j}"),
+                        datasources::uuid::Uuid::new_v4(),
                         created,
                         &[
+                            ("display_name", Value::from("")),
                             ("line_1", Value::from(format!("{id} Line {}", j + 1))),
+                            ("line_2", Value::from("")),
+                            ("line_3", Value::from("")),
+                            ("neighborhood", Value::from("")),
+                            ("district", Value::from("")),
                             ("city", Value::from(format!("City{}", (id + j) % 50))),
+                            ("state_province", Value::from("")),
+                            ("postal_code", Value::from("")),
                             ("country_code", Value::from("US")),
+                            ("formatted_address", Value::from("")),
                             ("is_primary", Value::Bool(j == 0)),
                         ],
                     )
@@ -370,7 +377,7 @@ fn seed_contacts(total: i64) -> Vec<Row> {
                 .map(|j| {
                     stamp_row(
                         0,
-                        format!("e{id}-{j}"),
+                        datasources::uuid::Uuid::new_v4(),
                         created,
                         &[
                             ("address", Value::from(format!("c{id}.e{}@example.com", j + 1))),
@@ -383,12 +390,17 @@ fn seed_contacts(total: i64) -> Vec<Row> {
                 .collect::<Vec<_>>();
             let mut contact = stamp_row(
                 id,
-                format!("00000000-0000-0000-0000-{id:012x}"),
+                datasources::uuid::Uuid::from_u128(id as u128),
                 created,
                 &[
                     ("name", Value::from(format!("Contact {id}"))),
                     ("given_name", Value::from(format!("Given{id}"))),
+                    ("additional_name", Value::from("")),
+                    ("pronunciation", Value::from("")),
                     ("family_name", Value::from(format!("Family{id}"))),
+                    ("nick_name", Value::from("")),
+                    ("job_title", Value::from("")),
+                    ("organization", Value::from("")),
                     ("gender_type_id", Value::Int(1 + (id % 3))),
                     ("is_starred", Value::Bool(false)),
                     ("is_favorite", Value::Bool(false)),
@@ -402,10 +414,10 @@ fn seed_contacts(total: i64) -> Vec<Row> {
         .collect()
 }
 
-fn stamp_row(id: i64, uuid: String, created: DateTime<Utc>, extra: &[(&str, Value)]) -> Row {
+fn stamp_row(id: i64, uuid: datasources::uuid::Uuid, created: DateTime<Utc>, extra: &[(&str, Value)]) -> Row {
     let mut row = Row::new();
     row.insert("id".into(), Value::Int(id));
-    row.insert("uuid".into(), Value::from(uuid));
+    row.insert("uuid".into(), Value::Uuid(uuid));
     row.insert("created".into(), Value::DateTime(created));
     row.insert("updated".into(), Value::DateTime(created));
     row.insert("version".into(), Value::Binary(vec![0]));
@@ -418,23 +430,8 @@ fn stamp_row(id: i64, uuid: String, created: DateTime<Utc>, extra: &[(&str, Valu
 fn related_len(row: &Row, field: &str) -> usize {
     match row.get(field) {
         Some(Value::Text(text)) if !text.is_empty() => text.split('|').count(),
-        Some(Value::Array(items)) => items.len(),
         _ => 0,
     }
-}
-
-async fn each<F, Fut>(items: &mut [Row], chunk: usize, mut write: F) -> Result<()>
-where
-    F: FnMut(&mut [Row]) -> Fut,
-    Fut: std::future::Future<Output = Result<()>>,
-{
-    let mut at = 0;
-    while at < items.len() {
-        let end = (at + chunk).min(items.len());
-        write(&mut items[at..end]).await?;
-        at = end;
-    }
-    Ok(())
 }
 
 async fn count(connection: &Arc<dyn Connection>, table: &str) -> Result<i64> {
@@ -469,6 +466,10 @@ where
         (times[times.len() / 2 - 1] + times[times.len() / 2]) / 2.0
     };
     Ok(json!({ "ms": ms, "perSec": rows as f64 / (ms / 1000.0) }))
+}
+
+async fn load_contacts<T: IReadonlyRepository<Contact> + ?Sized>(repo: &T) -> Result<Vec<Contact>> {
+    IReadonlyRepository::read(repo, None, None).try_collect().await
 }
 
 fn check(loaded: &[Contact], rows: i64, label: &str) -> Result<()> {

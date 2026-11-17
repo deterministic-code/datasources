@@ -91,72 +91,9 @@ var connection = await ds.CreateConnection();
 await connection.Open();
 try
 {
-    var sparseContact = new DictionaryMapper<string>(new Dictionary<string, string>
-    {
-        ["GivenName"] = "given_name",
-        ["AdditionalName"] = "additional_name",
-        ["FamilyName"] = "family_name",
-        ["NickName"] = "nick_name",
-        ["JobTitle"] = "job_title",
-        ["IsStarred"] = "is_starred",
-        ["IsFavorite"] = "is_favorite",
-        ["IsDeleted"] = "is_deleted",
-        ["GenderTypeId"] = "gender_type_id",
-    });
-    var sparseAddress = new DictionaryMapper<string>(new Dictionary<string, string>
-    {
-        ["ContactId"] = "contact_id",
-        ["DisplayName"] = "display_name",
-        ["Line1"] = "line_1",
-        ["Line2"] = "line_2",
-        ["Line3"] = "line_3",
-        ["StateProvince"] = "state_province",
-        ["PostalCode"] = "postal_code",
-        ["CountryCode"] = "country_code",
-        ["FormattedAddress"] = "formatted_address",
-        ["IsPrimary"] = "is_primary",
-    });
-    var sparseEmail = new DictionaryMapper<string>(new Dictionary<string, string>
-    {
-        ["ContactId"] = "contact_id",
-        ["DisplayName"] = "display_name",
-        ["IsPrimary"] = "is_primary",
-        ["EmailTypeId"] = "email_type_id",
-    });
-
-    var addressesBulk = Repo<Address>(connection, new()
-    {
-        Entity = "Address",
-        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Address"] = "addresses" }),
-        PropertyMappings = sparseAddress,
-        Ids = ["Id"],
-        CreateProperties = addressColumns,
-        UpdateProperties = addressColumns,
-        ReadProperties = addressColumns,
-        Schema = addressSchema,
-    }, "bulk_create_addresses", "bulk_update_addresses", "bulk_delete_addresses");
-    var emailsBulk = Repo<Email>(connection, new()
-    {
-        Entity = "Email",
-        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Email"] = "emails" }),
-        PropertyMappings = sparseEmail,
-        Ids = ["Id"],
-        CreateProperties = emailColumns,
-        UpdateProperties = emailColumns,
-        ReadProperties = emailColumns,
-        Schema = emailSchema,
-    }, "bulk_create_emails", "bulk_update_emails", "bulk_delete_emails");
-    var contactsBulk = Repo<Contact>(connection, new()
-    {
-        Entity = "Contact",
-        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts" }),
-        PropertyMappings = sparseContact,
-        Ids = ["Id"],
-        CreateProperties = contactColumns,
-        UpdateProperties = contactColumns,
-        ReadProperties = contactColumns,
-        Schema = contactSchema,
-    }, "bulk_create_contacts", "bulk_update_contacts", "bulk_delete_contacts");
+    var addressesBulk = Repo(connection, AddressesRepository.Options(), "bulk_create_addresses", "bulk_update_addresses", "bulk_delete_addresses");
+    var emailsBulk = Repo(connection, EmailsRepository.Options(), "bulk_create_emails", "bulk_update_emails", "bulk_delete_emails");
+    var contactsBulk = Repo(connection, ContactsRepository.Options(), "bulk_create_contacts", "bulk_update_contacts", "bulk_delete_contacts");
     contactsBulk.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), addressesBulk);
     contactsBulk.AddEnriched(new("Emails", "Id", "ContactId", Type: EnrichmentPropertyType.List), emailsBulk);
 

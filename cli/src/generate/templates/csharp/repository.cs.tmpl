@@ -65,7 +65,7 @@ public sealed class {{className}} : {{#readonly}}ReadonlyRepository{{/readonly}}
 {{/optimisticConcurrency}}
 
 {{^builder}}
-    static {{#readonly}}ReadonlyRepositoryMappingOptions{{/readonly}}{{^readonly}}CRUDRepositoryOptions{{/readonly}}<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options() => new()
+    public static {{#readonly}}ReadonlyRepositoryMappingOptions{{/readonly}}{{^readonly}}CRUDRepositoryOptions{{/readonly}}<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options() => new()
     {
         Entity = "{{typeName}}",
         EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{typeName}}"] = "{{table}}" }),
@@ -92,7 +92,7 @@ public sealed class {{className}} : {{#readonly}}ReadonlyRepository{{/readonly}}
     };
 {{/builder}}
 {{#builder}}
-    static {{#readonly}}ReadonlyRepositoryMappingOptions{{/readonly}}{{^readonly}}CRUDRepositoryOptions{{/readonly}}<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options(IConnection connection) =>
+    public static {{#readonly}}ReadonlyRepositoryMappingOptions{{/readonly}}{{^readonly}}CRUDRepositoryOptions{{/readonly}}<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>()
             .Add(new()
             {
