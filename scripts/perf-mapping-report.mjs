@@ -14,6 +14,7 @@ const containers = records.filter((row) => row.phase === "container");
 const results = records.filter((row) => row.sample === "mapping_comparison");
 const languages = [...new Set([...containers, ...results].map((row) => row.language).filter(Boolean))];
 const providers = [...new Set(results.map((row) => row.provider).filter(Boolean))];
+const tests = ["defaultRead", "dictionaryRead", "propertyMappedRead"];
 const round = (value) => Math.round(Number(value));
 const found = (language, provider) =>
   results.find((row) => row.language === language && row.provider === provider);
@@ -33,11 +34,15 @@ const containerRows = languages
 
 const resultRows = languages
   .flatMap((language) =>
-    providers.map((provider) => {
-      const row = found(language, provider);
-      if (!row) return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th><td></td><td></td><td></td><td></td><td></td></tr>`;
-      return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th>${metric(row.startupMs, "ms")}${metric(row.createMs, "ms")}${metric(row.createPerSec, "row p/s")}${metric(row.reads?.default?.ms, "ms")}${metric(row.reads?.dictionary?.ms, "ms")}</tr>`;
-    }),
+    providers.flatMap((provider) =>
+      tests.map((test) => {
+        const row = found(language, provider);
+        const cell = row?.tests?.[test];
+        if (!cell)
+          return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th><th>${escape(test)}</th><td></td><td></td><td></td></tr>`;
+        return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th><th>${escape(test)}</th>${metric(cell.seedMs, "ms")}${metric(cell.readMs, "ms")}${metric(cell.readPerSec, "parents p/s")}</tr>`;
+      }),
+    ),
   )
   .join("");
 
@@ -57,11 +62,11 @@ th,td{border:1px solid #444;padding:.65rem 1rem;vertical-align:top;white-space:n
 sub{color:#aaa;font-size:.65em}
 </style></head><body>
 <h1>mapping comparison</h1>
-<p>startup, create, and reads are process timers. container build is docker compose build.</p>
+<p>each test seeds, reads, then deletes. seed and read are process timers. container build is docker compose build.</p>
 <h2>container</h2>
 <table><thead><tr><th>language</th><th>build</th></tr></thead><tbody>${containerRows}</tbody></table>
-<h2>create and read</h2>
-<table><thead><tr><th>language</th><th>provider</th><th>startup</th><th>create</th><th>create rate</th><th>default read</th><th>dictionary read</th></tr></thead><tbody>${resultRows}</tbody></table>
+<h2>tests</h2>
+<table><thead><tr><th>language</th><th>provider</th><th>test</th><th>seed</th><th>read</th><th>read rate</th></tr></thead><tbody>${resultRows}</tbody></table>
 </body></html>
 `,
 );
