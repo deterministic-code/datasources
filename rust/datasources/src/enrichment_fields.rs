@@ -170,7 +170,7 @@ fn row_from_peek(value: Peek<'_, '_>) -> Option<Row> {
         if !is_column(field.shape()) {
             continue;
         }
-        if let Some(value) = peek_value(cell) {
+        if let Some(value) = peek_value(cell).filter(|value| *value != Value::Null) {
             row.insert(field.name.to_string(), value);
         }
     }

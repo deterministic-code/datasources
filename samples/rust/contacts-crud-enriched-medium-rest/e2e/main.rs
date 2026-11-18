@@ -1,8 +1,14 @@
 use contacts_crud_enriched_medium_rest::{
-    register, Address, Contact, LocalePreference, Phone, Repositories,
+    register, repositories, Address, Contact, LocalePreference, Phone, Repositories,
 };
-use datasources::{default, DatasourceError, Operator, Result, Where};
+use datasources::{
+    default, BatchCommandIBulkWriteStrategy, BulkCRUDRepository, DatasourceError,
+    Enrichment, EnrichmentPropertyType, Entity, Operator, Result, Row, Where,
+};
+use datasources::chrono::{DateTime, Datelike, Utc};
+use futures_util::TryStreamExt;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 fn uuid(text: &str) -> datasources::uuid::Uuid {
     text.parse().expect("uuid")
@@ -85,6 +91,105 @@ fn alan() -> Contact {
         )]),
         ..Default::default()
     }
+}
+
+fn bulk_contact_row(index: usize) -> Result<Row> {
+    let children = 5 + index % 6;
+    let contact = Contact {
+        first_name: format!("Bulk{index}"),
+        last_name: "Bulk".into(),
+        contact_source_name: "Manual".into(),
+        addresses: (0..children - 1)
+            .map(|n| Address {
+                address_type_name: if n % 2 == 0 { "Home" } else { "Work" }.into(),
+                line1: format!("{index}-{n} Bulk Lane"),
+                city: "London".into(),
+                external_id: Some(bulk_external_id(index, n)),
+                verified_at: Some(bulk_verified_at()),
+                ..Default::default()
+            })
+            .collect(),
+        phones: vec![Phone {
+            phone_type_name: "Mobile".into(),
+            number: format!("555-1{index:03}"),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut row = Contact::object_converter().reverse_convert(&contact)?;
+    row.set_payload("addresses", contact.payload("addresses"))?;
+    row.set_payload("phones", contact.payload("phones"))?;
+    Ok(row)
+}
+
+fn bulk_external_id(index: usize, n: usize) -> datasources::uuid::Uuid {
+    uuid(&format!("00000000-0000-0000-0001-{index:04}{n:08}"))
+}
+
+fn bulk_verified_at() -> DateTime<Utc> {
+    "2020-01-02T03:04:05.000Z".parse().expect("datetime")
+}
+
+fn assigned_date(value: DateTime<Utc>) -> bool {
+    value.year() >= 2020
+}
+
+fn contact_from_row(row: &Row) -> Result<Contact> {
+    let mut contact = Contact::object_converter().convert(row)?;
+    contact.hydrate_from_row(row)?;
+    Ok(contact)
+}
+
+fn require_bulk_contact(row: &Contact, index: usize) -> Result<()> {
+    if row.first_name != format!("Bulk{index}") || row.last_name != "Bulk" || row.contact_source_name != "Manual" {
+        return Err(DatasourceError::message("bulk contact fields"));
+    }
+    if row.id <= 0 || row.uuid.is_nil() {
+        return Err(DatasourceError::message("bulk contact uuid"));
+    }
+    if !assigned_date(row.created) || !assigned_date(row.updated) {
+        return Err(DatasourceError::message("bulk contact datetime"));
+    }
+    let children = 5 + index % 6;
+    if row.addresses.len() + row.phones.len() != children {
+        return Err(DatasourceError::message("bulk child counts"));
+    }
+    for n in 0..children - 1 {
+        let address = row
+            .addresses
+            .iter()
+            .find(|item| item.line1 == format!("{index}-{n} Bulk Lane"))
+            .ok_or_else(|| DatasourceError::message("bulk address fields"))?;
+        if address.address_type_name != if n % 2 == 0 { "Home" } else { "Work" } || address.city != "London" {
+            return Err(DatasourceError::message("bulk address fields"));
+        }
+        if address.contact_id != row.id {
+            return Err(DatasourceError::message("bulk address contact id"));
+        }
+        if address.id <= 0 || address.uuid.is_nil() || address.external_id != Some(bulk_external_id(index, n)) {
+            return Err(DatasourceError::message("bulk address uuid"));
+        }
+        if !assigned_date(address.created)
+            || !assigned_date(address.updated)
+            || address.verified_at != Some(bulk_verified_at())
+        {
+            return Err(DatasourceError::message("bulk address datetime"));
+        }
+    }
+    let phone = row.phones.first().ok_or_else(|| DatasourceError::message("bulk phone fields"))?;
+    if phone.number != format!("555-1{index:03}") || phone.phone_type_name != "Mobile" {
+        return Err(DatasourceError::message("bulk phone fields"));
+    }
+    if phone.contact_id != row.id {
+        return Err(DatasourceError::message("bulk phone contact id"));
+    }
+    if phone.id <= 0 || phone.uuid.is_nil() {
+        return Err(DatasourceError::message("bulk phone uuid"));
+    }
+    if !assigned_date(phone.created) || !assigned_date(phone.updated) {
+        return Err(DatasourceError::message("bulk phone datetime"));
+    }
+    Ok(())
 }
 
 fn require_ada_children(row: &Contact, engine_type: &str, engine_city: &str, number: &str) -> Result<()> {
@@ -321,6 +426,113 @@ async fn main() -> Result<()> {
         || zeroed.addresses[0].is_verified != Some(false)
     {
         return Err(DatasourceError::message("outlier zero"));
+    }
+
+    let connection = ds.create_connection().await?;
+    if !connection.is_open() {
+        connection.open().await?;
+    }
+    let address_types = repositories::addressTypesRepository::AddressTypesRepository::new(Arc::clone(&connection))?;
+    let phone_types = repositories::phoneTypesRepository::PhoneTypesRepository::new(Arc::clone(&connection))?;
+    let contact_sources = repositories::contactSourcesRepository::ContactSourcesRepository::new(Arc::clone(&connection))?;
+    let mut addresses_bulk = BulkCRUDRepository::with_strategy(
+        Arc::clone(&connection),
+        repositories::addressesRepository::AddressesRepository::options(Arc::clone(&connection))?,
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    )?;
+    addresses_bulk.add_enriched(
+        Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object),
+        &address_types,
+        None,
+    );
+    addresses_bulk.add_enriched(
+        Enrichment::new("description", "address_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object),
+        &address_types,
+        None,
+    );
+    let mut phones_bulk = BulkCRUDRepository::with_strategy(
+        Arc::clone(&connection),
+        repositories::phonesRepository::PhonesRepository::options(Arc::clone(&connection))?,
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    )?;
+    phones_bulk.add_enriched(
+        Enrichment::new("phone_type_name", "phone_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object),
+        &phone_types,
+        None,
+    );
+    phones_bulk.add_enriched(
+        Enrichment::new("description", "phone_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object),
+        &phone_types,
+        None,
+    );
+    let settings_bulk = BulkCRUDRepository::with_strategy(
+        Arc::clone(&connection),
+        repositories::contactSettingsRepository::ContactSettingsRepository::options(Arc::clone(&connection))?,
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    )?;
+    let prefs_bulk = BulkCRUDRepository::with_strategy(
+        Arc::clone(&connection),
+        repositories::contactPreferencesRepository::ContactPreferencesRepository::options(Arc::clone(&connection))?,
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    )?;
+    let mut contacts_bulk = BulkCRUDRepository::with_strategy(
+        Arc::clone(&connection),
+        repositories::contactsRepository::ContactsRepository::options(Arc::clone(&connection))?,
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    )?;
+    contacts_bulk.add_enriched(
+        Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List),
+        Arc::new(addresses_bulk),
+        None,
+    );
+    contacts_bulk.add_enriched(
+        Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List),
+        Arc::new(phones_bulk),
+        None,
+    );
+    contacts_bulk.add_enriched(
+        Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary)
+            .with_dictionary_key("key"),
+        Arc::new(settings_bulk),
+        None,
+    );
+    contacts_bulk.add_enriched(
+        Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary).with_dictionary_key("key"),
+        Arc::new(prefs_bulk),
+        None,
+    );
+    contacts_bulk.add_enriched(
+        Enrichment::new("contact_source_name", "contact_source_id", "id", Some("name".into()), EnrichmentPropertyType::Object),
+        &contact_sources,
+        None,
+    );
+    contacts_bulk.add_enriched(
+        Enrichment::new("description", "contact_source_id", "id", Some("description".into()), EnrichmentPropertyType::Object),
+        &contact_sources,
+        None,
+    );
+    let mut bulk_items = (0..10).map(bulk_contact_row).collect::<Result<Vec<_>>>()?;
+    let created_bulk = contacts_bulk.create_bulk(&mut bulk_items).await?;
+    if created_bulk.len() != 10 {
+        return Err(DatasourceError::message("bulk create ids"));
+    }
+    let mut ids = Vec::new();
+    for (index, row) in created_bulk.iter().enumerate() {
+        let created = contact_from_row(row)?;
+        require_bulk_contact(&created, index)?;
+        let id = i64::from(created.id);
+        if ids.contains(&id) {
+            return Err(DatasourceError::message("bulk create ids"));
+        }
+        ids.push(id);
+    }
+    let loaded_all: Vec<Contact> = contacts_repo.read(None, None).try_collect().await?;
+    for (index, id) in ids.iter().enumerate() {
+        let loaded = loaded_all
+            .iter()
+            .find(|row| i64::from(row.id) == *id)
+            .ok_or_else(|| DatasourceError::message("bulk read child counts"))?;
+        require_bulk_contact(loaded, index)?;
     }
 
     contacts_repo.delete(ada_after, None).await?;

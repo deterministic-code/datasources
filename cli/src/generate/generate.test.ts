@@ -1100,6 +1100,7 @@ types:
     }));
     expect(textOf(rust, "contacts-repository.rs")).toContain("pub struct ContactsRepository");
     expect(textOf(rust, "contacts-repository.rs")).toContain("pub fn contacts_row_repository");
+    expect(textOf(rust, "contacts-repository.rs")).toContain("pub fn options");
     expect(textOf(rust, "mod.rs")).toContain('#[path = "contacts-repository.rs"]');
     expect(textOf(rust, "mod.rs")).toContain("pub mod contacts_repository;");
     expect(textOf(rust, "mod.rs")).toContain('#[path = "repository-registry.rs"]');
@@ -1116,6 +1117,7 @@ types:
       ),
     ).toBe(0);
     expect(store.files[join(cwd, "generated/repositories/contacts-repository.ts")]).toContain("export class ContactsRepository");
+    expect(store.files[join(cwd, "generated/repositories/contacts-repository.ts")]).toContain("export const options");
     expect(store.files[join(cwd, "generated/repositories/contactsRepository.ts")]).toBeUndefined();
   });
 

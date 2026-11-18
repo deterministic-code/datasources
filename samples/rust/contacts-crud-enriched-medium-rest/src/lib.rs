@@ -4,7 +4,7 @@ pub use datasources_providers::register;
 pub use datasources_register::{
     Address, Contact, ContactGroup, LegacyContact, LocalePreference, Phone, Repositories,
 };
-pub(crate) use datasources_register::repositories;
+pub use datasources_register::repositories;
 
 pub mod api;
 pub mod clock;

@@ -1,4 +1,5 @@
 use crate::bulk_write_strategy::BulkWriteStrategy;
+use crate::crud_repository::CRUDRepository;
 use crate::IWhere;
 use crate::repository::ICRUDRepository;
 use crate::response::Response;
@@ -28,7 +29,8 @@ impl SingleCommandIBulkWriteStrategy {
 
 #[async_trait]
 impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
-    fn set_repo(&self, repo: Arc<dyn ICRUDRepository>) {
+    fn set_repo(&self, repo: Arc<CRUDRepository>) {
+        let repo: Arc<dyn ICRUDRepository> = repo;
         let _ = self.repo.set(Arc::downgrade(&repo));
     }
 
