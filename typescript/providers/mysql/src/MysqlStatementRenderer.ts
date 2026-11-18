@@ -85,7 +85,13 @@ export class MysqlStatementRenderer extends StatementRenderer {
   }
 
   protected override visitBulkInsert(insert: BulkInsertStatement): string {
-    return new MysqlBulkInsertStatementTextRenderer().render(insert);
+    const sql = new MysqlBulkInsertStatementTextRenderer().render(insert);
+    if (!insert.returning || insert.rows.length === 0) return sql;
+    const column = insert.returning;
+    const selects = insert.rows.map((_, index) =>
+      index === 0 ? `SELECT LAST_INSERT_ID() AS ${column}` : `SELECT LAST_INSERT_ID() + ${index} AS ${column}`,
+    );
+    return `${sql}; ${selects.join(" UNION ALL ")}`;
   }
 
   protected override visitBulkDelete(del: BulkDeleteStatement): string {

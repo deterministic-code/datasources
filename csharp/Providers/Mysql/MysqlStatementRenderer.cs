@@ -16,8 +16,18 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
     public override string Visit(DeleteStatement delete) =>
         new MysqlDeleteStatementTextRenderer(Text).Render(delete);
 
-    public override string Visit(BulkInsertStatement insert) =>
-        new MysqlBulkInsertStatementTextRenderer().Render(insert);
+    public override string Visit(BulkInsertStatement insert)
+    {
+        var sql = new MysqlBulkInsertStatementTextRenderer().Render(insert);
+        if (string.IsNullOrEmpty(insert.Returning) || insert.Rows.Count == 0)
+            return sql;
+        var column = insert.Returning;
+        var selects = Enumerable.Range(0, insert.Rows.Count).Select(index =>
+            index == 0
+                ? $"SELECT LAST_INSERT_ID() AS {column}"
+                : $"SELECT LAST_INSERT_ID() + {index} AS {column}");
+        return $"{sql}; {string.Join(" UNION ALL ", selects)}";
+    }
 
     public override string Visit(BulkDeleteStatement delete) =>
         new MysqlBulkDeleteStatementTextRenderer().Render(delete);

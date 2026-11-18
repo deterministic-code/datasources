@@ -5,6 +5,7 @@ public sealed record BulkInsertStatement : IBulkInsertStatement
     public string Table { get; }
     public IReadOnlyList<string> Columns { get; }
     public IReadOnlyList<IReadOnlyList<Parameter>> Rows { get; }
+    public string? Returning { get; init; }
 
     public BulkInsertStatement(string table, IReadOnlyList<string> columns, IReadOnlyList<IReadOnlyList<Parameter>> rows) =>
         (Table, Columns, Rows) = (table, columns, rows);

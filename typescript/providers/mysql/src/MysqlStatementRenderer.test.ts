@@ -50,6 +50,18 @@ describe("MysqlStatementRenderer", () => {
     expect(renderer.render(new InsertStatement("users", [{ name: "name", value: "ada" }], "id"))).toBe(
       "INSERT INTO users (name) VALUES (:name); SELECT LAST_INSERT_ID() AS id",
     );
+    expect(
+      renderer.render(
+        new BulkInsertStatement(
+          "users",
+          ["name"],
+          [[{ name: "name", value: "ada" }], [{ name: "name", value: "bea" }]],
+          "id",
+        ),
+      ),
+    ).toBe(
+      "INSERT INTO users (name) VALUES (:name__0), (:name__1); SELECT LAST_INSERT_ID() AS id UNION ALL SELECT LAST_INSERT_ID() + 1 AS id",
+    );
 
     const create = new CreateTableStatement(
       "orders",

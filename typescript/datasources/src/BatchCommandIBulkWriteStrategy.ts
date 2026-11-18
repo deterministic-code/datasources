@@ -5,7 +5,7 @@ import type { IWhere } from "./statements/IWhere.ts";
 import type { BulkCommand } from "./BulkCommand.ts";
 import { Native } from "./statements/Native.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
-import { execute, type ICommand } from "./ICommand.ts";
+import { execute, executeReader, type ICommand } from "./ICommand.ts";
 import type { Value, Cells } from "./converters/Value.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
@@ -88,14 +88,32 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     if (items.length === 0) return empty();
     const rows = items.map(this.mappedInsert);
     const columns = columnsOf(rows.map((row) => row.fields));
-    return this.chunked(rows, columns.length, (chunk) => {
+    const needsId = this.ids.length === 1 && !columns.includes(this.ids[0]!);
+    const size = Math.min(maxRows, Math.max(1, Math.floor(budget / Math.max(1, columns.length))));
+    let rowsAffected = 0;
+    for (let at = 0; at < rows.length; at += size) {
+      const chunk = rows.slice(at, at + size);
       const statement = new BulkInsertStatement(
         rows[0]!.table,
         columns,
         chunk.map((row) => row.fields),
+        needsId ? this.statements().selectInsertedId(this.ids[0]!).column : undefined,
       );
-      return execute(this.command, statement, statement.parameters);
-    });
+      if (!needsId) {
+        rowsAffected += (await execute(this.command, statement, statement.parameters)).rowsAffected;
+        continue;
+      }
+      const reader = await executeReader(this.command, statement, statement.parameters);
+      let index = 0;
+      for await (const row of reader.read()) {
+        const cell = Object.values(row)[0];
+        Object.assign(items[at + index]!, { [this.ids[0]!]: cell });
+        index += 1;
+      }
+      await reader.dispose();
+      rowsAffected += chunk.length;
+    }
+    return { result: null, rowsAffected };
   };
 
   private writeUpdates = async (items: T[]): Promise<Response> => {

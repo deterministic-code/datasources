@@ -25,6 +25,7 @@ pub struct BulkInsertStatement {
     table: String,
     columns: Vec<String>,
     rows: Vec<Vec<Parameter>>,
+    returning: Option<String>,
 }
 
 impl BulkInsertStatement {
@@ -33,7 +34,17 @@ impl BulkInsertStatement {
             table: table.as_ref().to_string(),
             columns: columns.to_vec(),
             rows,
+            returning: None,
         }
+    }
+
+    pub fn returning(mut self, column: impl Into<String>) -> Self {
+        self.returning = Some(column.into());
+        self
+    }
+
+    pub fn returning_column(&self) -> Option<&str> {
+        self.returning.as_deref()
     }
 
     pub fn table(&self) -> &str {

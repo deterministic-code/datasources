@@ -23,11 +23,17 @@ export const flattenBulkParameters = (
 };
 
 export class BulkInsertStatement implements IBulkInsertStatement {
-  constructor(
-    readonly table: string,
-    readonly columns: readonly string[],
-    readonly rows: readonly Parameter[][],
-  ) {}
+  readonly table: string;
+  readonly columns: readonly string[];
+  readonly rows: readonly Parameter[][];
+  readonly returning?: string;
+
+  constructor(table: string, columns: readonly string[], rows: readonly Parameter[][], returning?: string) {
+    this.table = table;
+    this.columns = columns;
+    this.rows = rows;
+    if (returning !== undefined) this.returning = returning;
+  }
 
   accept = (visitor: IStatementVisitor): string => visitor.visit(this);
 

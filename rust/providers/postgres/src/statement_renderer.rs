@@ -130,11 +130,15 @@ impl StatementVisitor for PostgresStatementRenderer {
             })
             .collect::<Vec<_>>()
             .join(", ");
-        format!(
+        let sql = format!(
             "INSERT INTO {} ({}) VALUES {values}",
             statement.table(),
             statement.columns().join(", ")
-        )
+        );
+        match statement.returning_column() {
+            Some(column) => format!("{sql} RETURNING {column}"),
+            None => sql,
+        }
     }
 
     fn visit_bulk_update(
@@ -333,6 +337,16 @@ mod tests {
         assert_eq!(
             renderer().render(&SelectInsertedIdStatement::new("users", "id")),
             "SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(\"id\") FROM users), 1)) AS id"
+        );
+        let bulk = BulkInsertStatement::new(
+            "users",
+            &["name".into()],
+            vec![vec![Parameter::new("name", "ada")]],
+        )
+        .returning("id");
+        assert_eq!(
+            renderer().render(&bulk),
+            "INSERT INTO users (name) VALUES ($name__0) RETURNING id"
         );
         let create = CreateTableStatement::new(
             "orders",

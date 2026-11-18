@@ -55,7 +55,28 @@ impl StatementVisitor for MysqlStatementRenderer {
     }
 
     fn visit_bulk_insert(&self, statement: &BulkInsertStatement, _text: &StatementTextRenderer) -> String {
-        BulkInsertStatementTextRenderer::render_with(statement, MysqlDriver::quote, MysqlDriver::parameter)
+        let sql = BulkInsertStatementTextRenderer::render_with(
+            statement,
+            MysqlDriver::quote,
+            MysqlDriver::parameter,
+        );
+        let Some(column) = statement.returning_column() else {
+            return sql;
+        };
+        if statement.rows().is_empty() {
+            return sql;
+        }
+        let selects = (0..statement.rows().len())
+            .map(|index| {
+                if index == 0 {
+                    format!("SELECT LAST_INSERT_ID() AS {column}")
+                } else {
+                    format!("SELECT LAST_INSERT_ID() + {index} AS {column}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" UNION ALL ");
+        format!("{sql}; {selects}")
     }
 
     fn visit_bulk_delete(&self, statement: &BulkDeleteStatement, _text: &StatementTextRenderer) -> String {
@@ -239,7 +260,7 @@ mod tests {
     use super::MysqlStatementRenderer;
     use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
     use datasources::{
-        BulkUpdateRow, BulkUpdateStatement, Column, ColumnDefault, CreateTableStatement,
+        BulkInsertStatement, BulkUpdateRow, BulkUpdateStatement, Column, ColumnDefault, CreateTableStatement,
         CreateTableStatementTextRenderer, DefaultStatementTextRenderer, NotNull, Parameter,
         InsertStatement, SelectInsertedIdStatement, StatementTextRenderer,
     };
@@ -258,6 +279,19 @@ mod tests {
         assert_eq!(
             renderer().render(&insert),
             "INSERT INTO users (name) VALUES (:name); SELECT LAST_INSERT_ID() AS id"
+        );
+        let bulk = BulkInsertStatement::new(
+            "users",
+            &["name".into()],
+            vec![
+                vec![Parameter::new("name", "ada")],
+                vec![Parameter::new("name", "bea")],
+            ],
+        )
+        .returning("id");
+        assert_eq!(
+            renderer().render(&bulk),
+            "INSERT INTO users (name) VALUES (:name__0), (:name__1); SELECT LAST_INSERT_ID() AS id UNION ALL SELECT LAST_INSERT_ID() + 1 AS id"
         );
         let create = CreateTableStatement::new(
             "orders",

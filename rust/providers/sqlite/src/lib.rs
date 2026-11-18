@@ -86,6 +86,9 @@ mod driver_converters;
 #[cfg(test)]
 #[path = "../tests/typed_list_enrichment.rs"]
 mod typed_list_enrichment;
+#[cfg(test)]
+#[path = "../tests/bulk_write_enrichment.rs"]
+mod bulk_write_enrichment;
 
 #[cfg(test)]
 mod tests {

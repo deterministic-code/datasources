@@ -14,6 +14,7 @@ import {
   NotNull,
   PrimaryKey,
   ReferentialAction,
+  BulkInsertStatement,
   InsertStatement,
   SelectInsertedIdStatement,
   SelectStatement,
@@ -35,6 +36,12 @@ describe("SqliteStatementRenderer", () => {
     expect(renderer.render(new InsertStatement("users", [{ name: "name", value: "ada" }], "id"))).toBe(
       "INSERT INTO users (name) VALUES ($name) RETURNING last_insert_rowid() AS id",
     );
+    expect(
+      renderer.render(new BulkInsertStatement("users", ["name"], [[{ name: "name", value: "ada" }]], "id")),
+    ).toBe("INSERT INTO users (name) VALUES ($name__0) RETURNING last_insert_rowid() AS id");
+    expect(
+      renderer.render(new BulkInsertStatement("users", ["name"], [[{ name: "name", value: "ada" }]])),
+    ).toBe("INSERT INTO users (name) VALUES ($name__0)");
 
     const create = new CreateTableStatement(
       "orders",

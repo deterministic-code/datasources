@@ -78,7 +78,7 @@ async fn batch_command_i_bulk_write_strategy_joins_statements() {
     ];
     repo.create_bulk(&mut created).await.unwrap();
     {
-        let logs = command.execute_logs.lock().unwrap();
+        let logs = command.reader_logs.lock().unwrap();
         assert_eq!(logs.len(), 1);
         assert_eq!(
             logs[0].0,
@@ -106,11 +106,11 @@ async fn batch_command_i_bulk_write_strategy_joins_statements() {
     .unwrap();
     let logs = command.execute_logs.lock().unwrap();
     assert_eq!(
-        logs[1].0,
+        logs[0].0,
         "UPDATE parents SET label = data.label FROM (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data WHERE parents.id = data.id"
     );
     assert_eq!(
-        logs[1]
+        logs[0]
             .1
             .iter()
             .map(|parameter| parameter.name.as_str())
@@ -118,11 +118,11 @@ async fn batch_command_i_bulk_write_strategy_joins_statements() {
         ["label__0", "id__0", "label__1", "id__1"]
     );
     assert_eq!(
-        logs[2].0,
+        logs[1].0,
         "DELETE FROM parents WHERE id IN ($id__0, $id__1)"
     );
     assert_eq!(
-        logs[2]
+        logs[1]
             .1
             .iter()
             .map(|parameter| parameter.name.as_str())
@@ -431,23 +431,24 @@ async fn stored_procedure_persists_children_in_one_call() {
 }
 
 #[tokio::test]
-async fn batch_create_requires_parent_id_when_children_are_present() {
-    let (repo, _) = family(
+async fn batch_create_stamps_generated_parent_id_when_children_are_present() {
+    let (repo, command) = family(
         Arc::new(BatchCommandIBulkWriteStrategy::new()),
         Arc::new(BatchCommandIBulkWriteStrategy::new()),
     );
-    let error = repo
-        .create_bulk(&mut [row(&[
-            ("label", Value::from("a")),
-            (
-                "children",
-                crate::default_write_enrichment_strategy::encode_rows(&[row(&[(
-                    "label",
-                    Value::from("x"),
-                )])]),
-            ),
-        ])])
-        .await
-        .unwrap_err();
-    assert!(error.to_string().contains("id"));
+    *command.reader_rows.lock().unwrap() = vec![row(&[("id", Value::Int(7))])];
+    let mut items = [row(&[
+        ("label", Value::from("a")),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[row(&[(
+                "label",
+                Value::from("x"),
+            )])]),
+        ),
+    ])];
+    repo.create_bulk(&mut items).await.unwrap();
+    assert_eq!(items[0].get("id"), Some(&Value::Int(7)));
+    let logs = command.reader_logs.lock().unwrap();
+    assert!(logs[1].0.contains("INSERT INTO children"));
 }

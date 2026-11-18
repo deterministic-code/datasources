@@ -41,11 +41,32 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
             return Empty();
         var rows = items.Select(MappedInsert).ToList();
         var columns = Columns(rows.Select(row => row.Fields));
-        return await Chunked(rows, columns.Count, chunk =>
+        var needsId = Ids.Count == 1 && !columns.Contains(Ids[0]);
+        var size = Math.Min(MaxRows, Math.Max(1, ParameterBudget / Math.Max(1, columns.Count)));
+        var affected = 0;
+        for (var at = 0; at < rows.Count; at += size)
         {
-            var statement = new BulkInsertStatement(rows[0].Table, columns, [.. chunk.Select(row => row.Fields)]);
-            return Command.Execute(statement, statement.Parameters);
-        });
+            var chunk = rows.Skip(at).Take(size).ToList();
+            var statement = new BulkInsertStatement(rows[0].Table, columns, [.. chunk.Select(row => row.Fields)])
+            {
+                Returning = needsId ? Statements().SelectInsertedId(Ids[0]).Column : null
+            };
+            if (!needsId)
+            {
+                affected += (await Command.Execute(statement, statement.Parameters)).RowsAffected;
+                continue;
+            }
+            await using var reader = await Command.ExecuteReader(statement, statement.Parameters);
+            var index = 0;
+            await foreach (var row in reader.Read())
+            {
+                var cell = row.Count == 0 ? (Value)Value.Null.Instance : row.First().Value;
+                EnrichmentCells.Stamp(items[at + index], Ids[0], cell.ToObject());
+                index++;
+            }
+            affected += chunk.Count;
+        }
+        return new Response(Value.Null.Instance, affected);
     }
 
     async Task<Response> WriteUpdates(IReadOnlyList<T> items)

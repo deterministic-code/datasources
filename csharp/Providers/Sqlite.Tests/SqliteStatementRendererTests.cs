@@ -17,6 +17,9 @@ public class SqliteStatementRendererTests
         Assert.Equal(
             "INSERT INTO users (name) VALUES ($name) RETURNING last_insert_rowid() AS id",
             Renderer.Render(new InsertStatement("users", [new Parameter("name", "ada")]) { Returning = "id" }));
+        Assert.Equal(
+            "INSERT INTO users (name) VALUES ($name__0) RETURNING last_insert_rowid() AS id",
+            Renderer.Render(new BulkInsertStatement("users", ["name"], [[new Parameter("name", "ada")]]) { Returning = "id" }));
 
         var create = new CreateTableStatement(
             "orders",

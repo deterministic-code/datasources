@@ -309,7 +309,7 @@ impl BatchCommandIBulkWriteStrategy {
         Ok(Response::new(Value::Null, rows_affected, None))
     }
 
-    async fn write_creates(&self, items: &[Row]) -> Result<Response> {
+    async fn write_creates(&self, items: &mut [Row]) -> Result<Response> {
         if items.is_empty() {
             return Ok(Response::new(Value::Null, 0, None));
         }
@@ -319,17 +319,52 @@ impl BatchCommandIBulkWriteStrategy {
             .collect::<Result<Vec<_>>>()?;
         let columns = columns(rows.iter().map(|row| row.fields.iter()));
         let table = rows[0].table.clone();
-        self.chunked(&rows, columns.len(), |chunk| {
-            let table = table.clone();
-            let columns = columns.clone();
+        let ids = self.ids()?.to_vec();
+        let needs_id = ids.len() == 1 && !columns.iter().any(|column| column == &ids[0]);
+        let size = (PARAMETER_BUDGET / columns.len().max(1)).max(1).min(MAX_ROWS);
+        let mut rows_affected = 0;
+        let mut at = 0;
+        while at < rows.len() {
+            let end = (at + size).min(rows.len());
+            let chunk = &rows[at..end];
             let fields = chunk.iter().map(|row| row.fields.clone()).collect::<Vec<_>>();
-            async move {
-                let statement = BulkInsertStatement::new(&table, &columns, fields);
-                let parameters = statement.parameters();
-                self.execute(&statement, parameters).await
+            let statement = if needs_id {
+                BulkInsertStatement::new(&table, &columns, fields).returning(
+                    self.statements()?
+                        .select_inserted_id(&ids[0])
+                        .column
+                        .clone(),
+                )
+            } else {
+                BulkInsertStatement::new(&table, &columns, fields)
+            };
+            let parameters = statement.parameters();
+            if !needs_id {
+                rows_affected += self.execute(&statement, parameters).await?.rows_affected;
+                at = end;
+                continue;
             }
-        })
-        .await
+            let reader = self
+                .command()?
+                .execute_reader_statement(&statement, Some(&parameters))
+                .await?;
+            let mut index = 0;
+            while reader.next().await? {
+                if let Some(row) = reader.current() {
+                    if let Some((_, value)) = row.iter().next() {
+                        crate::enrichment_fields::set_cell_on_row(
+                            &mut items[at + index],
+                            &ids[0],
+                            value.clone(),
+                        );
+                    }
+                    index += 1;
+                }
+            }
+            rows_affected += i64::try_from(chunk.len()).unwrap_or(0);
+            at = end;
+        }
+        Ok(Response::new(Value::Null, rows_affected, None))
     }
 
     async fn write_updates(&self, items: &[Row]) -> Result<Response> {
