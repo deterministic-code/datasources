@@ -55,7 +55,7 @@ impl BulkCRUDRepository {
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
         let use_transaction = write.use_transaction();
         let crud = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection), options.clone())?);
-        strategy.set_repo(Arc::clone(&crud) as Arc<dyn ICRUDRepository>);
+        strategy.set_repo(Arc::clone(&crud));
         strategy.attach(crud.command(), options, connection);
         Ok(Self {
             crud,

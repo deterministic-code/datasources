@@ -163,9 +163,105 @@ if (zeroed?.Addresses[0].Latitude != 0 || zeroed.Addresses[0].LabelNote != ""
     || zeroed.Addresses[0].Floor != 0 || zeroed.Addresses[0].IsVerified != false)
     throw new InvalidOperationException("outlier zero");
 
+var connection = await ds.CreateConnection();
+if (!connection.IsOpen) await connection.Open();
+var addressTypes = new AddressTypesRepository(connection);
+var phoneTypes = new PhoneTypesRepository(connection);
+var contactSources = new ContactSourcesRepository(connection);
+var addressesBulk = new BulkCRUDRepository<Address>(connection, AddressesRepository.Options(connection), new BatchCommandIBulkWriteStrategy<Address>());
+addressesBulk.AddEnriched(new("AddressTypeName", "AddressTypeId", "Id", "Name"), addressTypes);
+addressesBulk.AddEnriched(new("Description", "AddressTypeId", "Id", "Description"), addressTypes);
+var phonesBulk = new BulkCRUDRepository<Phone>(connection, PhonesRepository.Options(connection), new BatchCommandIBulkWriteStrategy<Phone>());
+phonesBulk.AddEnriched(new("PhoneTypeName", "PhoneTypeId", "Id", "Name"), phoneTypes);
+phonesBulk.AddEnriched(new("Description", "PhoneTypeId", "Id", "Description"), phoneTypes);
+var settingsBulk = new BulkCRUDRepository<Backend.Types.Datasource.ContactSetting>(connection, ContactSettingsRepository.Options(connection), new BatchCommandIBulkWriteStrategy<Backend.Types.Datasource.ContactSetting>());
+var prefsBulk = new BulkCRUDRepository<Backend.Types.Datasource.ContactPreference>(connection, ContactPreferencesRepository.Options(connection), new BatchCommandIBulkWriteStrategy<Backend.Types.Datasource.ContactPreference>());
+var contactsBulk = new BulkCRUDRepository<Contact>(connection, ContactsRepository.Options(connection), new BatchCommandIBulkWriteStrategy<Contact>());
+contactsBulk.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), addressesBulk);
+contactsBulk.AddEnriched(new("Phones", "Id", "ContactId", Type: EnrichmentPropertyType.List), phonesBulk);
+contactsBulk.AddEnriched(new("Settings", "Id", "ContactId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), settingsBulk);
+contactsBulk.AddEnriched(new("Prefs", "Id", "ContactId", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), prefsBulk);
+contactsBulk.AddEnriched(new("ContactSourceName", "ContactSourceId", "Id", "Name"), contactSources);
+contactsBulk.AddEnriched(new("Description", "ContactSourceId", "Id", "Description"), contactSources);
+var bulkItems = Enumerable.Range(0, 10).Select(index =>
+{
+    var children = 5 + index % 6;
+    return new Contact
+    {
+        FirstName = $"Bulk{index}",
+        LastName = "Bulk",
+        ContactSourceName = "Manual",
+        Addresses = [.. Enumerable.Range(0, children - 1).Select(n => new Address
+        {
+            AddressTypeName = n % 2 == 0 ? "Home" : "Work",
+            Line1 = $"{index}-{n} Bulk Lane",
+            City = "London",
+            ExternalId = BulkExternalId(index, n),
+            VerifiedAt = BulkVerifiedAt(),
+        })],
+        Phones = [new Phone { PhoneTypeName = "Mobile", Number = $"555-1{index:D3}" }],
+    };
+}).ToList();
+var createdBulk = await contactsBulk.Create(bulkItems);
+if (createdBulk.Count != 10 || createdBulk.Any(row => row.Id <= 0)
+    || createdBulk.Select(row => row.Id).Distinct().Count() != 10)
+    throw new InvalidOperationException("bulk create ids");
+for (var index = 0; index < createdBulk.Count; index++)
+    RequireBulkContact(createdBulk[index], index);
+var loadedAll = new List<Contact>();
+await foreach (var row in contacts.Read()) loadedAll.Add(row);
+for (var index = 0; index < createdBulk.Count; index++)
+{
+    var created = createdBulk[index];
+    RequireBulkContact(loadedAll.Single(item => item.Id == created.Id), index);
+}
+
 await contacts.Delete(after);
 if (await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id))) is not null)
     throw new InvalidOperationException("delete ada");
+
+static Guid BulkExternalId(int index, int n) =>
+    Guid.Parse($"00000000-0000-0000-0001-{index:D4}{n:D8}");
+
+static DateTime BulkVerifiedAt() =>
+    DateTime.Parse("2020-01-02T03:04:05.000Z").ToUniversalTime();
+
+static bool Assigned(DateTime value) => value != default && value.ToUniversalTime().Year >= 2020;
+
+static void RequireBulkContact(Contact row, int index)
+{
+    if (row.FirstName != $"Bulk{index}" || row.LastName != "Bulk" || row.ContactSourceName != "Manual")
+        throw new InvalidOperationException("bulk contact fields");
+    if (row.Id <= 0 || row.Uuid == Guid.Empty)
+        throw new InvalidOperationException("bulk contact uuid");
+    if (!Assigned(row.Created) || !Assigned(row.Updated))
+        throw new InvalidOperationException("bulk contact datetime");
+    var children = 5 + index % 6;
+    if (row.Addresses.Count + row.Phones.Count != children)
+        throw new InvalidOperationException("bulk child counts");
+    for (var n = 0; n < children - 1; n++)
+    {
+        var address = row.Addresses.Single(item => item.Line1 == $"{index}-{n} Bulk Lane");
+        if (address.AddressTypeName != (n % 2 == 0 ? "Home" : "Work") || address.City != "London")
+            throw new InvalidOperationException("bulk address fields");
+        if (address.ContactId != row.Id)
+            throw new InvalidOperationException("bulk address contact id");
+        if (address.Id <= 0 || address.Uuid == Guid.Empty || address.ExternalId != BulkExternalId(index, n))
+            throw new InvalidOperationException("bulk address uuid");
+        if (!Assigned(address.Created) || !Assigned(address.Updated)
+            || address.VerifiedAt?.ToUniversalTime() != BulkVerifiedAt())
+            throw new InvalidOperationException("bulk address datetime");
+    }
+    var phone = row.Phones.Single();
+    if (phone.Number != $"555-1{index:D3}" || phone.PhoneTypeName != "Mobile")
+        throw new InvalidOperationException("bulk phone fields");
+    if (phone.ContactId != row.Id)
+        throw new InvalidOperationException("bulk phone contact id");
+    if (phone.Id <= 0 || phone.Uuid == Guid.Empty)
+        throw new InvalidOperationException("bulk phone uuid");
+    if (!Assigned(phone.Created) || !Assigned(phone.Updated))
+        throw new InvalidOperationException("bulk phone datetime");
+}
 
 static void RequireAdaChildren(Contact row, string engineType, string engineCity, string number)
 {

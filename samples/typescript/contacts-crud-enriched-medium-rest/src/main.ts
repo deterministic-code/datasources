@@ -1,6 +1,22 @@
 import "../generated/repositories/repositoryRegistry.ts";
-import { Datasource, Operator, Where } from "@deterministic-code/datasources";
-import type { Contact } from "../generated/types/view/contact.ts";
+import {
+  BatchCommandIBulkWriteStrategy,
+  BulkCRUDRepository,
+  Datasource,
+  Operator,
+  Where,
+} from "@deterministic-code/datasources";
+import { options as addressOptions } from "../generated/repositories/addressesRepository.ts";
+import { AddressTypesRepository } from "../generated/repositories/addressTypesRepository.ts";
+import { options as contactOptions } from "../generated/repositories/contactsRepository.ts";
+import { options as preferenceOptions } from "../generated/repositories/contactPreferencesRepository.ts";
+import { options as settingOptions } from "../generated/repositories/contactSettingsRepository.ts";
+import { ContactSourcesRepository } from "../generated/repositories/contactSourcesRepository.ts";
+import { options as phoneOptions } from "../generated/repositories/phonesRepository.ts";
+import { PhoneTypesRepository } from "../generated/repositories/phoneTypesRepository.ts";
+import { address } from "../generated/types/view/address.ts";
+import { contact, type Contact } from "../generated/types/view/contact.ts";
+import { phone } from "../generated/types/view/phone.ts";
 
 await using ds = Datasource.default;
 const contacts = ds.contacts;
@@ -123,9 +139,100 @@ if (zeroed?.addresses[0].latitude !== 0 || zeroed.addresses[0].labelNote !== ""
   || zeroed.addresses[0].floor !== 0 || zeroed.addresses[0].isVerified !== false)
   throw new Error("outlier zero");
 
+const connection = await ds.createConnection();
+if (!connection.isOpen) await connection.open();
+const addressTypes = new AddressTypesRepository(connection);
+const phoneTypes = new PhoneTypesRepository(connection);
+const contactSources = new ContactSourcesRepository(connection);
+const addressesBulk = new BulkCRUDRepository(connection, addressOptions(connection), new BatchCommandIBulkWriteStrategy());
+addressesBulk.addEnriched({ destinationProperty: "addressTypeName", sourceProperty: "addressTypeId", relatedKey: "id", relatedProperty: "name", type: "object" }, addressTypes);
+addressesBulk.addEnriched({ destinationProperty: "description", sourceProperty: "addressTypeId", relatedKey: "id", relatedProperty: "description", type: "object" }, addressTypes);
+const phonesBulk = new BulkCRUDRepository(connection, phoneOptions(connection), new BatchCommandIBulkWriteStrategy());
+phonesBulk.addEnriched({ destinationProperty: "phoneTypeName", sourceProperty: "phoneTypeId", relatedKey: "id", relatedProperty: "name", type: "object" }, phoneTypes);
+phonesBulk.addEnriched({ destinationProperty: "description", sourceProperty: "phoneTypeId", relatedKey: "id", relatedProperty: "description", type: "object" }, phoneTypes);
+const settingsBulk = new BulkCRUDRepository(connection, settingOptions(connection), new BatchCommandIBulkWriteStrategy());
+const prefsBulk = new BulkCRUDRepository(connection, preferenceOptions(connection), new BatchCommandIBulkWriteStrategy());
+const contactsBulk = new BulkCRUDRepository(connection, contactOptions(connection), new BatchCommandIBulkWriteStrategy());
+contactsBulk.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, addressesBulk);
+contactsBulk.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, phonesBulk);
+contactsBulk.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", dictionaryKey: "key", type: "dictionary" }, settingsBulk);
+contactsBulk.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", dictionaryKey: "key", type: "dictionary" }, prefsBulk);
+contactsBulk.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, contactSources);
+contactsBulk.addEnriched({ destinationProperty: "description", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "description", type: "object" }, contactSources);
+const bulkItems = Array.from({ length: 10 }, (_, index) => {
+  const children = 5 + index % 6;
+  return contact({
+    firstName: `Bulk${index}`,
+    lastName: "Bulk",
+    contactSourceName: "Manual",
+    addresses: Array.from({ length: children - 1 }, (_, n) => address({
+      addressTypeName: n % 2 === 0 ? "Home" : "Work",
+      line1: `${index}-${n} Bulk Lane`,
+      city: "London",
+      externalId: bulkExternalId(index, n),
+      verifiedAt: bulkVerifiedAt(),
+    })),
+    phones: [phone({ phoneTypeName: "Mobile", number: `555-1${String(index).padStart(3, "0")}` })],
+  });
+});
+const createdBulk = await contactsBulk.createBulk(bulkItems);
+if (createdBulk.length !== 10 || createdBulk.some((row) => row.id <= 0)
+  || new Set(createdBulk.map((row) => row.id)).size !== 10)
+  throw new Error("bulk create ids");
+createdBulk.forEach((row, index) => requireBulkContact(row, index));
+const loadedAll: Contact[] = [];
+for await (const row of contacts.read()) loadedAll.push(row);
+createdBulk.forEach((created, index) => {
+  const loaded = loadedAll.find((row) => row.id === created.id);
+  if (loaded == null) throw new Error("bulk read child counts");
+  requireBulkContact(loaded, index);
+});
+
 await contacts.delete(after);
 if ((await contacts.readSingle(new Where(new Operator.Equals("id", ada.id)))) != null)
   throw new Error("delete ada");
+
+function bulkExternalId(index: number, n: number): string {
+  return `00000000-0000-0000-0001-${String(index).padStart(4, "0")}${String(n).padStart(8, "0")}`;
+}
+
+function bulkVerifiedAt(): Date {
+  return new Date("2020-01-02T03:04:05.000Z");
+}
+
+function assignedUuid(value: string | null | undefined): boolean {
+  return value != null && value !== "" && value !== "00000000-0000-0000-0000-000000000000";
+}
+
+function assignedDate(value: Date | null | undefined): boolean {
+  return value instanceof Date && !Number.isNaN(value.getTime()) && value.getUTCFullYear() >= 2020;
+}
+
+function requireBulkContact(row: Contact, index: number) {
+  if (row.firstName !== `Bulk${index}` || row.lastName !== "Bulk" || row.contactSourceName !== "Manual")
+    throw new Error("bulk contact fields");
+  if (row.id <= 0 || !assignedUuid(row.uuid)) throw new Error("bulk contact uuid");
+  if (!assignedDate(row.created) || !assignedDate(row.updated)) throw new Error("bulk contact datetime");
+  const children = 5 + index % 6;
+  if (row.addresses.length + row.phones.length !== children) throw new Error("bulk child counts");
+  for (let n = 0; n < children - 1; n++) {
+    const address = row.addresses.find((item) => item.line1 === `${index}-${n} Bulk Lane`);
+    if (address == null || address.addressTypeName !== (n % 2 === 0 ? "Home" : "Work") || address.city !== "London")
+      throw new Error("bulk address fields");
+    if (address.contactId !== row.id) throw new Error("bulk address contact id");
+    if (address.id <= 0 || !assignedUuid(address.uuid) || address.externalId !== bulkExternalId(index, n))
+      throw new Error("bulk address uuid");
+    if (!assignedDate(address.created) || !assignedDate(address.updated)
+      || address.verifiedAt?.getTime() !== bulkVerifiedAt().getTime())
+      throw new Error("bulk address datetime");
+  }
+  const phone = row.phones[0];
+  if (phone.number !== `555-1${String(index).padStart(3, "0")}` || phone.phoneTypeName !== "Mobile")
+    throw new Error("bulk phone fields");
+  if (phone.contactId !== row.id) throw new Error("bulk phone contact id");
+  if (phone.id <= 0 || !assignedUuid(phone.uuid)) throw new Error("bulk phone uuid");
+  if (!assignedDate(phone.created) || !assignedDate(phone.updated)) throw new Error("bulk phone datetime");
+}
 
 function requireAdaChildren(row: Contact, engineType: string, engineCity: string, number: string) {
   if (row.addresses.length !== 2 || row.phones.length !== 1) throw new Error("child counts");

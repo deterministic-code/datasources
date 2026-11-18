@@ -18,8 +18,13 @@ pub struct {{className}} {
 }
 
 impl {{className}} {
-    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn options({{#builder}}connection: Arc<dyn Connection>{{/builder}}) -> Result<{{#readonly}}ReadonlyRepositoryMappingOptions{{/readonly}}{{^readonly}}CRUDRepositoryOptions{{/readonly}}> {
 {{>crud}}
+        Ok(options)
+    }
+
+    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+        let options = Self::options({{#builder}}Arc::clone(&connection){{/builder}})?;
 {{#child}}
         let {{field}} = {{className}}::new(Arc::clone(&connection))?;
 {{/child}}
@@ -160,7 +165,7 @@ impl ICRUDRepository<{{entityType}}> for {{className}} {
 
 pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<{{#readonly}}ReadonlyRepository{{/readonly}}{{^readonly}}CRUDRepository{{/readonly}}<datasources::Row>> {
 {{#setup}}
-{{>crud}}
+        let options = {{className}}::options({{#builder}}Arc::clone(&connection){{/builder}})?;
 {{#readonly}}
 {{#readonlyChildren}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
@@ -178,7 +183,7 @@ pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<{{#readonly}}Readonl
         Ok(repo)
 {{/setup}}
 {{^setup}}
-{{>crud}}
+        let options = {{className}}::options({{#builder}}Arc::clone(&connection){{/builder}})?;
     {{#readonly}}ReadonlyRepository{{/readonly}}{{^readonly}}CRUDRepository{{/readonly}}::<datasources::Row>::new(connection, options)
 {{/setup}}
 }

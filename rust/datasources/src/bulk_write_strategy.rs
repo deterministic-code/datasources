@@ -1,8 +1,8 @@
 use crate::command::Command;
 use crate::connection::Connection;
+use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::IWhere;
-use crate::repository::ICRUDRepository;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait BulkWriteStrategy: Send + Sync {
-    fn set_repo(&self, repo: Arc<dyn ICRUDRepository>) {
+    fn set_repo(&self, repo: Arc<CRUDRepository>) {
         let _ = repo;
     }
 

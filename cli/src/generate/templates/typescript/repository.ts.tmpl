@@ -5,7 +5,7 @@ import { {{className}} } from "{{repoImport}}";
 {{/children}}
 {{#builder}}
 {{^readonly}}
-const options = (connection: IConnection) =>
+export const options = (connection: IConnection) =>
   new CRUDRepositoryBuilder<{{typeName}}>()
     .add({ type: {{typeName}}, entity: "{{typeName}}", entityMapper: new DictionaryMapper({{entityPairs}}), propertyMappings: new DictionaryMapper({{mappingPairs}}), ids: [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}], createProperties: [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}], updateProperties: [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}], readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}], schema: new Schema({ {{#schema}}{{#comma}}, {{/comma}}{{name}}: { type: "{{type}}", nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, hasDefault: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}{{#isId}}, isId: true{{/isId}} }{{/schema}} }) })
 {{#dialects}}

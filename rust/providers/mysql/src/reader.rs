@@ -2,7 +2,7 @@ use crate::command::{named_params, row_record};
 use crate::connection::{map_err, MysqlConnection};
 use crate::MysqlDriver;
 use async_trait::async_trait;
-use datasources::{DatasourceError, Reader, Result, Row, Value};
+use datasources::{statement_parameters, DatasourceError, Reader, Result, Row, Value};
 use futures_core::Stream;
 use mysql_async::prelude::Queryable;
 use mysql_async::Conn;
@@ -172,7 +172,17 @@ async fn result_sets(
 ) -> Result<Vec<Vec<Row>>> {
     let mut sets = Vec::new();
     for sql in statements {
-        let mut found = iter_sets(conn, sql, params).await?;
+        let names = statement_parameters(sql);
+        let used = params
+            .iter()
+            .filter(|(name, _)| {
+                names
+                    .iter()
+                    .any(|found| found == name.trim_start_matches(['$', '@', ':']))
+            })
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect();
+        let mut found = iter_sets(conn, sql, &used).await?;
         if is_call(sql) {
             found.retain(|rows| !rows.is_empty());
         }
