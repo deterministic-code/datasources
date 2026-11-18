@@ -45,9 +45,8 @@ public abstract class CreateEnrichmentStrategy<T>
         {
             if (Missing(Cell(record, source))) continue;
             var mapped = column(source);
-            record[mapped] = record[source];
             if (mapped != source)
-                record.Remove(source);
+                record.Remove(mapped);
         }
     }
 

@@ -42,8 +42,7 @@ export abstract class CreateEnrichmentStrategy<T> {
     for (const source of this.objectSources(entries)) {
       if (!this.presentCell(record[source])) continue;
       const mapped = column(source);
-      record[mapped] = record[source]!;
-      if (mapped !== source) delete record[source];
+      if (mapped !== source) delete record[mapped];
     }
   };
 

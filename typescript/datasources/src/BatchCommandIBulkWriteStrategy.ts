@@ -24,6 +24,7 @@ import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import type { Parameter } from "./Parameter.ts";
 import { afterBulkWrite } from "./BulkWriteEnrichment.ts";
+import { lookupRow } from "./IWriteEnrichmentStrategy.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
 const budget = 8000;
@@ -161,7 +162,15 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
   };
 
   private mappedInsert = async (item: T): Promise<Inserted> => {
-    const record = await this.repo.lookupRow(item);
+    const record = await lookupRow(
+      this.repo.write,
+      this.repo.tree,
+      item,
+      this.repo.schema,
+      this.repo.column,
+      this.repo.objectConverter!,
+      this.repo.rowConverter,
+    );
     const extras = this.repo.writeSources();
     const statement = this.statements().insert(
       this.fields(

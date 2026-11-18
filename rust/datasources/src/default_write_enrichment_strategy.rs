@@ -464,3 +464,111 @@ fn encode_row_text(row: &Row) -> String {
         .collect::<Vec<_>>()
         .join(",")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::converters::{RowTypeConverter, TypeConverter};
+    use crate::crud_repository::CRUDRepository;
+    use crate::enrichment_property_type::EnrichmentPropertyType;
+    use crate::schema::Schema;
+    use std::collections::HashMap;
+    use uuid::Uuid;
+
+    struct Flag;
+
+    impl TypeConverter<Value, Value> for Flag {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(match from {
+                Value::Int(1) => Value::Bool(true),
+                other => other.clone(),
+            })
+        }
+
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(match to {
+                Value::Bool(true) => Value::Int(1),
+                Value::Bool(false) => Value::Int(0),
+                other => other.clone(),
+            })
+        }
+    }
+
+    struct UuidText;
+
+    impl TypeConverter<Value, Value> for UuidText {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(from.clone())
+        }
+
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(match to {
+                Value::Uuid(id) => Value::Text(id.to_string()),
+                other => other.clone(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn lookup_row_converts_uuid_and_boolean_on_property_keys() {
+        let types = Arc::new(CRUDRepository::<Row>::memory(vec![]));
+        let mut parents = CRUDRepository::<Row>::memory(vec![]);
+        parents.add_enriched(
+            Enrichment::new(
+                "TypeName",
+                "Type",
+                "id",
+                Some("Name".into()),
+                EnrichmentPropertyType::Object,
+            ),
+            types,
+            None,
+        );
+        let write = DefaultWriteEnrichmentStrategy::<Row>::default();
+        let id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        let mut item = Row::new();
+        item.insert("Type".into(), Value::Uuid(id));
+        item.insert("Active".into(), Value::Bool(true));
+        let objects = <Row as crate::entity::Entity>::object_converter();
+        let rows = RowTypeConverter::from(
+            || {
+                HashMap::from([
+                    (
+                        "boolean".into(),
+                        Box::new(Flag) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+                    ),
+                    (
+                        "uuid".into(),
+                        Box::new(UuidText) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+                    ),
+                ])
+            },
+            &HashMap::from([
+                ("Type".into(), "uuid".into()),
+                ("Active".into(), "boolean".into()),
+            ]),
+        );
+        let columns = write.mapped_sources(&parents.tree, &|name| {
+            if name == "Type" {
+                "type_id".into()
+            } else {
+                name.into()
+            }
+        });
+        let converted = write
+            .lookup_row(
+                &parents.tree,
+                &mut item,
+                Schema::empty(),
+                objects,
+                Some(&rows),
+                columns,
+            )
+            .await
+            .unwrap();
+        assert!(converted.contains_key("Type"));
+        assert!(!converted.contains_key("type_id"));
+        assert_eq!(converted["Type"], Value::Text(id.to_string()));
+        assert_eq!(converted["Active"], Value::Int(1));
+    }
+}

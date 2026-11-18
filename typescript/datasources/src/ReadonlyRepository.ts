@@ -67,8 +67,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   readonly isSchemaRequired = false;
   readonly schema: Schema = new Schema({});
   private connection?: IConnection;
-  protected rowConverter?: TypeConverter<Cells, Cells>;
-  protected objectConverter?: TypeConverter<T, Cells>;
+  rowConverter?: TypeConverter<Cells, Cells>;
+  objectConverter?: TypeConverter<T, Cells>;
   private entityMappers: IMapper<string, string> = new IdentityMapper();
   private propertyMappers: IMapper<string, string> = new IdentityMapper();
   private statementMappers = new StatementMappers(new IdentityMapper(), new IdentityMapper());
@@ -171,7 +171,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     if (!connection.isOpen) await connection.open();
   };
 
-  protected column = (property: string): string => this.statementMappers.column(property);
+  column = (property: string): string => this.statementMappers.column(property);
 
   protected cell = (
     property: string,

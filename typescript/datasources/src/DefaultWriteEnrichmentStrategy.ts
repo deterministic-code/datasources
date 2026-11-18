@@ -12,6 +12,7 @@ import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { Schema } from "./Schema.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { Cells } from "./converters/Value.ts";
 import type { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
@@ -74,6 +75,19 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   ): Promise<void> => {
     const entries = enrichmentsOf<T>(tree.parent.value);
     if (entries) await this.createStrategy.lookup(entries, items, record, schema, column);
+  };
+
+  lookupRow = async (
+    tree: IRepositoryTree,
+    item: T,
+    schema: Schema,
+    column: (property: string) => string,
+    objects: TypeConverter<T, Cells>,
+    rows?: TypeConverter<Cells, Cells>,
+  ): Promise<Cells> => {
+    const record = objects.reverseConvert(item);
+    await this.lookup(tree, [item], record, schema, column);
+    return rows ? rows.reverseConvert(record) : record;
   };
 
   sources = (tree: IRepositoryTree, column: (property: string) => string): Set<string> => {
