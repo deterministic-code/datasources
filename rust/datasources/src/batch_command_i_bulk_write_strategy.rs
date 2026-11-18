@@ -2,6 +2,7 @@ use crate::bulk_command::BulkCommand;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
 use crate::connection::Connection;
+use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
@@ -20,7 +21,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use std::collections::HashSet;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, Weak};
 
 const PARAMETER_BUDGET: usize = 8000;
 const MAX_ROWS: usize = 250;
@@ -43,6 +44,7 @@ struct Deleted {
 
 #[derive(Default)]
 pub struct BatchCommandIBulkWriteStrategy {
+    repo: OnceLock<Weak<CRUDRepository>>,
     command: OnceLock<Arc<dyn Command>>,
     options: OnceLock<CRUDRepositoryOptions>,
     connection: OnceLock<Arc<dyn Connection>>,
@@ -52,6 +54,13 @@ pub struct BatchCommandIBulkWriteStrategy {
 impl BatchCommandIBulkWriteStrategy {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn repo(&self) -> Result<Arc<CRUDRepository>> {
+        self.repo
+            .get()
+            .and_then(Weak::upgrade)
+            .ok_or_else(|| DatasourceError::message("Repo required"))
     }
 
     fn command(&self) -> Result<Arc<dyn Command>> {
@@ -154,15 +163,18 @@ impl BatchCommandIBulkWriteStrategy {
         Ok(Where::new(and_all(children)))
     }
 
-    fn mapped_insert(&self, item: &Row) -> Result<Inserted> {
-        let record = self.reverse(item)?;
+    async fn mapped_insert(&self, item: &Row) -> Result<Inserted> {
+        let mut item = item.clone();
+        let record = self.repo()?.lookup_row(&mut item).await?;
         let ids = self.ids()?.to_vec();
         let create = self.options()?.create_properties.clone();
+        let extras = self.repo()?.write_sources();
         let fields = self.fields(
             &record,
             |key, value| {
-                listed(&create, key, true)
-                    && (!ids.iter().any(|id| id == key) || assigned(value))
+                extras.contains(key)
+                    || (listed(&create, key, true)
+                        && (!ids.iter().any(|id| id == key) || assigned(value)))
             },
             true,
         )?;
@@ -313,10 +325,10 @@ impl BatchCommandIBulkWriteStrategy {
         if items.is_empty() {
             return Ok(Response::new(Value::Null, 0, None));
         }
-        let rows = items
-            .iter()
-            .map(|item| self.mapped_insert(item))
-            .collect::<Result<Vec<_>>>()?;
+        let mut rows = Vec::with_capacity(items.len());
+        for item in items.iter() {
+            rows.push(self.mapped_insert(item).await?);
+        }
         let columns = columns(rows.iter().map(|row| row.fields.iter()));
         let table = rows[0].table.clone();
         let ids = self.ids()?.to_vec();
@@ -424,6 +436,10 @@ impl BatchCommandIBulkWriteStrategy {
 
 #[async_trait]
 impl BulkWriteStrategy for BatchCommandIBulkWriteStrategy {
+    fn set_repo(&self, repo: Arc<CRUDRepository>) {
+        let _ = self.repo.set(Arc::downgrade(&repo));
+    }
+
     fn attach(
         &self,
         command: Arc<dyn Command>,

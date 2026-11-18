@@ -16,6 +16,44 @@ public abstract class CreateEnrichmentStrategy<T>
 
     protected static bool Missing(Value? value) => EnrichmentCells.Missing(value);
 
+    internal static IEnumerable<string> ObjectSources(IReadOnlyList<StoredEnrichment> entries) =>
+        entries
+            .Where(entry => entry.Enrichment.Type is EnrichmentPropertyType.Object && entry.Enrichment.Association is null)
+            .Select(entry => entry.Enrichment.SourceProperty);
+
+    internal static IReadOnlySet<string> Sources(IReadOnlyList<StoredEnrichment> entries, Func<string, string> column) =>
+        ObjectSources(entries).SelectMany(source => new[] { source, column(source) }).ToHashSet();
+
+    internal static bool Destination(IReadOnlyList<StoredEnrichment> entries, string name) =>
+        entries.Any(entry => entry.Enrichment.DestinationProperty == name);
+
+    internal async Task Lookup(
+        IReadOnlyList<StoredEnrichment> entries,
+        IList<T> items,
+        Row record,
+        Schema schema,
+        Func<string, string> column)
+    {
+        foreach (var source in ObjectSources(entries))
+        {
+            var mapped = column(source);
+            if (Missing(Cell(record, source)) && !Missing(Cell(record, mapped)))
+                record[source] = record[mapped];
+        }
+        await ResolveLookups(entries, items, record, schema);
+        foreach (var source in ObjectSources(entries))
+        {
+            if (Missing(Cell(record, source))) continue;
+            var mapped = column(source);
+            record[mapped] = record[source];
+            if (mapped != source)
+                record.Remove(source);
+        }
+    }
+
+    static Value? Cell(Row record, string name) =>
+        record.TryGetValue(name, out var value) ? value : null;
+
     protected static string Text(Value value) => EnrichmentCells.Text(value);
 
     protected static IReadOnlyList<TItem> Payload<TParent, TItem>(TParent parent, string into) =>

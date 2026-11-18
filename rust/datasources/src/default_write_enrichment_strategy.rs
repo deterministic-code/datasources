@@ -83,6 +83,41 @@ impl<T: Entity> WriteEnrichmentStrategy<T> for DefaultWriteEnrichmentStrategy<T>
         crate::create_enrichment_strategy::resolve_lookups(&entries, items, record, schema).await
     }
 
+    fn mapped_sources(
+        &self,
+        tree: &RepositoryTree<T>,
+        column: &dyn Fn(&str) -> String,
+    ) -> Vec<(String, String)> {
+        let entries = tree.parent.enrichments.lock().expect("enrichments");
+        crate::create_enrichment_strategy::mapped_sources(&entries, column)
+    }
+
+    async fn lookup(
+        &self,
+        tree: &RepositoryTree<T>,
+        items: &mut [T],
+        record: &mut Row,
+        schema: &crate::schema::Schema,
+        columns: Vec<(String, String)>,
+    ) -> Result<()> {
+        let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
+        crate::create_enrichment_strategy::lookup(&entries, items, record, schema, &columns).await
+    }
+
+    fn sources(
+        &self,
+        tree: &RepositoryTree<T>,
+        column: &dyn Fn(&str) -> String,
+    ) -> HashSet<String> {
+        let entries = tree.parent.enrichments.lock().expect("enrichments");
+        crate::create_enrichment_strategy::sources(&entries, column)
+    }
+
+    fn destination(&self, tree: &RepositoryTree<T>, name: &str) -> bool {
+        let entries = tree.parent.enrichments.lock().expect("enrichments");
+        crate::create_enrichment_strategy::destination(&entries, name)
+    }
+
     async fn persist(
         &self,
         tree: &RepositoryTree<T>,
@@ -172,11 +207,15 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                 return Ok(());
             }
             let mut children = Vec::new();
+            let mut chunks = Vec::new();
             for parent in parents.iter() {
                 if self.skip(parent, &enrichment.destination_property, mode) {
+                    chunks.push(None);
                     continue;
                 }
-                children.extend(collect_children(parent, enrichment)?);
+                let rows = collect_children(parent, enrichment)?;
+                chunks.push(Some(rows.len()));
+                children.extend(rows);
             }
             if children.is_empty() {
                 return Ok(());
@@ -188,11 +227,25 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                 ))
             })?;
             if let Some(bulk) = persist.persist_bulk() {
-                return match mode {
-                    WriteMode::Create => bulk.create_bulk(&mut children).await.map(|_| ()),
-                    WriteMode::Update => bulk.update_bulk(&children, None).await.map(|_| ()),
-                    WriteMode::Delete => Ok(()),
-                };
+                match mode {
+                    WriteMode::Create => {
+                        children = bulk.create_bulk(&mut children).await?;
+                    }
+                    WriteMode::Update => {
+                        bulk.update_bulk(&children, None).await?;
+                    }
+                    WriteMode::Delete => return Ok(()),
+                }
+                let mut at = 0;
+                for (parent, chunk) in parents.iter_mut().zip(chunks) {
+                    let Some(count) = chunk else { continue };
+                    parent.set_payload(
+                        &enrichment.destination_property,
+                        children[at..at + count].to_vec(),
+                    )?;
+                    at += count;
+                }
+                return Ok(());
             }
             for parent in parents.iter_mut() {
                 if self.skip(parent, &enrichment.destination_property, mode) {

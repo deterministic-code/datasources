@@ -8,4 +8,13 @@ export interface IWriteEnrichmentStrategy<T> {
   persist(tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void>;
   persistBulk?(tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void>;
   resolveLookups?(tree: IRepositoryTree, items: T[], record: Cells, schema: Schema): Promise<void>;
+  lookup?(
+    tree: IRepositoryTree,
+    items: T[],
+    record: Cells,
+    schema: Schema,
+    column: (property: string) => string,
+  ): Promise<void>;
+  sources?(tree: IRepositoryTree, column: (property: string) => string): Set<string>;
+  destination?(tree: IRepositoryTree, name: string): boolean;
 }
