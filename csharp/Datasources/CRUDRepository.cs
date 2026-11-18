@@ -154,7 +154,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Insert(T item)
     {
         var record = await LookupRow(item);
-        var extras = EnrichmentSources();
+        var extras = write.Sources(tree, Column);
         var fields = Params(record, col =>
             extras.Contains(col)
             || (Listed(createProperties, col, true) && (!ids.Contains(col) || Assigned(record, col))), extras);
@@ -188,7 +188,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Save(T item, IWhere? byWhere)
     {
         var record = await LookupRow(item);
-        var extras = EnrichmentSources();
+        var extras = write.Sources(tree, Column);
         var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras, omitNull: false);
         DistinctColumns(fields);
         if (fields.Count == 0)
@@ -228,7 +228,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include, IReadOnlySet<string>? extras = null, bool omitNull = true) =>
         [.. record.Where(pair => include(pair.Key) && (!omitNull || pair.Value is not Value.Null)
-                && (extras?.Contains(pair.Key) == true || Writable(pair.Key) && !EnrichmentInto(pair.Key)))
+                && (extras?.Contains(pair.Key) == true || Writable(pair.Key) && !write.Destination(tree, pair.Key)))
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
@@ -257,32 +257,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             _ => true
         };
 
-    protected bool EnrichmentInto(string name) =>
-        ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.DestinationProperty == name);
+    internal IReadOnlySet<string> WriteSources() => write.Sources(tree, Column);
 
-    IEnumerable<string> ObjectSourceProperties() =>
-        ((IEnrichmentHost)this).Enrichments
-            .Where(entry => entry.Enrichment.Type is EnrichmentPropertyType.Object && entry.Enrichment.Association is null)
-            .Select(entry => entry.Enrichment.SourceProperty);
-
-    IReadOnlySet<string> EnrichmentSources() =>
-        ObjectSourceProperties().SelectMany(source => new[] { source, Column(source) }).ToHashSet();
-
-    async Task<Row> LookupRow(T item)
+    internal async Task<Row> LookupRow(T item)
     {
         var record = ObjectConverter.ReverseConvert(item);
-        foreach (var source in ObjectSourceProperties())
-            if (!Assigned(record, source) && Assigned(record, Column(source)))
-                record[source] = record[Column(source)];
-        await write.ResolveLookups(tree, [item!], record, Schema);
-        foreach (var source in ObjectSourceProperties())
-            if (Assigned(record, source))
-            {
-                var column = Column(source);
-                record[column] = record[source];
-                if (column != source)
-                    record.Remove(source);
-            }
+        await write.Lookup(tree, [item!], record, Schema, Column);
         return RowConverter?.ReverseConvert(record) ?? record;
     }
 

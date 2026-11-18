@@ -21,9 +21,23 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     public bool UseTransaction { get; }
 
     public Task ResolveLookups(IRepositoryTree tree, IList<T> items, Row record, Schema schema) =>
-        tree.Parent.Value is IEnrichmentHost host
-            ? create.ResolveLookups(host.Enrichments, items, record, schema)
+        Entries(tree) is { } entries
+            ? create.ResolveLookups(entries, items, record, schema)
             : Task.CompletedTask;
+
+    public Task Lookup(IRepositoryTree tree, IList<T> items, Row record, Schema schema, Func<string, string> column) =>
+        Entries(tree) is { } entries
+            ? create.Lookup(entries, items, record, schema, column)
+            : Task.CompletedTask;
+
+    public IReadOnlySet<string> Sources(IRepositoryTree tree, Func<string, string> column) =>
+        Entries(tree) is { } entries ? CreateEnrichmentStrategy<T>.Sources(entries, column) : new HashSet<string>();
+
+    public bool Destination(IRepositoryTree tree, string name) =>
+        Entries(tree) is { } entries && CreateEnrichmentStrategy<T>.Destination(entries, name);
+
+    static IReadOnlyList<StoredEnrichment>? Entries(IRepositoryTree tree) =>
+        tree.Parent.Value is IEnrichmentHost host ? host.Enrichments : null;
 
     public Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode) =>
         Walk(tree.Parent.Value, items, mode);

@@ -8,6 +8,7 @@ use crate::schema::Schema;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::value::Value;
 use async_trait::async_trait;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 #[async_trait]
@@ -85,6 +86,72 @@ pub(crate) fn dict_key<TChild: Entity>(child: &TChild, key_name: &str) -> String
 
 pub(crate) fn set<T: Entity>(item: &mut T, name: &str, value: Value) -> Result<()> {
     item.set_cell(name, value)
+}
+
+pub(crate) fn object_sources<T: Entity>(entries: &[StoredEnrichment<T>]) -> Vec<String> {
+    entries
+        .iter()
+        .filter(|entry| {
+            entry.enrichment.r#type == crate::EnrichmentPropertyType::Object
+                && entry.enrichment.association.is_none()
+        })
+        .map(|entry| entry.enrichment.source_property.clone())
+        .collect()
+}
+
+pub(crate) fn mapped_sources<T: Entity>(
+    entries: &[StoredEnrichment<T>],
+    column: impl Fn(&str) -> String,
+) -> Vec<(String, String)> {
+    object_sources(entries)
+        .into_iter()
+        .map(|source| {
+            let mapped = column(&source);
+            (source, mapped)
+        })
+        .collect()
+}
+
+pub(crate) fn sources<T: Entity>(
+    entries: &[StoredEnrichment<T>],
+    column: impl Fn(&str) -> String,
+) -> HashSet<String> {
+    mapped_sources(entries, column)
+        .into_iter()
+        .flat_map(|(source, mapped)| [source, mapped])
+        .collect()
+}
+
+pub(crate) fn destination<T: Entity>(entries: &[StoredEnrichment<T>], name: &str) -> bool {
+    entries
+        .iter()
+        .any(|entry| entry.enrichment.destination_property == name)
+}
+
+pub(crate) async fn lookup<T: Entity>(
+    entries: &[StoredEnrichment<T>],
+    items: &mut [T],
+    record: &mut Row,
+    schema: &Schema,
+    columns: &[(String, String)],
+) -> Result<()> {
+    for (source, mapped) in columns {
+        if !record.get(source).is_some_and(|value| !missing(value)) {
+            if let Some(value) = record.get(mapped).cloned().filter(|value| !missing(value)) {
+                record.insert(source.clone(), value);
+            }
+        }
+    }
+    resolve_lookups(entries, items, record, schema).await?;
+    for (source, mapped) in columns {
+        if let Some(value) = record.get(source).cloned().filter(|value| !missing(value)) {
+            record.insert(mapped.clone(), value);
+            if mapped != source {
+                record.remove(source);
+            }
+        }
+    }
+    Ok(())
 }
 
 pub(crate) async fn resolve_lookups<T: Entity>(

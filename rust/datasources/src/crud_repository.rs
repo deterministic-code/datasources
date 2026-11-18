@@ -266,12 +266,19 @@ impl<T: Entity> CRUDRepository<T> {
         )
     }
 
+    pub(crate) fn write_sources(&self) -> HashSet<String> {
+        self.write
+            .sources(&self.tree, &|name| self.readonly.column(name))
+    }
+
     fn insert_params(&self, record: &Row) -> Result<Vec<Parameter>> {
+        let extras = self.write_sources();
         let fields = self.fields(
             record,
             |key, value| {
-                listed(&self.create_properties, key, true)
-                    && (!self.ids.iter().any(|id| id == key) || assigned(value))
+                extras.contains(key)
+                    || (listed(&self.create_properties, key, true)
+                        && (!self.ids.iter().any(|id| id == key) || assigned(value)))
             },
             true,
         )?;
@@ -298,33 +305,22 @@ impl<T: Entity> CRUDRepository<T> {
         include: impl Fn(&str, &Value) -> bool,
         omit_null: bool,
     ) -> Result<Vec<Parameter>> {
-        let entries = self.readonly.enrichments.lock().expect("enrichments");
         let columns = self.crud_statements.read_columns();
-        let extras = |key: &str| {
-            entries.iter().any(|entry| {
-                entry.enrichment.r#type == crate::EnrichmentPropertyType::Object
-                    && entry.enrichment.association.is_none()
-                    && (entry.enrichment.source_property == key
-                        || self.readonly.column(&entry.enrichment.source_property) == key)
-            })
-        };
+        let extras = self.write_sources();
         let mut pairs: Vec<_> = record
             .iter()
             .filter(|(key, value)| {
                 !(omit_null && matches!(value, Value::Null))
-                    && (extras(key)
+                    && (extras.contains(*key)
                         || include(key, value)
                             && (columns.is_empty()
                                 || columns.iter().any(|name| {
                                     name == *key || self.readonly.column(name) == **key
                                 }))
-                            && !entries
-                                .iter()
-                                .any(|entry| entry.enrichment.destination_property == **key))
+                            && !self.write.destination(&self.tree, key))
             })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
-        drop(entries);
         pairs.sort_by(|left, right| left.0.cmp(&right.0));
         pairs
             .into_iter()
@@ -362,54 +358,20 @@ impl<T: Entity> CRUDRepository<T> {
         }
     }
 
-    async fn lookup_row(&self, item: &mut T) -> Result<Row> {
+    pub(crate) async fn lookup_row(&self, item: &mut T) -> Result<Row> {
         let mut record = to_stored(item)?;
-        {
-            let entries = self.readonly.enrichments.lock().expect("enrichments");
-            for entry in entries.iter() {
-                let enrichment = &entry.enrichment;
-                if enrichment.r#type != crate::EnrichmentPropertyType::Object
-                    || enrichment.association.is_some()
-                {
-                    continue;
-                }
-                let source = &enrichment.source_property;
-                let column = self.readonly.column(source);
-                if !record.get(source).is_some_and(assigned) {
-                    if let Some(value) = record.get(&column).cloned().filter(|value| assigned(value))
-                    {
-                        record.insert(source.clone(), value);
-                    }
-                }
-            }
-        }
+        let columns = self
+            .write
+            .mapped_sources(&self.tree, &|name| self.readonly.column(name));
         self.write
-            .resolve_lookups(
+            .lookup(
                 &self.tree,
                 std::slice::from_mut(item),
                 &mut record,
                 self.readonly.schema(),
+                columns,
             )
             .await?;
-        {
-            let entries = self.readonly.enrichments.lock().expect("enrichments");
-            for entry in entries.iter() {
-                let enrichment = &entry.enrichment;
-                if enrichment.r#type != crate::EnrichmentPropertyType::Object
-                    || enrichment.association.is_some()
-                {
-                    continue;
-                }
-                let source = &enrichment.source_property;
-                if let Some(value) = record.get(source).cloned().filter(|value| assigned(value)) {
-                    let column = self.readonly.column(source);
-                    record.insert(column.clone(), value);
-                    if column != *source {
-                        record.remove(source);
-                    }
-                }
-            }
-        }
         match &self.readonly.row_converter {
             Some(converter) => converter.reverse_convert(&record),
             None => Ok(record),

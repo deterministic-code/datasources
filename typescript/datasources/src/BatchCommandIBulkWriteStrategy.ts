@@ -86,7 +86,8 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
 
   private writeCreates = async (items: T[]): Promise<Response> => {
     if (items.length === 0) return empty();
-    const rows = items.map(this.mappedInsert);
+    const rows = [];
+    for (const item of items) rows.push(await this.mappedInsert(item));
     const columns = columnsOf(rows.map((row) => row.fields));
     const needsId = this.ids.length === 1 && !columns.includes(this.ids[0]!);
     const size = Math.min(maxRows, Math.max(1, Math.floor(budget / Math.max(1, columns.length))));
@@ -159,14 +160,16 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     return { result: null, rowsAffected };
   };
 
-  private mappedInsert = (item: T): Inserted => {
-    const record = this.reverse(item);
+  private mappedInsert = async (item: T): Promise<Inserted> => {
+    const record = await this.repo.lookupRow(item);
+    const extras = this.repo.writeSources();
     const statement = this.statements().insert(
       this.fields(
         record,
         (col) =>
-          listed(this.options.createProperties, col, true)
-          && (!this.ids.includes(col) || assigned(record[col] ?? null)),
+          extras.has(col)
+          || (listed(this.options.createProperties, col, true)
+            && (!this.ids.includes(col) || assigned(record[col] ?? null))),
       ),
     );
     return { table: statement.table, fields: statement.fields };

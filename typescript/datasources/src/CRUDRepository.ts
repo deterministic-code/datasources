@@ -188,7 +188,7 @@ export class CRUDRepository<T = Cells>
 
   private insert = async (item: T): Promise<Response> => {
     const record = await this.lookupRow(item);
-    const extras = this.objectSources();
+    const extras = this.writeSources();
     const fields = fieldsOf(
       record,
       (col) =>
@@ -197,7 +197,7 @@ export class CRUDRepository<T = Cells>
           && (!this.ids.includes(col) || assigned(record[col] ?? null))),
       extras,
       this.cell,
-      this.enrichmentInto,
+      this.destinationOf,
       this.crudStatements.readColumns,
       this.column,
     );
@@ -228,13 +228,13 @@ export class CRUDRepository<T = Cells>
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = await this.lookupRow(item);
-    const extras = this.objectSources();
+    const extras = this.writeSources();
     const fields = fieldsOf(
       record,
       (col) => extras.has(col) || listed(this.updateProperties, col, !this.ids.includes(col)),
       extras,
       this.cell,
-      this.enrichmentInto,
+      this.destinationOf,
       this.crudStatements.readColumns,
       this.column,
       false,
@@ -259,7 +259,7 @@ export class CRUDRepository<T = Cells>
     const parameters = listed.length
       ? listed
       : DefaultStatementTextRenderer.instance.render(statement).includes("$")
-        ? fieldsOf(record, () => true, new Set(), this.cell, this.enrichmentInto, this.crudStatements.readColumns, this.column)
+        ? fieldsOf(record, () => true, new Set(), this.cell, this.destinationOf, this.crudStatements.readColumns, this.column)
         : [];
     return execute(this.command(), statement, parameters);
   };
@@ -277,19 +277,11 @@ export class CRUDRepository<T = Cells>
 
   private reverseConvert = (item: T): Cells => this.mapped(this.objectConverter!.reverseConvert(item));
 
-  private lookupRow = async (item: T): Promise<Cells> => {
+  lookupRow = async (item: T): Promise<Cells> => {
     const record = this.objectConverter!.reverseConvert(item);
-    for (const source of this.objectSourceProperties()) {
-      const column = this.column(source);
-      if (!assigned(record[source] ?? null) && assigned(record[column] ?? null)) record[source] = record[column]!;
-    }
-    await this.write.resolveLookups?.(this.tree, [item], record, this.schema);
-    for (const source of this.objectSourceProperties()) {
-      if (!assigned(record[source] ?? null)) continue;
-      const column = this.column(source);
-      record[column] = record[source]!;
-      if (column !== source) delete record[source];
-    }
+    if (this.write.lookup)
+      await this.write.lookup(this.tree, [item], record, this.schema, this.column);
+    else await this.write.resolveLookups?.(this.tree, [item], record, this.schema);
     return this.mapped(record);
   };
 
@@ -306,16 +298,9 @@ export class CRUDRepository<T = Cells>
     );
   };
 
-  protected enrichmentInto = (name: string): boolean =>
-    enrichmentsOf<T>(this)!.some((entry) => entry.enrichment.destinationProperty === name);
+  writeSources = (): Set<string> => this.write.sources?.(this.tree, this.column) ?? new Set();
 
-  private objectSourceProperties = (): string[] =>
-    enrichmentsOf<T>(this)!
-      .filter((entry) => (entry.enrichment.type ?? "object") === "object" && !entry.enrichment.association)
-      .map((entry) => entry.enrichment.sourceProperty);
-
-  private objectSources = (): Set<string> =>
-    new Set(this.objectSourceProperties().flatMap((source) => [source, this.column(source)]));
+  private destinationOf = (name: string): boolean => this.write.destination?.(this.tree, name) ?? false;
 }
 
 const lastEnrichment = <T, TRelated = T, TLink = TRelated>(host: object): StoredEnrichment<T, TRelated, TLink> =>

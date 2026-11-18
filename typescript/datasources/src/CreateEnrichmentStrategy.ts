@@ -16,6 +16,37 @@ export abstract class CreateEnrichmentStrategy<T> {
 
   abstract createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
+  objectSources = (entries: readonly StoredEnrichment<T>[]): string[] =>
+    entries
+      .filter((entry) => (entry.enrichment.type ?? "object") === "object" && !entry.enrichment.association)
+      .map((entry) => entry.enrichment.sourceProperty);
+
+  sources = (entries: readonly StoredEnrichment<T>[], column: (property: string) => string): Set<string> =>
+    new Set(this.objectSources(entries).flatMap((source) => [source, column(source)]));
+
+  destination = (entries: readonly StoredEnrichment<T>[], name: string): boolean =>
+    entries.some((entry) => entry.enrichment.destinationProperty === name);
+
+  lookup = async (
+    entries: readonly StoredEnrichment<T>[],
+    items: T[],
+    record: Cells,
+    schema: Schema,
+    column: (property: string) => string,
+  ): Promise<void> => {
+    for (const source of this.objectSources(entries)) {
+      const mapped = column(source);
+      if (!this.presentCell(record[source]) && this.presentCell(record[mapped])) record[source] = record[mapped]!;
+    }
+    await this.resolveLookups(entries, items, record, schema);
+    for (const source of this.objectSources(entries)) {
+      if (!this.presentCell(record[source])) continue;
+      const mapped = column(source);
+      record[mapped] = record[source]!;
+      if (mapped !== source) delete record[source];
+    }
+  };
+
   async resolveLookups(entries: readonly StoredEnrichment<T>[], items: T[], record: Cells, schema: Schema): Promise<void> {
     for (const item of items) {
       for (const entry of entries) {

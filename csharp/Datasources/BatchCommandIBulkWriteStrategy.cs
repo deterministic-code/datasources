@@ -39,7 +39,9 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     {
         if (items.Count == 0)
             return Empty();
-        var rows = items.Select(MappedInsert).ToList();
+        var rows = new List<(string Table, IReadOnlyList<Parameter> Fields)>(items.Count);
+        foreach (var item in items)
+            rows.Add(await MappedInsert(item));
         var columns = Columns(rows.Select(row => row.Fields));
         var needsId = Ids.Count == 1 && !columns.Contains(Ids[0]);
         var size = Math.Min(MaxRows, Math.Max(1, ParameterBudget / Math.Max(1, columns.Count)));
@@ -113,11 +115,13 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         return new Response(Value.Null.Instance, affected);
     }
 
-    (string Table, IReadOnlyList<Parameter> Fields) MappedInsert(T item)
+    async Task<(string Table, IReadOnlyList<Parameter> Fields)> MappedInsert(T item)
     {
-        var record = Reverse(item);
+        var record = await Repo.LookupRow(item);
+        var extras = Repo.WriteSources();
         var statement = Statements().Insert(Fields(record, col =>
-            Listed(Options.CreateProperties, col, true) && (!Ids.Contains(col) || Assigned(record, col))));
+            extras.Contains(col)
+            || (Listed(Options.CreateProperties, col, true) && (!Ids.Contains(col) || Assigned(record, col)))));
         return (statement.Table, statement.Fields);
     }
 

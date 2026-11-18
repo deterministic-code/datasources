@@ -65,6 +65,27 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     if (entries) await this.createStrategy.resolveLookups(entries, items, record, schema);
   };
 
+  lookup = async (
+    tree: IRepositoryTree,
+    items: T[],
+    record: Cells,
+    schema: Schema,
+    column: (property: string) => string,
+  ): Promise<void> => {
+    const entries = enrichmentsOf<T>(tree.parent.value);
+    if (entries) await this.createStrategy.lookup(entries, items, record, schema, column);
+  };
+
+  sources = (tree: IRepositoryTree, column: (property: string) => string): Set<string> => {
+    const entries = enrichmentsOf<T>(tree.parent.value);
+    return entries ? this.createStrategy.sources(entries, column) : new Set();
+  };
+
+  destination = (tree: IRepositoryTree, name: string): boolean => {
+    const entries = enrichmentsOf<T>(tree.parent.value);
+    return !!entries && this.createStrategy.destination(entries, name);
+  };
+
   persist = async (tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void> => {
     await this.walk(tree.parent.value, items, mode);
   };
