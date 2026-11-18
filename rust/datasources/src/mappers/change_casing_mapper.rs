@@ -13,15 +13,23 @@ impl ChangeCasingMapper {
             reverse: ChangeCasingConverter::new(from),
         }
     }
+
+    pub fn map(&self, value: String) -> String {
+        self.forward.convert(&value)
+    }
+
+    pub fn reverse_map(&self, value: String) -> String {
+        self.reverse.convert(&value)
+    }
 }
 
 impl Mapper<String, String> for ChangeCasingMapper {
     fn map(&self, value: String) -> String {
-        self.forward.convert(&value)
+        ChangeCasingMapper::map(self, value)
     }
 
     fn reverse_map(&self, value: String) -> String {
-        self.reverse.convert(&value)
+        ChangeCasingMapper::reverse_map(self, value)
     }
 }
 
@@ -29,7 +37,6 @@ impl Mapper<String, String> for ChangeCasingMapper {
 mod tests {
     use super::ChangeCasingMapper;
     use crate::converters::Casing;
-    use crate::mappers::Mapper;
 
     #[test]
     fn maps_pascal_to_snake_and_back() {

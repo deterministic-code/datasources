@@ -93,6 +93,22 @@ describe("readonly repository", () => {
     expect(row?.IsEnabled).toBe(false);
   });
 
+  it("reads users through dictionary property mappings from change casing mapper", async () => {
+    const ds = Datasource.default;
+    const connection = await open(ds);
+    await applySchema(connection, "minimal-users");
+    await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+    const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const columns = ["Id", "Username", "IsEnabled"];
+    const repo = ds.createReadonlyRepository(User, connection, {
+      entityMapper: new DictionaryMapper([["User", "users"]]),
+      propertyMappings: new DictionaryMapper(columns.map((name) => [name, snake.map(name)])),
+    });
+    const byId = await repo.readSingle(new Where("Id", eq, 1));
+    expect(byId?.Username).toBe("ada");
+    expect(byId?.IsEnabled).toBe(true);
+  });
+
   it("maps an object explicitly", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
     const connection = await open(ds);
