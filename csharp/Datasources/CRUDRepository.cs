@@ -153,7 +153,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Insert(T item)
     {
-        var record = await LookupRow(item);
+        var record = await write.LookupRow(tree, item, Schema, Column, ObjectConverter, RowConverter);
         var extras = write.Sources(tree, Column);
         var fields = Params(record, col =>
             extras.Contains(col)
@@ -187,7 +187,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Save(T item, IWhere? byWhere)
     {
-        var record = await LookupRow(item);
+        var record = await write.LookupRow(tree, item, Schema, Column, ObjectConverter, RowConverter);
         var extras = write.Sources(tree, Column);
         var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras, omitNull: false);
         DistinctColumns(fields);
@@ -257,14 +257,17 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             _ => true
         };
 
-    internal IReadOnlySet<string> WriteSources() => write.Sources(tree, Column);
+    internal IWriteEnrichmentStrategy<T> Write => write;
 
-    internal async Task<Row> LookupRow(T item)
-    {
-        var record = ObjectConverter.ReverseConvert(item);
-        await write.Lookup(tree, [item!], record, Schema, Column);
-        return RowConverter?.ReverseConvert(record) ?? record;
-    }
+    internal IRepositoryTree Tree => tree;
+
+    internal TypeConverter<T, Row> Objects => ObjectConverter;
+
+    internal TypeConverter<Row, Row>? Rows => RowConverter;
+
+    internal string MapColumn(string property) => Column(property);
+
+    internal IReadOnlySet<string> WriteSources() => write.Sources(tree, Column);
 
     Row ReverseConvert(T item)
     {

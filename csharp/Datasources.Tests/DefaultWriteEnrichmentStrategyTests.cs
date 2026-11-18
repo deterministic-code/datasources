@@ -8,6 +8,8 @@ public class DefaultWriteEnrichmentStrategyTests
     sealed class Parent
     {
         public long Id { get; set; }
+        public Guid Type { get; set; }
+        public bool Active { get; set; }
         public string TypeName { get; set; } = "";
         public List<Child> Children { get; set; } = [];
     }
@@ -47,16 +49,78 @@ public class DefaultWriteEnrichmentStrategyTests
     }
 
     [Fact]
-    public async Task LookupRemapsColumnOntoSource()
+    public async Task LookupRestoresPropertyKeys()
     {
         var (write, tree) = Graph();
         var record = new Row { ["type_id"] = 7 };
         await write.Lookup(tree, [new Parent()], record, new Schema(new Dictionary<string, SchemaColumn>()), Column);
-        Assert.Equal(new Value.Int(7), record["type_id"]);
-        Assert.False(record.ContainsKey("Type"));
+        Assert.Equal(new Value.Int(7), record["Type"]);
+        Assert.False(record.ContainsKey("type_id"));
+        var assigned = new Row { ["Type"] = 3 };
+        await write.Lookup(tree, [new Parent()], assigned, new Schema(new Dictionary<string, SchemaColumn>()), Column);
+        Assert.Equal(new Value.Int(3), assigned["Type"]);
+        Assert.False(assigned.ContainsKey("type_id"));
     }
 
-    static (DefaultWriteEnrichmentStrategy<Parent> Write, IRepositoryTree Tree) Graph()
+    [Fact]
+    public async Task LookupThenReverseConvertConvertsBoolean()
+    {
+        var (write, tree) = Graph();
+        var record = new Row { ["type_id"] = 7, ["Active"] = true };
+        await write.Lookup(tree, [new Parent()], record, new Schema(new Dictionary<string, SchemaColumn>()), Column);
+        var converter = RowTypeConverter.From(
+            new Dictionary<string, TypeConverter<Value, Value>> { ["boolean"] = new Flag() },
+            new Dictionary<string, string> { ["Type"] = "integer", ["Active"] = "boolean" });
+        var converted = converter.ReverseConvert(record);
+        Assert.Equal(new Value.Int(1), converted["Active"]);
+        Assert.Equal(new Value.Int(7), converted["Type"]);
+    }
+
+    [Fact]
+    public async Task LookupRowConvertsUuidAndBooleanOnPropertyKeys()
+    {
+        var (write, tree) = Graph();
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var item = new Parent { Type = id, Active = true };
+        var objects = new MetaDataRowTypeConverter<Parent>();
+        var rows = RowTypeConverter.From(
+            new Dictionary<string, TypeConverter<Value, Value>>
+            {
+                ["boolean"] = new Flag(),
+                ["uuid"] = new UuidText(),
+            },
+            new Dictionary<string, string> { ["Type"] = "uuid", ["Active"] = "boolean" });
+        var converted = await write.LookupRow(
+            tree,
+            item,
+            new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["Type"] = new("uuid"),
+                ["Active"] = new("boolean"),
+            }),
+            Column,
+            objects,
+            rows);
+        Assert.True(converted.ContainsKey("Type"));
+        Assert.False(converted.ContainsKey("type_id"));
+        Assert.Equal(new Value.Text(id.ToString()), converted["Type"]);
+        Assert.Equal(new Value.Int(1), converted["Active"]);
+    }
+
+    sealed class Flag : TypeConverter<Value, Value>
+    {
+        public override Value Convert(Value from) => from.ToObject() is long n && n == 1;
+        public override Value ReverseConvert(Value to) => to.ToObject() is true ? 1L : 0L;
+    }
+
+    sealed class UuidText : TypeConverter<Value, Value>
+    {
+        public override Value Convert(Value from) => from;
+        public override Value ReverseConvert(Value to) =>
+            to.ToObject() is Guid guid ? guid.ToString() : to;
+    }
+
+    static (IWriteEnrichmentStrategy<Parent> Write, IRepositoryTree Tree) Graph()
     {
         var connection = new MemoryDriver().Connection(null);
         var typesRepo = Open<UserType>(connection);

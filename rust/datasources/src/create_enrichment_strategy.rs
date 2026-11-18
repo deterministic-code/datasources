@@ -144,11 +144,8 @@ pub(crate) async fn lookup<T: Entity>(
     }
     resolve_lookups(entries, items, record, schema).await?;
     for (source, mapped) in columns {
-        if let Some(value) = record.get(source).cloned().filter(|value| !missing(value)) {
-            record.insert(mapped.clone(), value);
-            if mapped != source {
-                record.remove(source);
-            }
+        if record.get(source).is_some_and(|value| !missing(value)) && mapped != source {
+            record.remove(mapped);
         }
     }
     Ok(())
@@ -239,4 +236,61 @@ async fn resolve_linked<T: Entity>(
         item.set_payload(&enrichment.destination_property, rows)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::converters::{RowTypeConverter, TypeConverter};
+    use crate::schema::Schema;
+    use std::collections::HashMap;
+
+    struct Flag;
+
+    impl TypeConverter<Value, Value> for Flag {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(match from {
+                Value::Int(1) => Value::Bool(true),
+                other => other.clone(),
+            })
+        }
+
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(match to {
+                Value::Bool(true) => Value::Int(1),
+                Value::Bool(false) => Value::Int(0),
+                other => other.clone(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn lookup_restores_property_keys_then_reverse_convert() {
+        let columns = [("Type".into(), "type_id".into())];
+        let mut items: [Row; 0] = [];
+        let mut record = HashMap::from([
+            ("type_id".into(), Value::Int(7)),
+            ("Active".into(), Value::Bool(true)),
+        ]);
+        lookup::<Row>(&[], &mut items, &mut record, Schema::empty(), &columns)
+            .await
+            .unwrap();
+        assert_eq!(record.get("Type"), Some(&Value::Int(7)));
+        assert!(!record.contains_key("type_id"));
+        let converter = RowTypeConverter::from(
+            || {
+                HashMap::from([(
+                    "boolean".into(),
+                    Box::new(Flag) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+                )])
+            },
+            &HashMap::from([
+                ("Type".into(), "integer".into()),
+                ("Active".into(), "boolean".into()),
+            ]),
+        );
+        let converted = converter.reverse_convert(&record).unwrap();
+        assert_eq!(converted["Active"], Value::Int(1));
+        assert_eq!(converted["Type"], Value::Int(7));
+    }
 }

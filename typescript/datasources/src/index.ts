@@ -68,6 +68,7 @@ export type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
 export type { Association, Enrichment } from "./Enrichment.ts";
 export { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 export type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
+export { lookupRow } from "./IWriteEnrichmentStrategy.ts";
 export type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 export type { WriteMode } from "./WriteMode.ts";
 export { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";

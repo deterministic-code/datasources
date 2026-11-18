@@ -117,7 +117,7 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
 
     async Task<(string Table, IReadOnlyList<Parameter> Fields)> MappedInsert(T item)
     {
-        var record = await Repo.LookupRow(item);
+        var record = await Repo.Write.LookupRow(Repo.Tree, item, Repo.Schema, Repo.MapColumn, Repo.Objects, Repo.Rows);
         var extras = Repo.WriteSources();
         var statement = Statements().Insert(Fields(record, col =>
             extras.Contains(col)

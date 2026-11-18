@@ -22,7 +22,7 @@ import { asRelated, StoredEnrichment } from "./StoredEnrichment.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
-import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
+import { lookupRow, type IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
@@ -87,8 +87,8 @@ export class CRUDRepository<T = Cells>
   private readonly createProperties?: readonly string[];
   private readonly updateProperties?: readonly string[];
   private readonly crudStatements: CRUDRepositoryStatements;
-  private readonly tree: IRepositoryTree;
-  private readonly write: IWriteEnrichmentStrategy<T>;
+  readonly tree: IRepositoryTree;
+  readonly write: IWriteEnrichmentStrategy<T>;
   private get useTransaction(): boolean {
     return this.write.useTransaction;
   }
@@ -187,7 +187,15 @@ export class CRUDRepository<T = Cells>
     this.readSingle(this.byId(id));
 
   private insert = async (item: T): Promise<Response> => {
-    const record = await this.lookupRow(item);
+    const record = await lookupRow(
+      this.write,
+      this.tree,
+      item,
+      this.schema,
+      this.column,
+      this.objectConverter!,
+      this.rowConverter,
+    );
     const extras = this.writeSources();
     const fields = fieldsOf(
       record,
@@ -227,7 +235,15 @@ export class CRUDRepository<T = Cells>
   private idValue = (item: T): Scalar | undefined => scalarOf((item as Props)[this.ids[0]!]);
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    const record = await this.lookupRow(item);
+    const record = await lookupRow(
+      this.write,
+      this.tree,
+      item,
+      this.schema,
+      this.column,
+      this.objectConverter!,
+      this.rowConverter,
+    );
     const extras = this.writeSources();
     const fields = fieldsOf(
       record,
@@ -272,17 +288,9 @@ export class CRUDRepository<T = Cells>
     return this.idWhere({ [this.ids[0]!]: id });
   };
 
-  private mapped = (row: Cells): Cells =>
-    this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
-
-  private reverseConvert = (item: T): Cells => this.mapped(this.objectConverter!.reverseConvert(item));
-
-  lookupRow = async (item: T): Promise<Cells> => {
+  private reverseConvert = (item: T): Cells => {
     const record = this.objectConverter!.reverseConvert(item);
-    if (this.write.lookup)
-      await this.write.lookup(this.tree, [item], record, this.schema, this.column);
-    else await this.write.resolveLookups?.(this.tree, [item], record, this.schema);
-    return this.mapped(record);
+    return this.rowConverter ? this.rowConverter.reverseConvert(record) : record;
   };
 
   private idWhere = (record: Cells): IWhere => {

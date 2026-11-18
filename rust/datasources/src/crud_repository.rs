@@ -42,13 +42,13 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct CRUDRepository<T: Entity = Row> {
-    readonly: ReadonlyRepository<T>,
+    pub(crate) readonly: ReadonlyRepository<T>,
     ids: Vec<String>,
     create_properties: Option<Vec<String>>,
     update_properties: Option<Vec<String>>,
     crud_statements: CRUDRepositoryStatements,
-    tree: RepositoryTree<T>,
-    write: Arc<dyn WriteEnrichmentStrategy<T>>,
+    pub(crate) tree: RepositoryTree<T>,
+    pub(crate) write: Arc<dyn WriteEnrichmentStrategy<T>>,
     entity: PhantomData<T>,
 }
 
@@ -358,25 +358,6 @@ impl<T: Entity> CRUDRepository<T> {
         }
     }
 
-    pub(crate) async fn lookup_row(&self, item: &mut T) -> Result<Row> {
-        let mut record = to_stored(item)?;
-        let columns = self
-            .write
-            .mapped_sources(&self.tree, &|name| self.readonly.column(name));
-        self.write
-            .lookup(
-                &self.tree,
-                std::slice::from_mut(item),
-                &mut record,
-                self.readonly.schema(),
-                columns,
-            )
-            .await?;
-        match &self.readonly.row_converter {
-            Some(converter) => converter.reverse_convert(&record),
-            None => Ok(record),
-        }
-    }
 
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
         let record = self.readonly.reverse_convert(stored)?;
@@ -624,7 +605,20 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
             Arc::clone(&self.readonly.connection),
             || async {
                 let mut item = Box::new(item);
-                let mut row = self.lookup_row(&mut *item).await?;
+                let columns = self
+                    .write
+                    .mapped_sources(&self.tree, &|name| self.readonly.column(name));
+                let mut row = self
+                    .write
+                    .lookup_row(
+                        &self.tree,
+                        &mut *item,
+                        self.readonly.schema(),
+                        T::object_converter(),
+                        self.readonly.row_converter.as_ref(),
+                        columns,
+                    )
+                    .await?;
                 let created = self.insert_parent(&mut row).await?;
                 copy_cells(&created, &mut *item, &self.ids)?;
                 if !self.enriched() {
@@ -651,7 +645,20 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
             Arc::clone(&self.readonly.connection),
             || async {
                 let mut item = Box::new(item);
-                let row = self.lookup_row(&mut *item).await?;
+                let columns = self
+                    .write
+                    .mapped_sources(&self.tree, &|name| self.readonly.column(name));
+                let row = self
+                    .write
+                    .lookup_row(
+                        &self.tree,
+                        &mut *item,
+                        self.readonly.schema(),
+                        T::object_converter(),
+                        self.readonly.row_converter.as_ref(),
+                        columns,
+                    )
+                    .await?;
                 let response = self.save(&row, by_where).await?;
                 if self.enriched() {
                     self.write

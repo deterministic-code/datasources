@@ -165,7 +165,21 @@ impl BatchCommandIBulkWriteStrategy {
 
     async fn mapped_insert(&self, item: &Row) -> Result<Inserted> {
         let mut item = item.clone();
-        let record = self.repo()?.lookup_row(&mut item).await?;
+        let repo = self.repo()?;
+        let columns = repo
+            .write
+            .mapped_sources(&repo.tree, &|name| repo.readonly.column(name));
+        let record = repo
+            .write
+            .lookup_row(
+                &repo.tree,
+                &mut item,
+                repo.readonly.schema(),
+                <Row as crate::entity::Entity>::object_converter(),
+                repo.readonly.row_converter.as_ref(),
+                columns,
+            )
+            .await?;
         let ids = self.ids()?.to_vec();
         let create = self.options()?.create_properties.clone();
         let extras = self.repo()?.write_sources();

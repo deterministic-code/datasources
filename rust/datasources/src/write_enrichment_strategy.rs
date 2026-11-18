@@ -1,3 +1,4 @@
+use crate::converters::{RowTypeConverter, TypeConverter};
 use crate::entity::Entity;
 use crate::repository_tree::RepositoryTree;
 use crate::result::Result;
@@ -56,6 +57,24 @@ pub trait WriteEnrichmentStrategy<T: Entity = Row>: Send + Sync {
         _columns: Vec<(String, String)>,
     ) -> Result<()> {
         self.resolve_lookups(tree, items, record, schema).await
+    }
+
+    async fn lookup_row(
+        &self,
+        tree: &RepositoryTree<T>,
+        item: &mut T,
+        schema: &Schema,
+        objects: Box<dyn TypeConverter<T, Row> + Send + Sync>,
+        rows: Option<&RowTypeConverter>,
+        columns: Vec<(String, String)>,
+    ) -> Result<Row> {
+        let mut record = objects.reverse_convert(item)?;
+        self.lookup(tree, std::slice::from_mut(item), &mut record, schema, columns)
+            .await?;
+        match rows {
+            Some(converter) => converter.reverse_convert(&record),
+            None => Ok(record),
+        }
     }
 
     fn sources(
