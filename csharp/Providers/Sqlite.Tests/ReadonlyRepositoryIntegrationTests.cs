@@ -72,6 +72,27 @@ public class ReadonlyRepositoryIntegrationTests
         Assert.False(row.IsEnabled);
     }
 
+    [Fact]
+    public async Task ReadsUsersThroughDictionaryPropertyMappingsFromChangeCasingMapper()
+    {
+        var ds = Datasource.Default;
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "minimal-users");
+        await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+        var snake = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+        string[] columns = ["Id", "Username", "IsEnabled"];
+        var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
+        {
+            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "users" }),
+            PropertyMappings = new DictionaryMapper<string>(columns.ToDictionary(name => name, name => snake.Map(name))),
+        });
+
+        var byId = await repo.ReadSingle(new Where("Id", eq, 1));
+
+        Assert.Equal("ada", byId!.Username);
+        Assert.True(byId.IsEnabled);
+    }
+
     sealed class UserConverter : TypeConverter<User, Row>
     {
         public override User Convert(Row from) => new()

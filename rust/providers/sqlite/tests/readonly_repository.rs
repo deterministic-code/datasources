@@ -93,6 +93,41 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     assert_eq!(row.get("IsEnabled"), Some(&Value::Bool(false)));
 }
 
+#[tokio::test]
+async fn reads_users_through_dictionary_property_mappings_from_change_casing_mapper() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = open(ds.as_ref()).await;
+    apply_schema(connection.as_ref(), "minimal-users").await.unwrap();
+    execute_sql(
+        &connection,
+        "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)",
+    )
+    .await;
+    let snake = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+    let columns = ["Id", "Username", "IsEnabled"];
+    let mut options = create_readonly_repository_mapping_options::<User>();
+    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([(
+        "User".to_string(),
+        "users".to_string(),
+    )])));
+    options.property_mappings = Some(Arc::new(DictionaryMapper::new(
+        columns
+            .iter()
+            .map(|name| ((*name).to_string(), snake.map((*name).to_string()))),
+    )));
+    options.read_properties = columns.iter().map(|column| (*column).to_string()).collect();
+    options.schema = super::boolean_schema();
+    let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
+    let by_id = repo
+        .read_single_where(&Where::binary("Id", eq, 1_i64), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(by_id.get("Username"), Some(&Value::from("ada")));
+    assert_eq!(by_id.get("IsEnabled"), Some(&Value::Bool(true)));
+}
+
 struct UserConverter;
 
 impl TypeConverter<Row, Row> for UserConverter {

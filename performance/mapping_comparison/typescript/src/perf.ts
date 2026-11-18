@@ -360,7 +360,7 @@ const performanceTestDefaultRead = async () => {
       await countContacts(connection);
     };
     const performanceDefaultRead = async () => {
-      const repo = ds.createRepository<Contact>("Contacts", connection);
+      const repo = ds.createRepository<Contact>("Contact", connection);
       let loaded = await collectAsync(repo.read());
       check(loaded, "default");
       const times: number[] = [];
