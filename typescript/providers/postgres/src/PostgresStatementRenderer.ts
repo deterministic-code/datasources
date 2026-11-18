@@ -1,5 +1,6 @@
 import {
   AlterTableStatement,
+  BulkInsertStatement,
   BulkUpdateStatement,
   CreateBulkCreateStoredProcedureStatement,
   CreateBulkDeleteStoredProcedureStatement,
@@ -62,6 +63,11 @@ export class PostgresStatementRenderer extends StatementRenderer {
   protected override visitInsert(statement: InsertStatement): string {
     const sql = super.visitInsert(statement);
     return statement.returning ? `${sql} RETURNING ${statement.returning}` : sql;
+  }
+
+  protected override visitBulkInsert(insert: BulkInsertStatement): string {
+    const sql = super.visitBulkInsert(insert);
+    return insert.returning ? `${sql} RETURNING ${insert.returning}` : sql;
   }
 
   protected override visitSelectInsertedId(inserted: SelectInsertedIdStatement): string {

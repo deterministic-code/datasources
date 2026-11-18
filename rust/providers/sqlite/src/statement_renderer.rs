@@ -9,9 +9,10 @@ use crate::quoted_renderers::{
 };
 use crate::sql_seed_statement_renderer::SqliteSqlSeedStatementRenderer;
 use datasources::{
-    AlterTableStatement, CreateIndexStatement, CreateTableStatement, CreateTableStatementTextRenderer,
-    CreateTriggerStatement, DropIndexStatement, DropTableStatement, DropTriggerStatement,
-    ForeignKeyStatement, InsertStatement, InsertStatementTextRenderer, ProcedureSource,
+    AlterTableStatement, BulkInsertStatement, BulkInsertStatementTextRenderer, CreateIndexStatement,
+    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
+    DropTableStatement, DropTriggerStatement, ForeignKeyStatement, InsertStatement,
+    InsertStatementTextRenderer, ProcedureSource,
     SelectInsertedIdStatement, SqlSeedStatement, sql_procedure_statements_of, Statement,
     StatementTextRenderer, StatementVisitor,
 };
@@ -25,6 +26,18 @@ impl StatementVisitor for SqliteStatementRenderer {
 
     fn visit_insert(&self, statement: &InsertStatement, _text: &StatementTextRenderer) -> String {
         let sql = InsertStatementTextRenderer::default().render(statement);
+        match statement.returning_column() {
+            Some(column) => format!("{sql} RETURNING last_insert_rowid() AS {column}"),
+            None => sql,
+        }
+    }
+
+    fn visit_bulk_insert(
+        &self,
+        statement: &BulkInsertStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        let sql = BulkInsertStatementTextRenderer.render(statement);
         match statement.returning_column() {
             Some(column) => format!("{sql} RETURNING last_insert_rowid() AS {column}"),
             None => sql,
@@ -94,7 +107,8 @@ mod tests {
     use crate::create_table_statement_renderer::SqliteCreateTableStatementRenderer;
     use datasources::{
         Column, ColumnDefault, CreateTableStatement, CreateTableStatementTextRenderer,
-        DefaultStatementTextRenderer, ForeignKey, InsertStatement, NotNull, Parameter, PrimaryKey,
+        BulkInsertStatement, DefaultStatementTextRenderer, ForeignKey, InsertStatement, NotNull,
+        Parameter, PrimaryKey,
         ReferentialAction, SelectInsertedIdStatement, SelectStatement, SelectStatementOptions,
         StatementTextRenderer,
     };
@@ -114,6 +128,16 @@ mod tests {
         assert_eq!(
             statements.render(&insert),
             "INSERT INTO users (name) VALUES ($name) RETURNING last_insert_rowid() AS id"
+        );
+        let bulk = BulkInsertStatement::new(
+            "users",
+            &["name".into()],
+            vec![vec![Parameter::new("name", "ada")]],
+        )
+        .returning("id");
+        assert_eq!(
+            statements.render(&bulk),
+            "INSERT INTO users (name) VALUES ($name__0) RETURNING last_insert_rowid() AS id"
         );
 
         let columns = [

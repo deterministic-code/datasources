@@ -17,6 +17,12 @@ public class MysqlStatementRendererTests
         Assert.Equal(
             "INSERT INTO users (name) VALUES (:name); SELECT LAST_INSERT_ID() AS id",
             Renderer.Render(new InsertStatement("users", [new Parameter("name", "ada")]) { Returning = "id" }));
+        Assert.Equal(
+            "INSERT INTO users (name) VALUES (:name__0), (:name__1); SELECT LAST_INSERT_ID() AS id UNION ALL SELECT LAST_INSERT_ID() + 1 AS id",
+            Renderer.Render(new BulkInsertStatement(
+                "users",
+                ["name"],
+                [[new Parameter("name", "ada")], [new Parameter("name", "bea")]]) { Returning = "id" }));
 
         var create = new CreateTableStatement(
             "orders",

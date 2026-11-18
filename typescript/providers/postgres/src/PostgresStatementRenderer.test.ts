@@ -19,6 +19,7 @@ import {
   DropTriggerStatement,
   ForeignKey,
   IdentityInsertStatement,
+  BulkInsertStatement,
   InsertStatement,
   NotNull,
   PrimaryKey,
@@ -41,6 +42,12 @@ describe("PostgresStatementRenderer", () => {
     expect(renderer.render(new InsertStatement("users", [{ name: "name", value: "ada" }], "id"))).toBe(
       "INSERT INTO users (name) VALUES ($name) RETURNING id",
     );
+    expect(
+      renderer.render(new BulkInsertStatement("users", ["name"], [[{ name: "name", value: "ada" }]], "id")),
+    ).toBe("INSERT INTO users (name) VALUES ($name__0) RETURNING id");
+    expect(
+      renderer.render(new BulkInsertStatement("users", ["name"], [[{ name: "name", value: "ada" }]])),
+    ).toBe("INSERT INTO users (name) VALUES ($name__0)");
 
     const create = new CreateTableStatement(
       "orders",

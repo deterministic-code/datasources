@@ -12,6 +12,14 @@ internal sealed class SqliteStatementRenderer(StatementTextRenderer text) : Stat
             : $"{sql} RETURNING last_insert_rowid() AS {insert.Returning}";
     }
 
+    public override string Visit(BulkInsertStatement insert)
+    {
+        var sql = base.Visit(insert);
+        return string.IsNullOrEmpty(insert.Returning)
+            ? sql
+            : $"{sql} RETURNING last_insert_rowid() AS {insert.Returning}";
+    }
+
     public override string Visit(SelectInsertedIdStatement inserted) =>
         new SqliteSelectInsertedIdStatementTextRenderer().Render(inserted);
 

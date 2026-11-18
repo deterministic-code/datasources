@@ -63,11 +63,11 @@ public class BulkWriteStrategyTests
         await repo.Create([new AddressRow { Label = "a" }, new AddressRow { Id = 0, Label = "b" }]);
         Assert.Equal(
             "INSERT INTO addresses (Label) VALUES ($Label__0), ($Label__1)",
-            command.ExecuteCalls[0].Text);
+            command.ExecuteReaderCalls[0].Text);
         await repo.Create([new AddressRow { Id = 9, Label = "c" }]);
         Assert.Equal(
             "INSERT INTO addresses (Id, Label) VALUES ($Id__0, $Label__0)",
-            command.ExecuteCalls[1].Text);
+            command.ExecuteCalls[0].Text);
     }
 
     [Fact]
@@ -75,28 +75,28 @@ public class BulkWriteStrategyTests
     {
         var (repo, command) = Repo(new BatchCommandIBulkWriteStrategy<Parent>());
         await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
-        Assert.Single(command.ExecuteCalls);
+        Assert.Single(command.ExecuteReaderCalls);
         Assert.Equal(
             "INSERT INTO parents (label) VALUES ($label__0), ($label__1)",
-            command.ExecuteCalls[0].Text);
-        Assert.Equal("label__0", command.ExecuteCalls[0].Parameters![0].Name);
-        Assert.Equal(new Value.Text("a"), command.ExecuteCalls[0].Parameters![0].Value);
-        Assert.Equal("label__1", command.ExecuteCalls[0].Parameters![1].Name);
-        Assert.Equal(new Value.Text("b"), command.ExecuteCalls[0].Parameters![1].Value);
+            command.ExecuteReaderCalls[0].Text);
+        Assert.Equal("label__0", command.ExecuteReaderCalls[0].Parameters![0].Name);
+        Assert.Equal(new Value.Text("a"), command.ExecuteReaderCalls[0].Parameters![0].Value);
+        Assert.Equal("label__1", command.ExecuteReaderCalls[0].Parameters![1].Name);
+        Assert.Equal(new Value.Text("b"), command.ExecuteReaderCalls[0].Parameters![1].Value);
 
         await repo.Update([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
         Assert.Equal(
             "UPDATE parents SET label = data.label FROM (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data WHERE parents.id = data.id",
-            command.ExecuteCalls[1].Text);
+            command.ExecuteCalls[0].Text);
         Assert.Equal(
             ["label__0", "id__0", "label__1", "id__1"],
-            command.ExecuteCalls[1].Parameters!.Select(parameter => parameter.Name));
+            command.ExecuteCalls[0].Parameters!.Select(parameter => parameter.Name));
 
         await repo.Delete([new Parent { id = 1 }, new Parent { id = 2 }]);
         Assert.Equal(
             "DELETE FROM parents WHERE id IN ($id__0, $id__1)",
-            command.ExecuteCalls[2].Text);
-        Assert.Equal(["id__0", "id__1"], command.ExecuteCalls[2].Parameters!.Select(parameter => parameter.Name));
+            command.ExecuteCalls[1].Text);
+        Assert.Equal(["id__0", "id__1"], command.ExecuteCalls[1].Parameters!.Select(parameter => parameter.Name));
     }
 
     [Fact]
@@ -215,14 +215,14 @@ public class BulkWriteStrategyTests
     }
 
     [Fact]
-    public async Task BatchCreateRequiresParentIdWhenChildrenArePresent()
+    public async Task BatchCreateStampsGeneratedParentIdWhenChildrenArePresent()
     {
-        var (parentsRepo, _, _) = FamilyRepos(new BatchCommandIBulkWriteStrategy<Family>());
-        var error = await Assert.ThrowsAsync<DatasourceException>(() => parentsRepo.Create(
-        [
-            new Family { label = "a", children = [new Child { label = "x" }] }
-        ]));
-        Assert.Contains("id", error.Message);
+        var (parentsRepo, _, command) = FamilyRepos(new BatchCommandIBulkWriteStrategy<Family>());
+        command.Reader = new MockReader<Row>([new Row { ["id"] = new Value.Int(7) }]);
+        var items = new Family[] { new() { label = "a", children = [new Child { label = "x" }] } };
+        await parentsRepo.Create(items);
+        Assert.Equal(7, items[0].id);
+        Assert.Contains("INSERT INTO children", command.ExecuteReaderCalls[1].Text);
     }
 
     [Fact]

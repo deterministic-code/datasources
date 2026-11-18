@@ -4,6 +4,7 @@ import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy
 import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
+import { MockReader } from "./mocks/mock-reader.ts";
 import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
 import { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
@@ -75,11 +76,11 @@ describe("bulk write strategies", () => {
       Object.assign(new Parent(), { label: "a" }),
       Object.assign(new Parent(), { id: 0, label: "b" }),
     ]);
-    expect(command.executeCalls[0]?.text).toBe(
+    expect(command.executeReaderCalls[0]?.text).toBe(
       "INSERT INTO parents (label) VALUES ($label__0), ($label__1)",
     );
     await repo.createBulk([Object.assign(new Parent(), { id: 9, label: "c" })]);
-    expect(command.executeCalls[1]?.text).toBe(
+    expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO parents (id, label) VALUES ($id__0, $label__0)",
     );
   });
@@ -90,21 +91,21 @@ describe("bulk write strategies", () => {
       Object.assign(new Parent(), { label: "a" }),
       Object.assign(new Parent(), { label: "b" }),
     ]);
-    expect(command.executeCalls).toHaveLength(1);
-    expect(command.executeCalls[0]?.text).toBe(
+    expect(command.executeReaderCalls).toHaveLength(1);
+    expect(command.executeReaderCalls[0]?.text).toBe(
       "INSERT INTO parents (label) VALUES ($label__0), ($label__1)",
     );
-    expect(command.executeCalls[0]?.parameters?.[0]).toMatchObject({ name: "label__0", value: "a" });
-    expect(command.executeCalls[0]?.parameters?.[1]).toMatchObject({ name: "label__1", value: "b" });
+    expect(command.executeReaderCalls[0]?.parameters?.[0]).toMatchObject({ name: "label__0", value: "a" });
+    expect(command.executeReaderCalls[0]?.parameters?.[1]).toMatchObject({ name: "label__1", value: "b" });
 
     await repo.updateBulk([
       Object.assign(new Parent(), { id: 1, label: "a" }),
       Object.assign(new Parent(), { id: 2, label: "b" }),
     ]);
-    expect(command.executeCalls[1]?.text).toBe(
+    expect(command.executeCalls[0]?.text).toBe(
       "UPDATE parents SET label = data.label FROM (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data WHERE parents.id = data.id",
     );
-    expect(command.executeCalls[1]?.parameters?.map((parameter) => parameter.name)).toEqual([
+    expect(command.executeCalls[0]?.parameters?.map((parameter) => parameter.name)).toEqual([
       "label__0",
       "id__0",
       "label__1",
@@ -115,10 +116,10 @@ describe("bulk write strategies", () => {
       Object.assign(new Parent(), { id: 1 }),
       Object.assign(new Parent(), { id: 2 }),
     ]);
-    expect(command.executeCalls[2]?.text).toBe(
+    expect(command.executeCalls[1]?.text).toBe(
       "DELETE FROM parents WHERE id IN ($id__0, $id__1)",
     );
-    expect(command.executeCalls[2]?.parameters?.map((parameter) => parameter.name)).toEqual(["id__0", "id__1"]);
+    expect(command.executeCalls[1]?.parameters?.map((parameter) => parameter.name)).toEqual(["id__0", "id__1"]);
   });
 
   it("leaves a shorter name inside a longer parameter", async () => {
@@ -129,8 +130,8 @@ describe("bulk write strategies", () => {
     }
     const { repo, command } = open(Coded, new BatchCommandIBulkWriteStrategy<Coded>());
     await repo.createBulk([Object.assign(new Coded(), { code: "a", code_extra: "ab" })]);
-    expect(command.executeCalls[0]?.text).toContain("$code__0");
-    expect(command.executeCalls[0]?.text).toContain("$code_extra__0");
+    expect(command.executeReaderCalls[0]?.text).toContain("$code__0");
+    expect(command.executeReaderCalls[0]?.text).toContain("$code_extra__0");
   });
 
   it("stored procedure commands sends one json call", async () => {
@@ -299,13 +300,15 @@ describe("bulk write strategies", () => {
     expect(items[1]?.id).toBe(8);
   });
 
-  it("batch create requires a parent id when children are present", async () => {
-    const { parentsRepo } = family(new BatchCommandIBulkWriteStrategy<Family>());
-    await expect(
-      parentsRepo.createBulk([
-        Object.assign(new Family(), { label: "a", children: [Object.assign(new Child(), { label: "x" })] }),
-      ]),
-    ).rejects.toThrow(/id/);
+  it("batch create stamps a generated parent id when children are present", async () => {
+    const { parentsRepo, command } = family(new BatchCommandIBulkWriteStrategy<Family>());
+    command.reader = new MockReader([{ id: 7 }]);
+    const items = [
+      Object.assign(new Family(), { label: "a", children: [Object.assign(new Child(), { label: "x" })] }),
+    ];
+    await parentsRepo.createBulk(items);
+    expect(items[0]?.id).toBe(7);
+    expect(command.executeReaderCalls[1]?.text).toContain("INSERT INTO children");
   });
 
   it("empty list does not execute", async () => {

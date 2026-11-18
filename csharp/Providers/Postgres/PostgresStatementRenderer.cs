@@ -10,6 +10,12 @@ internal sealed class PostgresStatementRenderer(StatementTextRenderer text) : St
         return string.IsNullOrEmpty(insert.Returning) ? sql : $"{sql} RETURNING {insert.Returning}";
     }
 
+    public override string Visit(BulkInsertStatement insert)
+    {
+        var sql = base.Visit(insert);
+        return string.IsNullOrEmpty(insert.Returning) ? sql : $"{sql} RETURNING {insert.Returning}";
+    }
+
     public override string Visit(SelectInsertedIdStatement inserted) =>
         new PostgresSelectInsertedIdStatementTextRenderer().Render(inserted);
 
