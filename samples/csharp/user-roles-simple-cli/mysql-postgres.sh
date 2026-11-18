@@ -1,3 +1,4 @@
+set -e -o pipefail
 export PROVIDER=mysql
 export DATASOURCE_URL="${MYSQL_URL:-mysql://ds:ds@mysql:3306/datasources}"
 datasources setup --yes "$@" mysql

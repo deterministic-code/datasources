@@ -36,10 +36,16 @@ test("0 Warning(s), 0 Error(s), npm env-config warn, npm deprecated, git integri
   assert.equal(result.status, 0);
 });
 
+test("expected.txt diff fails", () => {
+  const result = sh(`e2e_fail_line ${JSON.stringify("samples/typescript/contacts-simple-cli: --- expected.txt")}`);
+  assert.equal(result.status, 0);
+});
+
 test("rustc error and npm error fail", () => {
   for (const line of [
     "error[E0061]: this method takes 1 argument but 2 arguments were supplied",
     "error: could not compile `contacts-simple-cli`",
+    "Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@deterministic-code/datasources-code-generators'",
     "npm error code ERESOLVE",
   ]) {
     const result = sh(`e2e_fail_line ${JSON.stringify(line)}`);

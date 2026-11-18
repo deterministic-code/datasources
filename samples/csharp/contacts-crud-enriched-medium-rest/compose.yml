@@ -54,7 +54,7 @@ services:
     environment:
       npm_config_cache: /npm-cache
       NUGET_PACKAGES: /nuget/packages/${COMPOSE_PROJECT_NAME:-contacts-crud-enriched-medium-rest}
-      NUGET_HTTP_CACHE_PATH: /nuget/http-cache
+      NUGET_HTTP_CACHE_PATH: /nuget/http-cache/${COMPOSE_PROJECT_NAME:-contacts-crud-enriched-medium-rest}
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources
 

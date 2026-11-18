@@ -72,13 +72,10 @@ if [ -n "$rust" ]; then build_image datasources-e2e-rust e2e-rust.Dockerfile; fi
 
 mkdir -p "${HOME}/.cache/datasources-npm" "${HOME}/.cache/datasources-nuget" "${HOME}/.cache/datasources-cargo"
 
-if [ -n "$use_local" ]; then
-  parallel=${E2E_PARALLEL:-1}
-else
-  parallel=${E2E_PARALLEL:-3}
-fi
+parallel=${E2E_PARALLEL:-3}
 
 status_dir=$(mktemp -d "${TMPDIR:-/tmp}/e2e-docker.XXXXXX")
+local_root=
 running=""
 projects=""
 token=0
@@ -102,7 +99,7 @@ cleanup() {
     kill "$pid" 2>/dev/null
   done
   wait
-  rm -rf "$status_dir"
+  rm -rf "$status_dir" ${local_root:+"$local_root"}
   exit "$status"
 }
 trap cleanup EXIT
@@ -117,7 +114,7 @@ reap() {
     pid=${rest%%:*}
     kind=${rest#*:}
     if [ -f "$status_dir/$token_n" ]; then
-      wait "$pid"
+      wait "$pid" || true
       kept_projects=""
       for project_entry in $projects; do
         if [ "${project_entry%%:*}" != "$token_n" ]; then
@@ -164,13 +161,31 @@ run_scripts() {
   if [ -n "$use_local" ]; then
     docker compose run --rm --no-deps \
       -e DATASOURCES_REPO=/datasources \
-      -v "$repo:/datasources" \
-      -v /datasources/cli/node_modules \
-      app sh -c 'npm install --prefix "$DATASOURCES_REPO/cli" && npm run prepare --prefix "$DATASOURCES_REPO/cli" && ln -sf "$DATASOURCES_REPO/cli/bin/datasources.mjs" /usr/local/bin/datasources && sh sqlite.sh --local && sh mysql-postgres.sh --local'
+      -e DATASOURCES_BUILD_ROOT=/tmp/datasources-build \
+      -e DATASOURCES_TS_PREBUILT=1 \
+      -v "$repo:/datasources:ro" \
+      -v "$local_root/cli:/datasources/cli:ro" \
+      -v "$local_root/typescript:/datasources/typescript:ro" \
+      -v "$local_root/csharp:/datasources/csharp:ro" \
+      app sh -c 'mkdir -p "$DATASOURCES_BUILD_ROOT" && ln -sf /datasources/cli/bin/datasources.mjs /usr/local/bin/datasources && sh sqlite.sh --local && sh mysql-postgres.sh --local'
   else
     docker compose run --rm --no-deps app sh -c 'sh sqlite.sh && sh mysql-postgres.sh'
   fi
 }
+
+if [ -n "$use_local" ]; then
+  local_root=$(mktemp -d "${TMPDIR:-/tmp}/e2e-local-root.XXXXXX")
+  mkdir -p "$local_root/cli" "$local_root/typescript" "$local_root/csharp"
+  tar -C "$repo/cli" --exclude=node_modules --exclude=coverage -cf - . | tar -C "$local_root/cli" -xf -
+  tar -C "$repo/typescript" --exclude=node_modules --exclude=coverage --exclude=dist -cf - . | tar -C "$local_root/typescript" -xf -
+  tar -C "$repo/csharp" --exclude=obj --exclude=bin --exclude=artifacts --exclude=TestResults -cf - . | tar -C "$local_root/csharp" -xf -
+  docker run --rm \
+    -e npm_config_cache=/npm-cache \
+    -v "${HOME}/.cache/datasources-npm:/npm-cache" \
+    -v "$local_root:/datasources" \
+    datasources-e2e-node \
+    sh -c 'npm install --prefix /datasources/cli && npm run prepare --prefix /datasources/cli && npm install --prefix /datasources/typescript && npm run build --prefix /datasources/typescript'
+fi
 
 for dir in "$@"; do
   await_slot "$dir"
@@ -191,14 +206,22 @@ for dir in "$@"; do
       trap 'status=$?; trap - EXIT; docker compose down -v --remove-orphans -t 0 || true; exit "$status"' EXIT
       start=$(date +%s)
       printf 'e2e-docker: %s start %s\n' "$(date +%H:%M:%S)" "$dir"
-      code=0
+      work_log=$(mktemp)
+      set +e
       {
-        docker compose build app || exit $?
-        docker compose up -d --wait mysql postgres || exit $?
-        run_scripts || exit $?
-      } 2>&1 | while IFS= read -r line || [ -n "$line" ]; do
+        docker compose build app &&
+          docker compose up -d --wait mysql postgres &&
+          run_scripts
+      } >"$work_log" 2>&1
+      run=$?
+      set -e
+      watch=0
+      while IFS= read -r line || [ -n "$line" ]; do
         printf '%s\n' "$dir: $line"
-      done | e2e_watch || code=$?
+      done < "$work_log" | e2e_watch || watch=$?
+      rm -f "$work_log"
+      code=$run
+      [ "$watch" -eq 0 ] || code=$watch
       if [ "$code" -eq 0 ]; then
         printf 'e2e-docker: %s done %s %ss\n' "$(date +%H:%M:%S)" "$dir" "$(($(date +%s) - start))"
       fi
@@ -211,3 +234,10 @@ for dir in "$@"; do
 done
 
 await_idle
+code=0
+for f in "$status_dir"/*; do
+  [ -f "$f" ] || continue
+  read -r sample_code < "$f"
+  [ "$sample_code" = 0 ] || code=1
+done
+exit "$code"

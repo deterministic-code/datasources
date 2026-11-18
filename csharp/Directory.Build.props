@@ -14,6 +14,13 @@
     <IsPackable>false</IsPackable>
     <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts/</PackageOutputPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(DATASOURCES_BUILD_ROOT)' != ''">
+    <BaseIntermediateOutputPath>$(DATASOURCES_BUILD_ROOT)/$(MSBuildProjectName)/obj/</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(DATASOURCES_BUILD_ROOT)/$(MSBuildProjectName)/obj/$(Configuration)/</IntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(DATASOURCES_BUILD_ROOT)/$(MSBuildProjectName)/obj/</MSBuildProjectExtensionsPath>
+    <BaseOutputPath>$(DATASOURCES_BUILD_ROOT)/$(MSBuildProjectName)/bin/</BaseOutputPath>
+    <PackageOutputPath>$(DATASOURCES_BUILD_ROOT)/$(MSBuildProjectName)/artifacts/</PackageOutputPath>
+  </PropertyGroup>
   <PropertyGroup Condition="
     '$(MSBuildProjectName)' == 'Datasources' or
     '$(MSBuildProjectName)' == 'Datasources.Json' or
