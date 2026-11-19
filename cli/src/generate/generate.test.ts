@@ -2752,9 +2752,22 @@ types: []
   it("generate all writes migrations and migrates up", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");
-    const seeded = Object.fromEntries(Object.entries(contactsAuthored()).map(([name, text]) => [join(input, name), text]));
-    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
-    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///./app.sqlite\n";
+    const seeded = {
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - note:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - title:
+            type: string
+`,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+      [join(input, "settings.yaml")]: "settings:\n  backend:\n    datasources: sqlite\n",
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///./app.sqlite\n",
+    };
     const store = mem(seeded);
     const ran: string[] = [];
     const io = deps(store.fs);
