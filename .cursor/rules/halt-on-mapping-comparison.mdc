@@ -1,0 +1,16 @@
+---
+description: Mapping-comparison tests copy C#; fix generate or core, not the perf programs
+alwaysApply: true
+---
+
+# Halt on mapping-comparison adapters
+
+[performance/mapping_comparison/csharp/Program.cs](performance/mapping_comparison/csharp/Program.cs) is the algorithm. TypeScript and Rust copy it. Language method names only (`Read` / `read` / `read`).
+
+Sequential default → dictionary → property-mapped as named tests: `PerformanceTestDefaultRead` / `PerformanceTestDictionaryRead` / `PerformanceTestPropertyMappedRead` (TS `performanceTest*`, Rust `performance_test_*`). Same seed, read, teardown written in each function. Timers only around bulk create and around `Read`/`collect`. Average wall and total CPU after the read loop. `Check` outside those timers.
+
+Dictionary read attaches the same Contact fills as generated `CreateReadonly`: `Addresses`, `Emails`, `Phones`, `Attributes`, `Labels`. Dictionary Labels use the `contact_labels` association (`GraphReadonlyEnrichmentStrategy` + `ContactLabelsRepository`, `ContactId` / `LabelId`), not `CreateReadonly`’s `Id`=`Id` list.
+
+HALT IMMEDIATELY if a compile, empty field, missing `"Contacts"` lookup, or ranking is “fixed” inside the perf programs: extra remapper, identity snake→snake mapper, a second Pascal→snake pass, `Promise.all` / `WhenAll` / `try_join`, `Check` inside the clock, per-iteration CPU, sparse hand-built seed mappers, a second `createRepository` name (`"contacts"` vs `"Contacts"`), a generic runner (`Run` plus a repository factory), collapsing the three named tests, dictionary omitting a `CreateReadonly` Contact fill, or dictionary Labels joining `Id`=`Id` without the `contact_labels` association.
+
+If C# uses Pascal properties, `ChangeCasingMapper(Pascal, Snake)`, `DictionaryMapper` pairs, and `CreateRepository<Contact>("Contacts")`, the other languages must already emit those names from generate for this sample. If they do not, stop and name the generator or settings. Do not invent a faster or slower path in the test.

@@ -42,9 +42,9 @@ impl PostgresCommand {
         sql: &str,
         params: &HashMap<String, Value>,
     ) -> Result<PostgresExecuteResult> {
-        let slot = connection.lock_client().await?;
-        let client = slot
-            .as_ref()
+        let mut slot = connection.lock_client().await?;
+        let session = slot
+            .as_mut()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
         let mut rows_affected = 0;
         let mut result = Value::Null;
@@ -62,14 +62,19 @@ impl PostgresCommand {
             let (text, values) = to_postgres(&part, &used);
             let boxed: Vec<Box<dyn ToSql + Sync + Send>> = values.iter().map(box_value).collect();
             let refs: Vec<&(dyn ToSql + Sync)> = boxed.iter().map(|v| v.as_ref() as _).collect();
-            let statement = client
-                .prepare_typed(&text, &param_types(&values))
-                .await
-                .map_err(map_err)?;
+            let statement = session.prepared(&text, &param_types(&values)).await?;
             if statement.columns().is_empty() {
-                rows_affected += client.execute(&statement, &refs).await.map_err(map_err)? as i64;
+                rows_affected += session
+                    .client
+                    .execute(&statement, &refs)
+                    .await
+                    .map_err(map_err)? as i64;
             } else {
-                let rows = client.query(&statement, &refs).await.map_err(map_err)?;
+                let rows = session
+                    .client
+                    .query(&statement, &refs)
+                    .await
+                    .map_err(map_err)?;
                 if let Some(row) = rows.first() {
                     result = from_cell(row, 0);
                 }
@@ -90,15 +95,16 @@ impl PostgresCommand {
         let (text, values) = to_postgres(sql, params);
         let boxed: Vec<Box<dyn ToSql + Sync + Send>> = values.iter().map(box_value).collect();
         let refs: Vec<&(dyn ToSql + Sync)> = boxed.iter().map(|v| v.as_ref() as _).collect();
-        let slot = connection.lock_client().await?;
-        let client = slot
-            .as_ref()
+        let mut slot = connection.lock_client().await?;
+        let session = slot
+            .as_mut()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let statement = client
-            .prepare_typed(&text, &param_types(&values))
+        let statement = session.prepared(&text, &param_types(&values)).await?;
+        let rows = session
+            .client
+            .query(&statement, &refs)
             .await
             .map_err(map_err)?;
-        let rows = client.query(&statement, &refs).await.map_err(map_err)?;
         Ok(rows.into_iter().next())
     }
 }

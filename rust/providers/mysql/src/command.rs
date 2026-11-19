@@ -60,20 +60,13 @@ impl MysqlCommand {
                 .map(|(name, value)| (name.clone(), value.clone()))
                 .collect();
             let sql = MysqlDriver::placeholders(&part);
-            let mut query = conn
-                .exec_iter(sql.as_str(), named_params(&used))
-                .await
-                .map_err(map_err)?;
-            while let Some(mut stream) = query.stream::<Row>().await.map_err(map_err)? {
-                let columns = stream.columns_ref().len();
-                while let Some(row) = pull(Pin::new(&mut stream)).await.map_err(map_err)?
-                {
-                    if columns > 0 {
-                        let value = row.as_ref(0).cloned().unwrap_or(MysqlValue::NULL);
-                        result = from_mysql_value(value);
-                    }
+            result = match conn.exec_iter(sql.as_str(), named_params(&used)).await {
+                Ok(query) => last_cell(query, result).await?,
+                Err(error) if cannot_prepare(&error) => {
+                    last_cell(conn.query_iter(sql).await.map_err(map_err)?, result).await?
                 }
-            }
+                Err(error) => return Err(map_err(error)),
+            };
             rows_affected += conn.affected_rows() as i64;
         }
         Ok(MysqlExecuteResult {
@@ -392,6 +385,29 @@ pub(crate) fn row_record(row: Row) -> datasources::Row {
         record.insert(column.name_str().into_owned(), from_mysql_value(value));
     }
     record
+}
+
+fn cannot_prepare(error: &mysql_async::Error) -> bool {
+    matches!(error, mysql_async::Error::Server(server) if server.code == 1295)
+}
+
+async fn last_cell<P>(
+    mut query: mysql_async::QueryResult<'_, '_, P>,
+    mut result: Value,
+) -> Result<Value>
+where
+    P: mysql_async::prelude::Protocol + Unpin,
+{
+    while let Some(mut stream) = query.stream::<Row>().await.map_err(map_err)? {
+        let columns = stream.columns_ref().len();
+        while let Some(row) = pull(Pin::new(&mut stream)).await.map_err(map_err)? {
+            if columns > 0 {
+                let value = row.as_ref(0).cloned().unwrap_or(MysqlValue::NULL);
+                result = from_mysql_value(value);
+            }
+        }
+    }
+    Ok(result)
 }
 
 async fn pull<S, T, E>(mut stream: Pin<&mut S>) -> std::result::Result<Option<T>, E>

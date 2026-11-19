@@ -39,8 +39,8 @@ const resultRows = languages
         const row = found(language, provider);
         const cell = row?.tests?.[test];
         if (!cell)
-          return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th><th>${escape(test)}</th><td></td><td></td><td></td></tr>`;
-        return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th><th>${escape(test)}</th>${metric(cell.seedMs, "ms")}${metric(cell.readMs, "ms")}${metric(cell.readPerSec, "parents p/s")}</tr>`;
+          return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th><th>${escape(test)}</th><td></td><td></td><td></td><td></td><td></td></tr>`;
+        return `<tr><th>${escape(language)}</th><th>${escape(provider)}</th><th>${escape(test)}</th>${metric(cell.seedMs, "ms")}${metric(cell.seedCpuMs, "ms")}${metric(cell.readMs, "ms")}${metric(cell.readCpuMs, "ms")}${metric(cell.readPerSec, "parents p/s")}</tr>`;
       }),
     ),
   )
@@ -62,11 +62,11 @@ th,td{border:1px solid #444;padding:.65rem 1rem;vertical-align:top;white-space:n
 sub{color:#aaa;font-size:.65em}
 </style></head><body>
 <h1>mapping comparison</h1>
-<p>each test seeds, reads, then deletes. seed and read are process timers. container build is docker compose build.</p>
+<p>each test seeds, reads, then deletes. seed and read are wall-clock; seed cpu and read cpu are process CPU. container build is docker compose build.</p>
 <h2>container</h2>
 <table><thead><tr><th>language</th><th>build</th></tr></thead><tbody>${containerRows}</tbody></table>
 <h2>tests</h2>
-<table><thead><tr><th>language</th><th>provider</th><th>test</th><th>seed</th><th>read</th><th>read rate</th></tr></thead><tbody>${resultRows}</tbody></table>
+<table><thead><tr><th>language</th><th>provider</th><th>test</th><th>seed</th><th>seed cpu</th><th>read</th><th>read cpu</th><th>read rate</th></tr></thead><tbody>${resultRows}</tbody></table>
 </body></html>
 `,
 );

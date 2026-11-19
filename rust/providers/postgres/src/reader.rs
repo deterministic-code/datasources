@@ -20,20 +20,22 @@ impl PostgresReader {
         statements: Vec<String>,
         params: HashMap<String, Value>,
     ) -> Result<Self> {
-        let slot = connection.lock_client().await?;
-        let client = slot
-            .as_ref()
+        let mut slot = connection.lock_client().await?;
+        let session = slot
+            .as_mut()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
         let mut sets = Vec::new();
         for sql in statements {
             let (text, values) = to_postgres(&sql, &params);
             let boxed: Vec<Box<dyn ToSql + Sync + Send>> = values.iter().map(box_value).collect();
-            let refs: Vec<&(dyn ToSql + Sync)> = boxed.iter().map(|value| value.as_ref() as _).collect();
-            let statement = client
-                .prepare_typed(&text, &param_types(&values))
+            let refs: Vec<&(dyn ToSql + Sync)> =
+                boxed.iter().map(|value| value.as_ref() as _).collect();
+            let statement = session.prepared(&text, &param_types(&values)).await?;
+            let rows = session
+                .client
+                .query(&statement, &refs)
                 .await
                 .map_err(map_err)?;
-            let rows = client.query(&statement, &refs).await.map_err(map_err)?;
             sets.push(rows.iter().map(row_record).collect());
         }
         drop(slot);
