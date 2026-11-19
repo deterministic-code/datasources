@@ -14,6 +14,26 @@ static class EnrichmentCells
             ? dict.Contains(name) ? dict[name] : null
             : obj!.GetType().GetProperty(name)?.GetValue(obj);
 
+    internal static TItem CopyExcept<TItem>(TItem item, string dest)
+    {
+        var copy = (TItem)Activator.CreateInstance(item!.GetType())!;
+        if (item is IDictionary source && copy is IDictionary target)
+        {
+            foreach (DictionaryEntry entry in source)
+            {
+                if (entry.Key is string name && name == dest) continue;
+                target[entry.Key!] = entry.Value;
+            }
+            return copy;
+        }
+        foreach (var prop in item!.GetType().GetProperties())
+        {
+            if (!prop.CanRead || !prop.CanWrite || prop.Name == dest) continue;
+            Write(prop, copy!, prop.GetValue(item));
+        }
+        return copy;
+    }
+
     internal static void Set<TItem>(TItem obj, string name, object? value)
     {
         if (obj is IDictionary dict)
@@ -164,8 +184,11 @@ static class EnrichmentCells
     internal static string MapKey(Enrichment enrichment) =>
         enrichment.DictionaryKey ?? throw new DatasourceException($"{enrichment.DestinationProperty} requires \"DictionaryKey\"");
 
-    static IEnumerable<string> ValueColumns(Schema schema, Enrichment enrichment) =>
-        schema.Columns
-            .Where(pair => !pair.Value.IsId && pair.Key != enrichment.RelatedKey && pair.Key != MapKey(enrichment))
+    static IEnumerable<string> ValueColumns(Schema schema, Enrichment enrichment)
+    {
+        var related = enrichment.Pairs().Select(pair => pair.RelatedKey).ToHashSet();
+        return schema.Columns
+            .Where(pair => !pair.Value.IsId && !related.Contains(pair.Key) && pair.Key != MapKey(enrichment))
             .Select(pair => pair.Key);
+    }
 }

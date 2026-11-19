@@ -11,7 +11,7 @@ pub struct ContactChangeLogsRepository {
 }
 
 impl ContactChangeLogsRepository {
-    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn options() -> Result<CRUDRepositoryOptions> {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "ContactChangeLog".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
@@ -29,6 +29,11 @@ impl ContactChangeLogsRepository {
     options.create_properties = Some(vec!["occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()]);
     options.update_properties = Some(vec!["occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()]);
 
+        Ok(options)
+    }
+
+    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+        let options = Self::options()?;
         let repo = CRUDRepository::<ContactChangeLog>::new(connection, options)?;
         Ok(Self { inner: Arc::new(repo) })
     }
@@ -150,22 +155,6 @@ impl ICRUDRepository<ContactChangeLog> for ContactChangeLogsRepository {
 }
 
 pub fn contact_change_logs_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "ContactChangeLog".into();
-    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-        ("ContactChangeLog".into(), "contact_change_logs".into()),
-    ])));
-    options.schema = Schema::new(HashMap::from([
-        ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
-        ("occurred_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: false, is_id: false }),
-        ("contact_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
-        ("changed_by".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-        ("change_summary".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-    ]));
-    options.ids = vec!["id".into()];
-    options.read_properties = vec!["id".into(), "occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()];
-    options.create_properties = Some(vec!["occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()]);
-    options.update_properties = Some(vec!["occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()]);
-
+        let options = ContactChangeLogsRepository::options()?;
     CRUDRepository::<datasources::Row>::new(connection, options)
 }

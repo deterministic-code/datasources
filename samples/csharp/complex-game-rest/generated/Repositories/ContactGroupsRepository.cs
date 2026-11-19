@@ -21,7 +21,7 @@ public sealed class ContactGroupsRepository : CRUDRepository<Backend.Types.View.
         return repo;
     }
 
-    static CRUDRepositoryOptions<Backend.Types.View.ContactGroup> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.View.ContactGroup> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.ContactGroup>()
             .Add(new()
             {

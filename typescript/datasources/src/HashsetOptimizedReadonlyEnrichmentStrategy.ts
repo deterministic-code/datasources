@@ -5,9 +5,6 @@ import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Row } from "./Row.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 
-const hasKey = (value: Scalar | object | undefined): value is Scalar =>
-  value !== undefined && value !== null;
-
 export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
   extends DefaultReadonlyEnrichmentStrategy<T>
 {
@@ -23,13 +20,13 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
     for await (const item of via.read(
       new Where(new Operator.In(enrichment.relatedKey, [...keys.values()])),
     )) {
-      const by = this.props(item)[enrichment.relatedKey];
-      if (hasKey(by)) index.set(this.keyOf(by), item);
+      const cacheKey = this.rowMatchKey(item, enrichment);
+      if (cacheKey !== undefined) index.set(cacheKey, item);
     }
     for (const [indexOfParent, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment, sources, indexOfParent);
-      if (key === undefined || key === null) continue;
-      const related = index.get(this.keyOf(key));
+      const cacheKey = this.matchKey(parent, enrichment, sources, indexOfParent);
+      if (cacheKey === undefined) continue;
+      const related = index.get(cacheKey);
       if (!related) continue;
       Object.assign(parent, {
         [enrichment.destinationProperty]: enrichment.relatedProperty ? this.props(related)[enrichment.relatedProperty] : related,
@@ -49,18 +46,16 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
     for await (const item of via.read(
       new Where(new Operator.In(enrichment.relatedKey, [...keys.values()])),
     )) {
-      const by = this.props(item)[enrichment.relatedKey];
-      if (hasKey(by)) {
-        const cacheKey = this.keyOf(by);
-        const list = index.get(cacheKey) ?? [];
-        list.push(item);
-        index.set(cacheKey, list);
-      }
+      const cacheKey = this.rowMatchKey(item, enrichment);
+      if (cacheKey === undefined) continue;
+      const list = index.get(cacheKey) ?? [];
+      list.push(item);
+      index.set(cacheKey, list);
     }
     for (const [indexOfParent, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment, sources, indexOfParent);
-      if (key === undefined || key === null) continue;
-      Object.assign(parent, { [enrichment.destinationProperty]: index.get(this.keyOf(key)) ?? [] });
+      const cacheKey = this.matchKey(parent, enrichment, sources, indexOfParent);
+      if (cacheKey === undefined) continue;
+      Object.assign(parent, { [enrichment.destinationProperty]: index.get(cacheKey) ?? [] });
     }
   }
 

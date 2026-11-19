@@ -49,12 +49,13 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment, At(sources, i));
-            if (key is null) continue;
-            var cacheKey = KeyOf(key);
+            var cacheKey = MatchKey(parent, enrichment, At(sources, i));
+            if (cacheKey is null) continue;
             if (!cache.TryGetValue(cacheKey, out var related))
             {
-                related = await via.ReadSingle(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key))));
+                var clause = MatchWhere(parent, enrichment, At(sources, i));
+                if (clause is null) continue;
+                related = await via.ReadSingle(clause);
                 cache[cacheKey] = related;
             }
             if (related is null) continue;
@@ -71,10 +72,10 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment, At(sources, i));
-            if (key is null) continue;
+            var clause = MatchWhere(parent, enrichment, At(sources, i));
+            if (clause is null) continue;
             var related = new List<TRelated>();
-            await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
+            await foreach (var item in via.Read(clause))
                 related.Add(item);
             Set(parent, enrichment.DestinationProperty, related);
         }
@@ -91,10 +92,10 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment, At(sources, i));
-            if (key is null) continue;
+            var clause = MatchWhere(parent, enrichment, At(sources, i));
+            if (clause is null) continue;
             var map = EnrichmentCells.MapOf(parent, enrichment.DestinationProperty);
-            await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
+            await foreach (var item in via.Read(clause))
             {
                 if (Get(item!, mapKey) is not { } entry) continue;
                 map[entry] = EnrichmentCells.DictionaryValue(item, enrichment, schema, map);
@@ -103,18 +104,55 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         }
     }
 
-    protected static Row? At(IReadOnlyList<Row?>? sources, int index) =>
+    internal static Row? At(IReadOnlyList<Row?>? sources, int index) =>
         sources is not null && index < sources.Count ? sources[index] : null;
 
-    protected static object? SourceKey<TParent>(TParent parent, Enrichment enrichment, Row? source)
-    {
-        var name = enrichment.SourceProperty;
-        return source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+    protected static object? SourceValue<TParent>(TParent parent, string name, Row? source) =>
+        source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
             ? cell.ToObject()
             : Get(parent, name);
+
+    protected static object? SourceKey<TParent>(TParent parent, Enrichment enrichment, Row? source) =>
+        SourceValue(parent, enrichment.SourceProperty, source);
+
+    internal static string? MatchKey<TParent>(TParent parent, Enrichment enrichment, Row? source)
+    {
+        var parts = new List<string>();
+        foreach (var pair in enrichment.Pairs())
+        {
+            var key = SourceValue(parent, pair.SourceProperty, source);
+            if (key is null) return null;
+            parts.Add(KeyOf(key));
+        }
+        return string.Join('\0', parts);
     }
 
-    protected static string KeyOf(object? key) => key?.ToString() ?? "";
+    internal static string? RowMatchKey<TItem>(TItem row, Enrichment enrichment)
+    {
+        var parts = new List<string>();
+        foreach (var pair in enrichment.Pairs())
+        {
+            var key = Get(row, pair.RelatedKey);
+            if (key is null) return null;
+            parts.Add(KeyOf(key));
+        }
+        return string.Join('\0', parts);
+    }
+
+    protected static Where? MatchWhere<TParent>(TParent parent, Enrichment enrichment, Row? source)
+    {
+        Condition? condition = null;
+        foreach (var pair in enrichment.Pairs())
+        {
+            var key = SourceValue(parent, pair.SourceProperty, source);
+            if (key is null) return null;
+            Condition equals = new Operator.Equals(pair.RelatedKey, Value.From(key));
+            condition = condition is null ? equals : new Operator.And(condition, equals);
+        }
+        return condition is null ? null : new Where(condition);
+    }
+
+    internal static string KeyOf(object? key) => key?.ToString() ?? "";
 
     protected static object? Get<TItem>(TItem obj, string name) => EnrichmentCells.Get(obj, name);
 

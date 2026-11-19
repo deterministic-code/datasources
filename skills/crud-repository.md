@@ -1132,7 +1132,7 @@ See [Bulk repository](bulk-repository.md) for list writes.
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L624-L656)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L645-L677)
 
 ```csharp
 var ds = Datasource.Default;
@@ -1188,13 +1188,15 @@ ada-v2
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L613-L662)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L653-L704)
 
 ```rust
 let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.ids = vec!["Id".into()];
+options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+options.schema = super::super::boolean_schema();
 let users_repo = ds.create_repository::<Row>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
@@ -1261,7 +1263,7 @@ ada-v2
 no row
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L229-L256)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L245-L272)
 
 ```typescript
 const ds = Datasource.default;
@@ -1547,7 +1549,7 @@ CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAIN
 
 `account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. `ReadSingleById` / `readSingleById` / `read_single_by_id`, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L682-L715)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L703-L736)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -1584,7 +1586,7 @@ ada-v2
 grace
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L859-L905)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L901-L947)
 
 ```rust
 let built = datasource();
@@ -1636,7 +1638,7 @@ ada-v2
 grace
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L379-L409)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L395-L425)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -1927,7 +1929,7 @@ const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("Id",
 
 `UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L208-L295)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L229-L316)
 
 ```csharp
 var ds = Datasource.Default;
@@ -2058,7 +2060,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L697-L853)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L739-L895)
 
 ```rust
 let ds = default().unwrap();
@@ -2258,7 +2260,7 @@ let gone = users_repo.read_single_by_id(&key).await.unwrap();
 no row
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L288-L369)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L304-L385)
 
 ```typescript
 const ds = Datasource.default;

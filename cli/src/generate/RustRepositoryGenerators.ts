@@ -6,7 +6,7 @@ import type { IDeterministic } from "@deterministic-code/deterministic-generator
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import type { TypeKind } from "@deterministic-code/generators-common/paths";
-import { dialectsOf, isLinked, optimisticClass, type RepositoryModel } from "./RepositoryModel.ts";
+import { dialectsOf, isGraph, isLinked, isSelfVia, optimisticClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
 import { caseDirectories } from "./casing.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
@@ -43,7 +43,10 @@ class RustRepositoryGenerators extends RepositoryGenerator {
     }));
     const token = model.optimisticConcurrency;
     const vias = new Map<string, string>();
-    for (const item of model.enrichments) vias.set(item.via, item.viaType);
+    for (const item of model.enrichments) {
+      if (!isSelfVia(item)) vias.set(item.via, item.viaType);
+      if (isGraph(item)) vias.set(item.link, item.linkType);
+    }
     const rowEntity = this.isRustEnum(spec, model.specName);
     return {
       typeName: model.typeName,
@@ -57,10 +60,13 @@ class RustRepositoryGenerators extends RepositoryGenerator {
       readonlyFn: casing.convertFields(this.readonlyRepositoryStem(model.specName)),
       child,
       childFields: child.length === 0 ? "" : `, ${child.map((item) => item.field).join(", ")}`,
-      shareConnection: child.length === 0 ? undefined : {},
+      shareConnection: child.length === 0 && !model.enrichments.some(isSelfVia) ? undefined : {},
       enrichments,
       hasEnrichments: enrichments.length === 0 ? undefined : {},
-      hasLinked: model.enrichments.some(isLinked) ? {} : undefined,
+      hasLinked: model.enrichments.some((item) => item.kind === "linked" || item.kind === "graph") ? {} : undefined,
+      hasTree: model.enrichments.some((item) => item.kind === "tree") ? {} : undefined,
+      hasGraph: model.enrichments.some((item) => item.kind === "graph") ? {} : undefined,
+      hasSelfVia: model.enrichments.some(isSelfVia) ? {} : undefined,
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
       schema: this.schemaBag(model.schema),
@@ -105,7 +111,11 @@ class RustRepositoryGenerators extends RepositoryGenerator {
     for (const model of models) {
       if (!enumNames.has(model.specName)) names.add(model.typeName);
       for (const item of model.enrichments) {
-        if ((item.kind === "list" || item.kind === "linked") && !enumNames.has(item.via)) names.add(item.viaType);
+        if (
+          (item.kind === "list" || item.kind === "linked" || item.kind === "tree" || item.kind === "graph") &&
+          !enumNames.has(item.via)
+        )
+          names.add(item.viaType);
       }
     }
     return { schemaTypes: [...names].map((name) => ({ name })) };

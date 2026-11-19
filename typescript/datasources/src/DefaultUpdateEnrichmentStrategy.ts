@@ -1,3 +1,4 @@
+import { enrichmentMatches } from "./Enrichment.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
@@ -8,7 +9,9 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
   async updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     const rows = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer);
-    for (const related of rows) this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
+    for (const related of rows)
+      for (const match of enrichmentMatches(enrichment))
+        this.stampCell(related, match.relatedKey, this.getCell(parent, match.sourceProperty));
     const keys = this.namesOf(writer, rows[0] ?? existing[0] ?? {} as TChild);
     const keep = new Set(rows.filter((row) => this.hasKey(row, keys)).map((row) => this.keyOf(row, keys)));
     for (const row of existing.filter((row) => !keep.has(this.keyOf(row, keys))))

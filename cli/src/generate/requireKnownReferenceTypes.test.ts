@@ -43,6 +43,10 @@ describe("requireKnownReferenceTypes", () => {
     expect(() => requireKnownReferenceTypes(specOf([named("review", [field(".id")])]))).not.toThrow();
   });
 
+  it("ignores an empty tuple type name", () => {
+    expect(() => requireKnownReferenceTypes(specOf([named("review", [field([""])])]))).not.toThrow();
+  });
+
   it("throws missing type for a string reference", () => {
     expect(() => requireKnownReferenceTypes(specOf([named("review", [field("user.id")])]))).toThrow(
       'missing type "user"',
@@ -53,5 +57,19 @@ describe("requireKnownReferenceTypes", () => {
     expect(() => requireKnownReferenceTypes(specOf([named("review", [field(["user", "id"])])]))).toThrow(
       'missing type "user"',
     );
+  });
+
+  it("accepts a composite reference when every type is present", () => {
+    expect(() =>
+      requireKnownReferenceTypes(
+        specOf([named("a", [field()]), named("review", [field(["a.x", "a.y"])])]),
+      ),
+    ).not.toThrow();
+  });
+
+  it("throws missing type for the absent side of a composite reference", () => {
+    expect(() =>
+      requireKnownReferenceTypes(specOf([named("a", [field()]), named("review", [field(["a.x", "b.y"])])])),
+    ).toThrow('missing type "b"');
   });
 });

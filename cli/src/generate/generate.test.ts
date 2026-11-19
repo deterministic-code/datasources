@@ -250,6 +250,362 @@ types:
     expect(errs).toEqual(["address.ghosts references ghost.ghost_id has no type"]);
   });
 
+  it("generates a join on every column of a composite reference", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const store = mem({
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - seat:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - play_id:
+            type: integer
+        - user_id:
+            type: integer
+  - mark:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - play_id:
+            type: integer
+        - user_id:
+            type: integer
+        - label:
+            type: string
+  - mark_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: mark.label
+        - value:
+            type: string
+            references: mark.label
+  - seat_view:
+      tags: [view_type]
+      inherits: seat
+      fields:
+        - marks:
+            type: mark[]
+            references: [mark.play_id, mark.user_id]
+        - labels:
+            type: mark_map{}
+            references: [mark.play_id, mark.user_id]
+`,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    });
+    const errs: string[] = [];
+    const io = deps(store.fs);
+    io.err = (line) => errs.push(line);
+    expect(await exec(["generate", "all", "--dialect", "rust", "--cwd", cwd, "--no-auto-migrate-up"], io, cwd)).toBe(0);
+    expect(errs).toEqual([]);
+    const text = Object.values(store.files).find((item) => item.includes("with_keys")) ?? "";
+    const pair = '.with_keys(&[("play_id", "play_id"), ("user_id", "user_id")])';
+    expect(text.match(/with_keys/g)?.length).toBe(text.split(pair).length - 1);
+    expect(text).toContain('Enrichment::new("marks", "play_id", "play_id"');
+    expect(text).toContain('Enrichment::new("labels", "play_id", "play_id"');
+  });
+
+  it("rejects composite references that name two types", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - seat:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - play_id:
+            type: integer
+        - user_id:
+            type: integer
+  - mark:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - play_id:
+            type: integer
+  - seat_view:
+      tags: [view_type]
+      inherits: seat
+      fields:
+        - marks:
+            type: mark[]
+            references: [mark.play_id, seat.user_id]
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    expect(() => planRepositories(spec, "rust", {})).toThrow(
+      "seat_view.marks composite references must name one type",
+    );
+  });
+
+  it("rejects a composite reference whose column is missing on the parent", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - seat:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - play_id:
+            type: integer
+  - mark:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - play_id:
+            type: integer
+        - user_id:
+            type: integer
+  - seat_view:
+      tags: [view_type]
+      inherits: seat
+      fields:
+        - marks:
+            type: mark[]
+            references: [mark.play_id, mark.user_id]
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    expect(() => planRepositories(spec, "rust", {})).toThrow(
+      "seat_view.marks composite reference mark.user_id has no column on seat_view",
+    );
+  });
+
+  it("emits tree and graph enrichers with a flat via and a junction child", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const types = `version: 1.0.0
+types:
+  - category:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_category_id:
+            references: category.id
+            is_nullable: true
+        - name:
+            type: string
+  - category_tree:
+      tags: [view_type, tree, readonly_lookup]
+      inherits: category
+      fields:
+        - children:
+            type: category_tree[]
+            references: category.parent_category_id
+  - region_category:
+      tags: [datasource_type]
+      fields:
+        - region_id:
+            type: integer
+            is_id: true
+        - category_id:
+            type: integer
+            is_id: true
+        - parent_region_id:
+            references: region_category.region_id
+            is_nullable: true
+        - parent_category_id:
+            references: region_category.category_id
+            is_nullable: true
+        - name:
+            type: string
+  - region_category_tree:
+      tags: [view_type, tree, readonly_lookup]
+      inherits: region_category
+      fields:
+        - children:
+            type: region_category_tree[]
+            references: [region_category.parent_region_id, region_category.parent_category_id]
+  - node:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - value:
+            type: string
+  - node_edge:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - from_node_id:
+            references: node.id
+        - to_node_id:
+            references: node.id
+  - node_graph:
+      tags: [view_type, graph, readonly_lookup]
+      inherits: node
+      fields:
+        - edges:
+            type: node_graph[]
+            references: node_edge.from_node_id
+`;
+    const store = mem({
+      [join(input, "types.yaml")]: types,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    });
+    expect(
+      await exec(
+        ["generate", "all", "--dialect", "csharp", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        deps(store.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    const treeCs = Object.values(store.files).find((item) => item.includes("class CategoryTreesRepository")) ?? "";
+    const regionCs = Object.values(store.files).find((item) => item.includes("class RegionCategoryTreesRepository")) ?? "";
+    const graphCs = Object.values(store.files).find((item) => item.includes("class NodeGraphsRepository")) ?? "";
+    expect(treeCs).toContain("TreeReadonlyEnrichmentStrategy");
+    expect(treeCs).toContain("new ReadonlyRepository<Backend.Types.View.CategoryTree>");
+    expect(treeCs).not.toContain("public CategoryTreesRepository CategoryTree");
+    expect(regionCs).toContain('new EnrichmentMatch("RegionId", "ParentRegionId")');
+    expect(regionCs).toContain('new EnrichmentMatch("CategoryId", "ParentCategoryId")');
+    expect(graphCs).toContain("GraphReadonlyEnrichmentStrategy");
+    expect(graphCs).toContain("public NodeEdgesRepository NodeEdge");
+    expect(graphCs).toContain("new NodeEdgesRepository(connection)");
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": types,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    const models = planRepositories(spec, "csharp", {});
+    expect(models.find((model) => model.specName === "category")?.readonly).toBe(false);
+    expect(models.find((model) => model.specName === "category_tree")?.readonly).toBe(true);
+    expect(models.find((model) => model.specName === "category_tree")?.enrichments[0]?.kind).toBe("tree");
+    expect(models.find((model) => model.specName === "region_category_tree")?.enrichments[0]?.keys).toEqual([
+      { source: "RegionId", relatedKey: "ParentRegionId" },
+      { source: "CategoryId", relatedKey: "ParentCategoryId" },
+    ]);
+    expect(models.find((model) => model.specName === "node_graph")?.enrichments[0]?.kind).toBe("graph");
+    const ts = mem({
+      [join(input, "types.yaml")]: types,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    });
+    expect(
+      await exec(
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        deps(ts.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    const treeTs = Object.values(ts.files).find((item) => item.includes("export class CategoryTreesRepository")) ?? "";
+    const graphTs = Object.values(ts.files).find((item) => item.includes("export class NodeGraphsRepository")) ?? "";
+    expect(treeTs).toContain("TreeReadonlyEnrichmentStrategy");
+    expect(graphTs).toContain("GraphReadonlyEnrichmentStrategy");
+    expect(graphTs).toContain("this.nodeEdge = new NodeEdgesRepository(connection)");
+    const rust = mem({
+      [join(input, "types.yaml")]: types,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    });
+    expect(
+      await exec(
+        ["generate", "all", "--dialect", "rust", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        deps(rust.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    const treeRs = Object.values(rust.files).find((item) => item.includes("pub struct CategoryTreesRepository")) ?? "";
+    const graphRs = Object.values(rust.files).find((item) => item.includes("pub struct NodeGraphsRepository")) ?? "";
+    expect(treeRs).toContain("TreeReadonlyEnrichmentStrategy");
+    expect(graphRs).toContain("GraphReadonlyEnrichmentStrategy");
+    expect(graphRs).toContain("pub node_edge: NodeEdgesRepository");
+  });
+
+  it("rejects a tree composite whose parent key has no references", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - region_category:
+      tags: [datasource_type]
+      fields:
+        - region_id:
+            type: integer
+            is_id: true
+        - category_id:
+            type: integer
+            is_id: true
+        - parent_region_id:
+            type: integer
+            is_nullable: true
+        - parent_category_id:
+            type: integer
+            is_nullable: true
+  - region_category_tree:
+      tags: [view_type, tree, readonly_lookup]
+      inherits: region_category
+      fields:
+        - children:
+            type: region_category_tree[]
+            references: [region_category.parent_region_id, region_category.parent_category_id]
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    expect(() => planRepositories(spec, "csharp", {})).toThrow(
+      "region_category_tree.children tree reference region_category.parent_region_id has no parent key",
+    );
+  });
+
+  it("plans a graph whose junction targets the view name", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - node:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - node_edge:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - from_node_id:
+            references: node_graph.id
+        - to_node_id:
+            references: node_graph.id
+  - node_graph:
+      tags: [view_type, graph, readonly_lookup]
+      inherits: node
+      fields:
+        - edges:
+            type: node_graph[]
+            references: node_edge.from_node_id
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    expect(planRepositories(spec, "csharp", {}).find((model) => model.specName === "node_graph")?.enrichments[0]?.kind).toBe(
+      "graph",
+    );
+  });
+
   it("writes sqlite migrations for complex-game with local includes", async () => {
     const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/complex-game-rest-shared/deterministic");
     const cwd = "app";

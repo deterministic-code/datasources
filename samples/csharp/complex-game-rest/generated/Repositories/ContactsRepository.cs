@@ -17,8 +17,8 @@ public sealed class ContactsRepository : CRUDRepository<Backend.Types.View.Conta
         ContactSource = new ContactSourcesRepository(connection);
         AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), Address);
         AddEnriched(new("Phones", "Id", "ContactId", Type: EnrichmentPropertyType.List), Phone);
-        AddEnriched(new("Settings", "Id", "ContactId", "Value", Type: EnrichmentPropertyType.Dictionary), ContactSettings);
-        AddEnriched(new("Prefs", "Id", "ContactId", Type: EnrichmentPropertyType.Dictionary), ContactPreferences);
+        AddEnriched(new("Settings", "Id", "ContactId", "Value", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), ContactSettings);
+        AddEnriched(new("Prefs", "Id", "ContactId", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), ContactPreferences);
         AddEnriched(new("ContactSourceName", "ContactSourceId", "Id", "Name"), ContactSource);
         AddEnriched(new("Description", "ContactSourceId", "Id", "Description"), ContactSource);
     }
@@ -33,14 +33,14 @@ public sealed class ContactsRepository : CRUDRepository<Backend.Types.View.Conta
         var ContactSource = new ContactSourcesRepository(connection);
         repo.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), Address);
         repo.AddEnriched(new("Phones", "Id", "ContactId", Type: EnrichmentPropertyType.List), Phone);
-        repo.AddEnriched(new("Settings", "Id", "ContactId", "Value", Type: EnrichmentPropertyType.Dictionary), ContactSettings);
-        repo.AddEnriched(new("Prefs", "Id", "ContactId", Type: EnrichmentPropertyType.Dictionary), ContactPreferences);
+        repo.AddEnriched(new("Settings", "Id", "ContactId", "Value", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), ContactSettings);
+        repo.AddEnriched(new("Prefs", "Id", "ContactId", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), ContactPreferences);
         repo.AddEnriched(new("ContactSourceName", "ContactSourceId", "Id", "Name"), ContactSource);
         repo.AddEnriched(new("Description", "ContactSourceId", "Id", "Description"), ContactSource);
         return repo;
     }
 
-    static CRUDRepositoryOptions<Backend.Types.View.Contact> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.View.Contact> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.Contact>()
             .Add(new()
             {

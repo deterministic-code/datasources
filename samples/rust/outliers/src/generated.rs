@@ -1,0 +1,4 @@
+#[path = "../generated/mod.rs"]
+mod generated_mod;
+pub use generated_mod::*;
+pub use generated_mod::Repositories;

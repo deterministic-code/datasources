@@ -1,7 +1,7 @@
 use crate::entity::{assign_one, assign_related, Entity};
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::{
-    key_of, source_at, source_key_of, ReadonlyEnrichmentStrategy,
+    key_of, match_key, row_match_key, source_at, source_key_of, ReadonlyEnrichmentStrategy,
 };
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
@@ -39,19 +39,15 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             .await?;
         let mut index = HashMap::new();
         for related in loaded {
-            if let Some(by) = related.cell(&enrichment.related_key) {
-                index.insert(key_of(&by), related);
+            if let Some(cache_key) = row_match_key(&related, enrichment) {
+                index.insert(cache_key, related);
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key_of(
-                parent,
-                &enrichment.source_property,
-                source_at(sources, index_i),
-            ) else {
+            let Some(cache_key) = match_key(parent, enrichment, source_at(sources, index_i)) else {
                 continue;
             };
-            let Some(related) = index.get(&key_of(&key)).cloned() else {
+            let Some(related) = index.get(&cache_key).cloned() else {
                 continue;
             };
             match enrichment.related_property.as_deref() {
@@ -86,19 +82,15 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             .await?;
         let mut index: HashMap<String, Vec<TRelated>> = HashMap::new();
         for related in loaded {
-            if let Some(by) = related.cell(&enrichment.related_key) {
-                index.entry(key_of(&by)).or_default().push(related);
+            if let Some(cache_key) = row_match_key(&related, enrichment) {
+                index.entry(cache_key).or_default().push(related);
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key_of(
-                parent,
-                &enrichment.source_property,
-                source_at(sources, index_i),
-            ) else {
+            let Some(cache_key) = match_key(parent, enrichment, source_at(sources, index_i)) else {
                 continue;
             };
-            let related = index.get(&key_of(&key)).cloned().unwrap_or_default();
+            let related = index.get(&cache_key).cloned().unwrap_or_default();
             assign_related(parent, &enrichment.destination_property, related)?;
         }
         Ok(())

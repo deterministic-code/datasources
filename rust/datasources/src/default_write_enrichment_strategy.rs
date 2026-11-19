@@ -385,13 +385,11 @@ pub(crate) fn collect_children<T: Entity>(parent: &T, enrichment: &Enrichment) -
     if related.is_empty() {
         return Ok(related);
     }
-    let key = required(
-        parent,
-        &enrichment.source_property,
-        &enrichment.destination_property,
-    )?;
-    for row in &mut related {
-        row.insert(enrichment.related_key.clone(), key.clone());
+    for (source_name, related_key) in enrichment.pairs() {
+        let key = required(parent, &source_name, &enrichment.destination_property)?;
+        for row in &mut related {
+            row.insert(related_key.clone(), key.clone());
+        }
     }
     Ok(related)
 }

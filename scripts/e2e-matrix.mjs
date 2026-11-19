@@ -30,6 +30,7 @@ const samples = [
   { name: "user-roles-simple-cli", sql: false },
   { name: "contacts-crud-enriched-medium-rest", sql: true },
   { name: "complex-game-rest", sql: true },
+  { name: "outliers", sql: true },
 ];
 
 const mysqlUrl = () =>

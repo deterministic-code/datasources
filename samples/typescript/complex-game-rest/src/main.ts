@@ -7,8 +7,13 @@ import { ContactsRepository } from "../generated/repositories/contactsRepository
 import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
 import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
 import { GroupsRepository } from "../generated/repositories/groupsRepository.ts";
+import { ItemGraphsRepository } from "../generated/repositories/itemGraphsRepository.ts";
+import { ItemLinksRepository } from "../generated/repositories/itemLinksRepository.ts";
+import { ItemsRepository } from "../generated/repositories/itemsRepository.ts";
 import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
 import { RolesRepository } from "../generated/repositories/rolesRepository.ts";
+import { SkillsRepository } from "../generated/repositories/skillsRepository.ts";
+import { SkillTreesRepository } from "../generated/repositories/skillTreesRepository.ts";
 import { UsersRepository } from "../generated/repositories/usersRepository.ts";
 import type { Group } from "../generated/types/datasource/group.ts";
 import type { Role } from "../generated/types/datasource/role.ts";
@@ -25,6 +30,11 @@ const api = new Api(
   new ReviewsRepository(connection),
   new GameStatesRepository(connection),
   new ContactsRepository(connection),
+  new SkillsRepository(connection),
+  new SkillTreesRepository(connection),
+  new ItemsRepository(connection),
+  new ItemLinksRepository(connection),
+  new ItemGraphsRepository(connection),
 );
 const roles = new RolesRepository(connection);
 const groups = new GroupsRepository(connection);
@@ -129,6 +139,34 @@ const updated = await call(api, "GET", `/contacts?id=${contactId}`, undefined, 2
 requireAdaChildren(updated, "Work", "Cambridge", "555-0111");
 if (addressByLine1(contactRow(updated), "1 College").addressTypeName !== "Home")
   throw new Error("update home address");
+
+const combat = await call(api, "POST", "/skills", { name: "combat", parentSkillId: null }, 201);
+const combatId = combat.id;
+const melee = await call(api, "POST", "/skills", { name: "melee", parentSkillId: combatId }, 201);
+const meleeId = melee.id;
+const swordSkill = await call(api, "POST", "/skills", { name: "sword", parentSkillId: meleeId }, 201);
+const nest = await call(api, "GET", `/skill_tree?id=${combatId}`, undefined, 200);
+if (!Array.isArray(nest) || nest.length !== 1 || nest[0].children[0].name !== "melee" || nest[0].children[0].children[0].name !== "sword")
+  throw new Error("skill nest");
+if (nest[0].children[0].children[0].children.length !== 0) throw new Error("skill nest leaf");
+
+const loopA = await call(api, "POST", "/skills", { name: "loop-a", parentSkillId: null }, 201);
+const loopB = await call(api, "POST", "/skills", { name: "loop-b", parentSkillId: loopA.id }, 201);
+const loopC = await call(api, "POST", "/skills", { name: "loop-c", parentSkillId: loopB.id }, 201);
+await call(api, "PUT", `/skills?id=${loopA.id}`, { name: "loop-a", parentSkillId: loopC.id }, 200);
+const cycle = await call(api, "GET", `/skill_tree?id=${loopA.id}`, undefined, 200);
+if (!Array.isArray(cycle) || cycle[0].children[0].name !== "loop-b" || cycle[0].children[0].children[0].name !== "loop-c")
+  throw new Error("skill cycle");
+if (cycle[0].children[0].children[0].children.length !== 0) throw new Error("skill cycle cut");
+
+const sword = await call(api, "POST", "/items", { name: "sword" }, 201);
+const shield = await call(api, "POST", "/items", { name: "shield" }, 201);
+const potion = await call(api, "POST", "/items", { name: "potion" }, 201);
+await call(api, "POST", "/item_links", { fromItemId: sword.id, toItemId: shield.id }, 201);
+await call(api, "POST", "/item_links", { fromItemId: sword.id, toItemId: potion.id }, 201);
+const graph = await call(api, "GET", `/item_graph?id=${sword.id}`, undefined, 200);
+const edgeNames = [...graph[0].edges.map((edge: { name: string }) => edge.name)].sort().join(",");
+if (!Array.isArray(graph) || edgeNames !== "potion,shield") throw new Error("item graph");
 
 for (const target of [
   `/contacts?id=${contactId}`,

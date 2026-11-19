@@ -3,14 +3,19 @@ use crate::generated::repositories::categoriesRepository::CategoriesRepository;
 use crate::generated::repositories::contactsRepository::ContactsRepository;
 use crate::generated::repositories::gameStatesRepository::GameStatesRepository;
 use crate::generated::repositories::gamesRepository::GamesRepository;
+use crate::generated::repositories::itemGraphsRepository::ItemGraphsRepository;
+use crate::generated::repositories::itemLinksRepository::ItemLinksRepository;
+use crate::generated::repositories::itemsRepository::ItemsRepository;
 use crate::generated::repositories::reviewsRepository::ReviewsRepository;
+use crate::generated::repositories::skillTreesRepository::SkillTreesRepository;
+use crate::generated::repositories::skillsRepository::SkillsRepository;
 use crate::generated::repositories::usersRepository::UsersRepository;
 use crate::json_object::JsonObjectSerializer;
-use crate::{Category, Contact, Game, GameState, Review, User};
+use crate::{Category, Contact, Game, GameState, Item, ItemLink, Review, Skill, User};
 use chrono::{DateTime, Utc};
 use datasources::{
-    Connection, DatasourceError, Expression, Identifier, Operator, Value, Where,
-    CRUDRepository,
+    Connection, CRUDRepository, DatasourceError, Entity, Expression, Identifier, IReadonlyRepository,
+    Operator, Value, Where,
 };
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
@@ -28,6 +33,11 @@ pub struct Api {
     reviews: ReviewsRepository,
     states: GameStatesRepository,
     contacts: ContactsRepository,
+    skills: SkillsRepository,
+    skill_trees: SkillTreesRepository,
+    items: ItemsRepository,
+    item_links: ItemLinksRepository,
+    item_graphs: ItemGraphsRepository,
     clock: Clock,
 }
 
@@ -39,9 +49,27 @@ impl Api {
         reviews: ReviewsRepository,
         states: GameStatesRepository,
         contacts: ContactsRepository,
+        skills: SkillsRepository,
+        skill_trees: SkillTreesRepository,
+        items: ItemsRepository,
+        item_links: ItemLinksRepository,
+        item_graphs: ItemGraphsRepository,
         clock: Clock,
     ) -> Self {
-        Self { users, categories, games, reviews, states, contacts, clock }
+        Self {
+            users,
+            categories,
+            games,
+            reviews,
+            states,
+            contacts,
+            skills,
+            skill_trees,
+            items,
+            item_links,
+            item_graphs,
+            clock,
+        }
     }
 
     pub fn open(connection: Arc<dyn Connection>, clock: Clock) -> datasources::Result<Self> {
@@ -51,7 +79,12 @@ impl Api {
             GamesRepository::new(Arc::clone(&connection))?,
             ReviewsRepository::new(Arc::clone(&connection))?,
             GameStatesRepository::new(Arc::clone(&connection))?,
-            ContactsRepository::new(connection)?,
+            ContactsRepository::new(Arc::clone(&connection))?,
+            SkillsRepository::new(Arc::clone(&connection))?,
+            SkillTreesRepository::new(Arc::clone(&connection))?,
+            ItemsRepository::new(Arc::clone(&connection))?,
+            ItemLinksRepository::new(Arc::clone(&connection))?,
+            ItemGraphsRepository::new(connection)?,
             clock,
         ))
     }
@@ -103,6 +136,21 @@ impl Api {
                 put(&self.contacts, &query, stamp_contact(read(body)?, &self.clock), |row, id| row.id = id).await
             }
             ("DELETE", "/contacts") => delete(&self.contacts, &query).await,
+            ("GET", "/skills") => get(&self.skills, &query, &["id", "name"]).await,
+            ("POST", "/skills") => post(&self.skills, stamp_skill(read(body)?, &self.clock)).await,
+            ("PUT", "/skills") => {
+                put(&self.skills, &query, stamp_skill(read(body)?, &self.clock), |row, id| row.id = id).await
+            }
+            ("DELETE", "/skills") => delete(&self.skills, &query).await,
+            ("GET", "/skill_tree") => get_view(&self.skill_trees, &query, &["id", "name"]).await,
+            ("GET", "/items") => get(&self.items, &query, &["id", "name"]).await,
+            ("POST", "/items") => post(&self.items, stamp_item(read(body)?, &self.clock)).await,
+            ("PUT", "/items") => {
+                put(&self.items, &query, stamp_item(read(body)?, &self.clock), |row, id| row.id = id).await
+            }
+            ("DELETE", "/items") => delete(&self.items, &query).await,
+            ("POST", "/item_links") => post(&self.item_links, stamp_item_link(read(body)?, &self.clock)).await,
+            ("GET", "/item_graph") => get_view(&self.item_graphs, &query, &["id", "name"]).await,
             _ => Ok(HttpResult { status: 404, body: String::new() }),
         }
     }
@@ -161,6 +209,25 @@ async fn get<T: datasources::Entity + datasources::Facet<'static>>(
     keys: &[&str],
 ) -> Result<HttpResult, ApiError> {
     Ok(ok(200, &list(repo, where_query(query, keys)).await?)?)
+}
+
+async fn get_view<T, R>(repo: &R, query: &HashMap<String, String>, keys: &[&str]) -> Result<HttpResult, ApiError>
+where
+    T: Entity + datasources::Facet<'static>,
+    R: IReadonlyRepository<T> + Sync,
+{
+    Ok(ok(200, &list_view(repo, where_query(query, keys)).await?)?)
+}
+
+async fn list_view<T, R>(repo: &R, filter: Option<Where>) -> Result<Vec<T>, ApiError>
+where
+    T: Entity,
+    R: IReadonlyRepository<T> + Sync,
+{
+    Ok(match filter.as_ref() {
+        Some(clause) => repo.read_where(clause, None).try_collect::<Vec<_>>().await?,
+        None => repo.read(None, None).try_collect::<Vec<_>>().await?,
+    })
 }
 
 async fn post<T: datasources::Entity + datasources::Facet<'static>>(repo: &CRUDRepository<T>, row: T) -> Result<HttpResult, ApiError> {
@@ -293,6 +360,21 @@ fn stamp_user(mut user: User, clock: &Clock) -> User {
 fn stamp_category(mut category: Category, clock: &Clock) -> Category {
     stamp(&mut category.uuid, &mut category.created, &mut category.updated, &mut category.version, clock);
     category
+}
+
+fn stamp_skill(mut skill: Skill, clock: &Clock) -> Skill {
+    stamp(&mut skill.uuid, &mut skill.created, &mut skill.updated, &mut skill.version, clock);
+    skill
+}
+
+fn stamp_item(mut item: Item, clock: &Clock) -> Item {
+    stamp(&mut item.uuid, &mut item.created, &mut item.updated, &mut item.version, clock);
+    item
+}
+
+fn stamp_item_link(mut link: ItemLink, clock: &Clock) -> ItemLink {
+    stamp(&mut link.uuid, &mut link.created, &mut link.updated, &mut link.version, clock);
+    link
 }
 
 fn stamp_game(mut game: Game, clock: &Clock) -> Game {

@@ -181,3 +181,42 @@ types:
         - categories:
             type: categories[]
             references: games_categories.game_id
+  - skills:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - parent_skill_id:
+            references: skills.id
+            is_nullable: true
+        - name:
+            type: string
+            size: 128
+  - skill_tree:
+      tags: [view_type, tree, readonly_lookup]
+      inherits: skills
+      fields:
+        - children:
+            type: skill_tree[]
+            references: skills.parent_skill_id
+  - items:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - name:
+            type: string
+            size: 128
+  - item_links:
+      tags: [datasource_type, many_to_many]
+      inherits: base
+      fields:
+        - from_item_id:
+            references: items.id
+        - to_item_id:
+            references: items.id
+  - item_graph:
+      tags: [view_type, graph, readonly_lookup]
+      inherits: items
+      fields:
+        - edges:
+            type: item_graph[]
+            references: item_links.from_item_id

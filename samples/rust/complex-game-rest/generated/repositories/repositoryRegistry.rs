@@ -1,4 +1,4 @@
-use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
+use datasources::{Datasource, DatasourceError, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
 use super::super::Address;
 use super::super::AddressType;
 use super::super::Category;
@@ -14,11 +14,16 @@ use super::super::GameState;
 use super::super::Game;
 use super::super::GamesCategory;
 use super::super::Group;
+use super::super::ItemGraph;
+use super::super::ItemLink;
+use super::super::Item;
 use super::super::LegacyContact;
 use super::super::Phone;
 use super::super::PhoneType;
 use super::super::Review;
 use super::super::Role;
+use super::super::SkillTree;
+use super::super::Skill;
 use super::super::User;
 use super::super::UserGroup;
 use super::super::UserRole;
@@ -29,145 +34,175 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "Address",
         "addresses",
-        |connection| Arc::new(super::addressesRepository::AddressesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Address>>,
+        |connection| Ok(Arc::new(super::addressesRepository::AddressesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Address>>),
         |connection| Arc::new(super::addressesRepository::AddressesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Address>>,
     );
     factory.register_named(
         "AddressType",
         "address_types",
-        |connection| Arc::new(super::addressTypesRepository::AddressTypesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<AddressType>>,
+        |_connection| Err(DatasourceError::message("AddressType is a readonly lookup")),
         |connection| Arc::new(super::addressTypesRepository::AddressTypesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<AddressType>>,
     );
     factory.register_named(
         "Category",
         "categories",
-        |connection| Arc::new(super::categoriesRepository::CategoriesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Category>>,
+        |connection| Ok(Arc::new(super::categoriesRepository::CategoriesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Category>>),
         |connection| Arc::new(super::categoriesRepository::CategoriesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Category>>,
     );
     factory.register_named(
         "Contact",
         "contacts",
-        |connection| Arc::new(super::contactsRepository::ContactsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Contact>>,
+        |connection| Ok(Arc::new(super::contactsRepository::ContactsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Contact>>),
         |connection| Arc::new(super::contactsRepository::ContactsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Contact>>,
     );
     factory.register_named(
         "ContactChangeLog",
         "contact_change_logs",
-        |connection| Arc::new(super::contactChangeLogsRepository::ContactChangeLogsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactChangeLog>>,
+        |connection| Ok(Arc::new(super::contactChangeLogsRepository::ContactChangeLogsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactChangeLog>>),
         |connection| Arc::new(super::contactChangeLogsRepository::ContactChangeLogsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactChangeLog>>,
     );
     factory.register_named(
         "ContactGroup",
         "contact_groups",
-        |connection| Arc::new(super::contactGroupsRepository::ContactGroupsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactGroup>>,
+        |connection| Ok(Arc::new(super::contactGroupsRepository::ContactGroupsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactGroup>>),
         |connection| Arc::new(super::contactGroupsRepository::ContactGroupsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactGroup>>,
     );
     factory.register_named(
         "ContactGroupMember",
         "contact_group_members",
-        |connection| Arc::new(super::contactGroupMembersRepository::ContactGroupMembersRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactGroupMember>>,
+        |connection| Ok(Arc::new(super::contactGroupMembersRepository::ContactGroupMembersRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactGroupMember>>),
         |connection| Arc::new(super::contactGroupMembersRepository::ContactGroupMembersRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactGroupMember>>,
     );
     factory.register_named(
         "ContactPreference",
         "contact_preferences",
-        |connection| Arc::new(super::contactPreferencesRepository::ContactPreferencesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactPreference>>,
+        |connection| Ok(Arc::new(super::contactPreferencesRepository::ContactPreferencesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactPreference>>),
         |connection| Arc::new(super::contactPreferencesRepository::ContactPreferencesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactPreference>>,
     );
     factory.register_named(
         "ContactSetting",
         "contact_settings",
-        |connection| Arc::new(super::contactSettingsRepository::ContactSettingsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactSetting>>,
+        |connection| Ok(Arc::new(super::contactSettingsRepository::ContactSettingsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactSetting>>),
         |connection| Arc::new(super::contactSettingsRepository::ContactSettingsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactSetting>>,
     );
     factory.register_named(
         "ContactSource",
         "contact_sources",
-        |connection| Arc::new(super::contactSourcesRepository::ContactSourcesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactSource>>,
+        |_connection| Err(DatasourceError::message("ContactSource is a readonly lookup")),
         |connection| Arc::new(super::contactSourcesRepository::ContactSourcesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactSource>>,
     );
     factory.register_named(
         "GameSetting",
         "game_settings",
-        |connection| Arc::new(super::gameSettingsRepository::GameSettingsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<GameSetting>>,
+        |connection| Ok(Arc::new(super::gameSettingsRepository::GameSettingsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<GameSetting>>),
         |connection| Arc::new(super::gameSettingsRepository::GameSettingsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<GameSetting>>,
     );
     factory.register_named(
         "GameState",
         "game_states",
-        |connection| Arc::new(super::gameStatesRepository::GameStatesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<GameState>>,
+        |connection| Ok(Arc::new(super::gameStatesRepository::GameStatesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<GameState>>),
         |connection| Arc::new(super::gameStatesRepository::GameStatesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<GameState>>,
     );
     factory.register_named(
         "Game",
         "games",
-        |connection| Arc::new(super::gamesRepository::GamesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Game>>,
+        |connection| Ok(Arc::new(super::gamesRepository::GamesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Game>>),
         |connection| Arc::new(super::gamesRepository::GamesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Game>>,
     );
     factory.register_named(
         "GamesCategory",
         "games_categories",
-        |connection| Arc::new(super::gamesCategoriesRepository::GamesCategoriesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<GamesCategory>>,
+        |connection| Ok(Arc::new(super::gamesCategoriesRepository::GamesCategoriesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<GamesCategory>>),
         |connection| Arc::new(super::gamesCategoriesRepository::GamesCategoriesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<GamesCategory>>,
     );
     factory.register_named(
         "Group",
         "groups",
-        |connection| Arc::new(super::groupsRepository::GroupsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Group>>,
+        |connection| Ok(Arc::new(super::groupsRepository::GroupsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Group>>),
         |connection| Arc::new(super::groupsRepository::GroupsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Group>>,
+    );
+    factory.register_named(
+        "ItemGraph",
+        "item_graphs",
+        |_connection| Err(DatasourceError::message("ItemGraph is a readonly lookup")),
+        |connection| Arc::new(super::itemGraphsRepository::ItemGraphsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ItemGraph>>,
+    );
+    factory.register_named(
+        "ItemLink",
+        "item_links",
+        |connection| Ok(Arc::new(super::itemLinksRepository::ItemLinksRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ItemLink>>),
+        |connection| Arc::new(super::itemLinksRepository::ItemLinksRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ItemLink>>,
+    );
+    factory.register_named(
+        "Item",
+        "items",
+        |connection| Ok(Arc::new(super::itemsRepository::ItemsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Item>>),
+        |connection| Arc::new(super::itemsRepository::ItemsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Item>>,
     );
     factory.register_named(
         "LegacyContact",
         "legacy_contacts",
-        |connection| Arc::new(super::legacyContactsRepository::LegacyContactsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<LegacyContact>>,
+        |connection| Ok(Arc::new(super::legacyContactsRepository::LegacyContactsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<LegacyContact>>),
         |connection| Arc::new(super::legacyContactsRepository::LegacyContactsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<LegacyContact>>,
     );
     factory.register_named(
         "Phone",
         "phones",
-        |connection| Arc::new(super::phonesRepository::PhonesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Phone>>,
+        |connection| Ok(Arc::new(super::phonesRepository::PhonesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Phone>>),
         |connection| Arc::new(super::phonesRepository::PhonesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Phone>>,
     );
     factory.register_named(
         "PhoneType",
         "phone_types",
-        |connection| Arc::new(super::phoneTypesRepository::PhoneTypesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<PhoneType>>,
+        |_connection| Err(DatasourceError::message("PhoneType is a readonly lookup")),
         |connection| Arc::new(super::phoneTypesRepository::PhoneTypesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<PhoneType>>,
     );
     factory.register_named(
         "Review",
         "reviews",
-        |connection| Arc::new(super::reviewsRepository::ReviewsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Review>>,
+        |connection| Ok(Arc::new(super::reviewsRepository::ReviewsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Review>>),
         |connection| Arc::new(super::reviewsRepository::ReviewsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Review>>,
     );
     factory.register_named(
         "Role",
         "roles",
-        |connection| Arc::new(super::rolesRepository::RolesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Role>>,
+        |connection| Ok(Arc::new(super::rolesRepository::RolesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Role>>),
         |connection| Arc::new(super::rolesRepository::RolesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Role>>,
+    );
+    factory.register_named(
+        "SkillTree",
+        "skill_trees",
+        |_connection| Err(DatasourceError::message("SkillTree is a readonly lookup")),
+        |connection| Arc::new(super::skillTreesRepository::SkillTreesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<SkillTree>>,
+    );
+    factory.register_named(
+        "Skill",
+        "skills",
+        |connection| Ok(Arc::new(super::skillsRepository::SkillsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<Skill>>),
+        |connection| Arc::new(super::skillsRepository::SkillsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Skill>>,
     );
     factory.register_named(
         "User",
         "users",
-        |connection| Arc::new(super::usersRepository::UsersRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<User>>,
+        |connection| Ok(Arc::new(super::usersRepository::UsersRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<User>>),
         |connection| Arc::new(super::usersRepository::UsersRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<User>>,
     );
     factory.register_named(
         "UserGroup",
         "user_groups",
-        |connection| Arc::new(super::userGroupsRepository::UserGroupsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<UserGroup>>,
+        |connection| Ok(Arc::new(super::userGroupsRepository::UserGroupsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<UserGroup>>),
         |connection| Arc::new(super::userGroupsRepository::UserGroupsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<UserGroup>>,
     );
     factory.register_named(
         "UserRole",
         "user_roles",
-        |connection| Arc::new(super::userRolesRepository::UserRolesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<UserRole>>,
+        |connection| Ok(Arc::new(super::userRolesRepository::UserRolesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<UserRole>>),
         |connection| Arc::new(super::userRolesRepository::UserRolesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<UserRole>>,
     );
     factory.register_named(
         "UserSetting",
         "user_settings",
-        |connection| Arc::new(super::userSettingsRepository::UserSettingsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<UserSetting>>,
+        |connection| Ok(Arc::new(super::userSettingsRepository::UserSettingsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<UserSetting>>),
         |connection| Arc::new(super::userSettingsRepository::UserSettingsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<UserSetting>>,
     );
 }
@@ -190,11 +225,16 @@ pub trait Repositories {
     fn games(&self) -> Arc<super::gamesRepository::GamesRepository>;
     fn games_categories(&self) -> Arc<super::gamesCategoriesRepository::GamesCategoriesRepository>;
     fn groups(&self) -> Arc<super::groupsRepository::GroupsRepository>;
+    fn item_graphs(&self) -> Arc<super::itemGraphsRepository::ItemGraphsRepository>;
+    fn item_links(&self) -> Arc<super::itemLinksRepository::ItemLinksRepository>;
+    fn items(&self) -> Arc<super::itemsRepository::ItemsRepository>;
     fn legacy_contacts(&self) -> Arc<super::legacyContactsRepository::LegacyContactsRepository>;
     fn phones(&self) -> Arc<super::phonesRepository::PhonesRepository>;
     fn phone_types(&self) -> Arc<super::phoneTypesRepository::PhoneTypesRepository>;
     fn reviews(&self) -> Arc<super::reviewsRepository::ReviewsRepository>;
     fn roles(&self) -> Arc<super::rolesRepository::RolesRepository>;
+    fn skill_trees(&self) -> Arc<super::skillTreesRepository::SkillTreesRepository>;
+    fn skills(&self) -> Arc<super::skillsRepository::SkillsRepository>;
     fn users(&self) -> Arc<super::usersRepository::UsersRepository>;
     fn user_groups(&self) -> Arc<super::userGroupsRepository::UserGroupsRepository>;
     fn user_roles(&self) -> Arc<super::userRolesRepository::UserRolesRepository>;
@@ -247,6 +287,15 @@ impl Repositories for Arc<dyn Datasource> {
     fn groups(&self) -> Arc<super::groupsRepository::GroupsRepository> {
         Arc::new(super::groupsRepository::GroupsRepository::new(self.bind_connection(None)).expect("groups"))
     }
+    fn item_graphs(&self) -> Arc<super::itemGraphsRepository::ItemGraphsRepository> {
+        Arc::new(super::itemGraphsRepository::ItemGraphsRepository::new(self.bind_connection(None)).expect("item_graphs"))
+    }
+    fn item_links(&self) -> Arc<super::itemLinksRepository::ItemLinksRepository> {
+        Arc::new(super::itemLinksRepository::ItemLinksRepository::new(self.bind_connection(None)).expect("item_links"))
+    }
+    fn items(&self) -> Arc<super::itemsRepository::ItemsRepository> {
+        Arc::new(super::itemsRepository::ItemsRepository::new(self.bind_connection(None)).expect("items"))
+    }
     fn legacy_contacts(&self) -> Arc<super::legacyContactsRepository::LegacyContactsRepository> {
         Arc::new(super::legacyContactsRepository::LegacyContactsRepository::new(self.bind_connection(None)).expect("legacy_contacts"))
     }
@@ -261,6 +310,12 @@ impl Repositories for Arc<dyn Datasource> {
     }
     fn roles(&self) -> Arc<super::rolesRepository::RolesRepository> {
         Arc::new(super::rolesRepository::RolesRepository::new(self.bind_connection(None)).expect("roles"))
+    }
+    fn skill_trees(&self) -> Arc<super::skillTreesRepository::SkillTreesRepository> {
+        Arc::new(super::skillTreesRepository::SkillTreesRepository::new(self.bind_connection(None)).expect("skill_trees"))
+    }
+    fn skills(&self) -> Arc<super::skillsRepository::SkillsRepository> {
+        Arc::new(super::skillsRepository::SkillsRepository::new(self.bind_connection(None)).expect("skills"))
     }
     fn users(&self) -> Arc<super::usersRepository::UsersRepository> {
         Arc::new(super::usersRepository::UsersRepository::new(self.bind_connection(None)).expect("users"))

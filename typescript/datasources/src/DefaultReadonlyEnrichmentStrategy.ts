@@ -1,6 +1,6 @@
 import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { dictionaryMapKey, dictionaryValueColumns, type Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, dictionaryValueColumns, enrichmentMatches, type Enrichment } from "./Enrichment.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -65,12 +65,13 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     for (const [index, parent] of parents.entries()) {
       const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
-      const cacheKey = this.keyOf(key);
-      if (!cache.has(cacheKey))
-        cache.set(
-          cacheKey,
-          await via.readSingle(new Where(new Operator.Equals(enrichment.relatedKey, this.scalar(key)))),
-        );
+      const cacheKey = this.matchKey(parent, enrichment, sources, index);
+      if (cacheKey === undefined) continue;
+      if (!cache.has(cacheKey)) {
+        const clause = this.matchWhere(parent, enrichment, sources, index);
+        if (clause === undefined) continue;
+        cache.set(cacheKey, await via.readSingle(clause));
+      }
       const related = cache.get(cacheKey);
       if (!related) continue;
       Object.assign(parent, {
@@ -86,12 +87,10 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     sources?: (Row | undefined)[],
   ): Promise<void> {
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment, sources, index);
-      if (key === undefined || key === null) continue;
+      const clause = this.matchWhere(parent, enrichment, sources, index);
+      if (clause === undefined) continue;
       const related: TRelated[] = [];
-      for await (const item of via.read(
-        new Where(new Operator.Equals(enrichment.relatedKey, this.scalar(key))),
-      ))
+      for await (const item of via.read(clause))
         related.push(item);
       Object.assign(parent, { [enrichment.destinationProperty]: related });
     }
@@ -106,12 +105,10 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     const schema = via.schema;
     const mapKey = dictionaryMapKey(enrichment);
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment, sources, index);
-      if (key === undefined || key === null) continue;
+      const clause = this.matchWhere(parent, enrichment, sources, index);
+      if (clause === undefined) continue;
       const map: Record<string, Scalar | object> = {};
-      for await (const item of via.read(
-        new Where(new Operator.Equals(enrichment.relatedKey, this.scalar(key))),
-      )) {
+      for await (const item of via.read(clause)) {
         const row = this.props(item);
         const entry = row[mapKey];
         if (entry === undefined || entry === null) continue;
@@ -123,19 +120,70 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     }
   }
 
+  sourceValue(
+    parent: T,
+    name: string,
+    sources: (Row | undefined)[] | undefined,
+    index: number,
+  ): Scalar | object | undefined {
+    const cell = sources?.[index]?.[name];
+    return cell !== undefined && cell !== null ? cell : this.props(parent)[name];
+  }
+
   protected sourceKey(
     parent: T,
     enrichment: Enrichment,
     sources: (Row | undefined)[] | undefined,
     index: number,
   ): Scalar | object | undefined {
-    const cell = sources?.[index]?.[enrichment.sourceProperty];
-    return cell !== undefined && cell !== null ? cell : this.props(parent)[enrichment.sourceProperty];
+    return this.sourceValue(parent, enrichment.sourceProperty, sources, index);
+  }
+
+  matchKey(
+    parent: object,
+    enrichment: Enrichment,
+    sources?: (Row | undefined)[],
+    index = 0,
+  ): string | undefined {
+    const parts: string[] = [];
+    for (const match of enrichmentMatches(enrichment)) {
+      const key = this.sourceValue(parent as T, match.sourceProperty, sources, index);
+      if (key === undefined || key === null) return undefined;
+      parts.push(this.keyOf(key));
+    }
+    return parts.join("\0");
+  }
+
+  rowMatchKey<TItem>(item: TItem, enrichment: Enrichment): string | undefined {
+    const props = this.props(item);
+    const parts: string[] = [];
+    for (const match of enrichmentMatches(enrichment)) {
+      const key = props[match.relatedKey];
+      if (key === undefined || key === null) return undefined;
+      parts.push(this.keyOf(key));
+    }
+    return parts.join("\0");
+  }
+
+  protected matchWhere(
+    parent: T,
+    enrichment: Enrichment,
+    sources: (Row | undefined)[] | undefined,
+    index: number,
+  ): Where | undefined {
+    const parts: Operator[] = [];
+    for (const match of enrichmentMatches(enrichment)) {
+      const key = this.sourceValue(parent, match.sourceProperty, sources, index);
+      if (key === undefined || key === null) return undefined;
+      parts.push(new Operator.Equals(match.relatedKey, this.scalar(key)));
+    }
+    const [first, ...rest] = parts;
+    return first === undefined ? undefined : new Where(rest.reduce<Operator>((left, right) => new Operator.And(left, right), first));
   }
 
   protected props = <TItem>(item: TItem): Props => item as never as Props;
 
-  protected keyOf = (key: Scalar | object, name = ""): string => String(this.lookupKey(key, name));
+  keyOf = (key: Scalar | object, name = ""): string => String(this.lookupKey(key, name));
 
   protected lookupKey = (value: Scalar | object | undefined, name = ""): Scalar | object | undefined =>
     identityKey(value, name);

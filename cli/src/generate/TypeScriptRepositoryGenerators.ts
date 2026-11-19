@@ -37,6 +37,8 @@ class TypeScriptRepositoryGenerators extends RepositoryGenerator {
       children,
       enrichments,
       setup: children.length === 0 && enrichments.length === 0 ? undefined : {},
+      hasTree: model.enrichments.some((item) => item.kind === "tree") ? {} : undefined,
+      hasGraph: model.enrichments.some((item) => item.kind === "graph") ? {} : undefined,
       builder: dialects.length === 0 ? undefined : { dialects },
       schema: this.schemaBag(model.schema),
       ...this.optionsOf(model),

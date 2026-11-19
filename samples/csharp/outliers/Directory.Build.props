@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Outliers.Tests'">
+    <BaseIntermediateOutputPath>obj/Outliers.Tests/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/Outliers.Tests/</BaseOutputPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);node_modules/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

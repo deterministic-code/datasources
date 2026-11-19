@@ -21,7 +21,7 @@ pub struct ContactsRepository {
 }
 
 impl ContactsRepository {
-    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn options(connection: Arc<dyn Connection>) -> Result<CRUDRepositoryOptions> {
     let options = CRUDRepositoryBuilder::new()
     .add({
         let mut options = CRUDRepositoryOptions::default();
@@ -77,6 +77,11 @@ impl ContactsRepository {
     })
     .for_connection(connection.as_ref())?;
 
+        Ok(options)
+    }
+
+    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+        let options = Self::options(Arc::clone(&connection))?;
         let address = AddressesRepository::new(Arc::clone(&connection))?;
         let phone = PhonesRepository::new(Arc::clone(&connection))?;
         let contact_settings = ContactSettingsRepository::new(Arc::clone(&connection))?;
@@ -85,8 +90,8 @@ impl ContactsRepository {
         let mut repo = CRUDRepository::<Contact>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List), &address, None);
         repo.add_enriched(Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List), &phone, None);
-        repo.add_enriched(Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary), &contact_settings, None);
-        repo.add_enriched(Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary), &contact_preferences, None);
+        repo.add_enriched(Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("key"), &contact_settings, None);
+        repo.add_enriched(Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary).with_dictionary_key("key"), &contact_preferences, None);
         repo.add_enriched(Enrichment::new("contact_source_name", "contact_source_id", "id", Some("name".into()), EnrichmentPropertyType::Object), &contact_source, None);
         repo.add_enriched(Enrichment::new("description", "contact_source_id", "id", Some("description".into()), EnrichmentPropertyType::Object), &contact_source, None);
         Ok(Self { inner: Arc::new(repo), address, phone, contact_settings, contact_preferences, contact_source })
@@ -121,8 +126,8 @@ impl ContactsRepository {
         let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;
         repo.add_enriched(Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List), &address, None);
         repo.add_enriched(Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List), &phone, None);
-        repo.add_enriched(Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary), &contact_settings, None);
-        repo.add_enriched(Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary), &contact_preferences, None);
+        repo.add_enriched(Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("key"), &contact_settings, None);
+        repo.add_enriched(Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary).with_dictionary_key("key"), &contact_preferences, None);
         repo.add_enriched(Enrichment::new("contact_source_name", "contact_source_id", "id", Some("name".into()), EnrichmentPropertyType::Object), &contact_source, None);
         repo.add_enriched(Enrichment::new("description", "contact_source_id", "id", Some("description".into()), EnrichmentPropertyType::Object), &contact_source, None);
         Ok(repo)
@@ -227,61 +232,7 @@ impl ICRUDRepository<Contact> for ContactsRepository {
 }
 
 pub fn contacts_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-    let options = CRUDRepositoryBuilder::new()
-    .add({
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "Contact".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("Contact".into(), "contacts_bases".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("first_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("last_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("email".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
-            ("notes".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
-            ("user_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
-            ("contact_source_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("description".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into(), "user_id".into(), "contact_source_id".into()];
-        options.create_properties = Some(vec!["first_name".into(), "last_name".into(), "email".into(), "notes".into(), "user_id".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into(), "user_id".into()]);
-        options
-    })
-    .add_for("sqlite", {
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "Contact".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("Contact".into(), "contacts_bases".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("first_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("last_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("email".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
-            ("notes".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
-            ("user_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
-            ("contact_source_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("description".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into(), "user_id".into(), "contact_source_id".into()];
-        options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into(), "user_id".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into(), "user_id".into()]);
-        options
-    })
-    .for_connection(connection.as_ref())?;
-
+        let options = ContactsRepository::options(Arc::clone(&connection))?;
         let address = Arc::new(super::addressesRepository::addresses_row_repository(Arc::clone(&connection))?);
         let phone = Arc::new(super::phonesRepository::phones_row_repository(Arc::clone(&connection))?);
         let contact_settings = Arc::new(super::contactSettingsRepository::contact_settings_row_repository(Arc::clone(&connection))?);
@@ -290,8 +241,8 @@ pub fn contacts_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRe
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List), Arc::clone(&address), None);
         repo.add_enriched(Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List), Arc::clone(&phone), None);
-        repo.add_enriched(Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary), Arc::clone(&contact_settings), None);
-        repo.add_enriched(Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary), Arc::clone(&contact_preferences), None);
+        repo.add_enriched(Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("key"), Arc::clone(&contact_settings), None);
+        repo.add_enriched(Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary).with_dictionary_key("key"), Arc::clone(&contact_preferences), None);
         repo.add_enriched(Enrichment::new("contact_source_name", "contact_source_id", "id", Some("name".into()), EnrichmentPropertyType::Object), Arc::clone(&contact_source), None);
         repo.add_enriched(Enrichment::new("description", "contact_source_id", "id", Some("description".into()), EnrichmentPropertyType::Object), Arc::clone(&contact_source), None);
         Ok(repo)

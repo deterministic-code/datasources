@@ -7,7 +7,7 @@ public sealed class GameSettingsRepository : CRUDRepository<Backend.Types.Dataso
     public static IReadonlyRepository<Backend.Types.Datasource.GameSetting> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.Datasource.GameSetting>(connection, Options(connection));
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.GameSetting> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.Datasource.GameSetting> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.GameSetting>()
             .Add(new()
             {

@@ -5,7 +5,7 @@ import { RolesRepository } from "./rolesRepository";
 import { UserRolesRepository } from "./userRolesRepository";
 import { GroupsRepository } from "./groupsRepository";
 import { UserGroupsRepository } from "./userGroupsRepository";
-const options = (connection: IConnection) =>
+export const options = (connection: IConnection) =>
   new CRUDRepositoryBuilder<User>()
     .add({ type: User, entity: "User", entityMapper: new DictionaryMapper([["User", "user_bases"]]), propertyMappings: new DictionaryMapper([["isEnabled", "is_enabled"]]), ids: ["id"], createProperties: ["username", "password", "isEnabled"], updateProperties: ["uuid", "username", "password", "isEnabled"], readProperties: ["id", "uuid", "created", "updated", "version", "username", "password", "isEnabled"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, username: { type: "string", nullable: false, hasDefault: false }, password: { type: "string", nullable: false, hasDefault: false }, isEnabled: { type: "boolean", nullable: false, hasDefault: true } }) })
     .add("sqlite", { type: User, entity: "User", entityMapper: new DictionaryMapper([["User", "user_bases"]]), propertyMappings: new DictionaryMapper([["isEnabled", "is_enabled"]]), ids: ["id"], createProperties: ["uuid", "created", "version", "username", "password", "isEnabled"], updateProperties: ["uuid", "created", "version", "username", "password", "isEnabled"], readProperties: ["id", "uuid", "created", "updated", "version", "username", "password", "isEnabled"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, username: { type: "string", nullable: false, hasDefault: false }, password: { type: "string", nullable: false, hasDefault: false }, isEnabled: { type: "boolean", nullable: false, hasDefault: true } }) })
@@ -30,7 +30,7 @@ export class UsersRepository extends CRUDRepository<User> {
     this.userRole = new UserRolesRepository(connection);
     this.group = new GroupsRepository(connection);
     this.userGroup = new UserGroupsRepository(connection);
-    this.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "userId", relatedProperty: "value", type: "dictionary" }, this.userSettings);
+    this.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "userId", relatedProperty: "value", dictionaryKey: "name", type: "dictionary" }, this.userSettings);
     this.addLinked({ destinationProperty: "roles", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", association: { parent: "userId", related: "roleId" }, type: "list" }, this.role, this.userRole);
     this.addLinked({ destinationProperty: "groups", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", association: { parent: "userId", related: "groupId" }, type: "list" }, this.group, this.userGroup);
   }
@@ -41,7 +41,7 @@ export class UsersRepository extends CRUDRepository<User> {
     const userRole = new UserRolesRepository(connection);
     const group = new GroupsRepository(connection);
     const userGroup = new UserGroupsRepository(connection);
-    repo.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "userId", relatedProperty: "value", type: "dictionary" }, userSettings);
+    repo.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "userId", relatedProperty: "value", dictionaryKey: "name", type: "dictionary" }, userSettings);
     repo.addEnriched({ destinationProperty: "roles", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", type: "list" }, role);
     repo.addEnriched({ destinationProperty: "groups", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", type: "list" }, group);
     return repo;

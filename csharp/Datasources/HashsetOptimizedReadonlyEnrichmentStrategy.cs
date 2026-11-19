@@ -13,15 +13,15 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         var index = new Dictionary<string, TRelated>();
         await foreach (var item in via.Read(new Where(new Operator.In(enrichment.RelatedKey, keys.Values.ToList()))))
         {
-            var by = Get(item!, enrichment.RelatedKey);
-            if (by is not null)
-                index[KeyOf(by)] = item;
+            var cacheKey = RowMatchKey(item!, enrichment);
+            if (cacheKey is not null)
+                index[cacheKey] = item;
         }
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment, At(sources, i));
-            if (key is null || !index.TryGetValue(KeyOf(key), out var related))
+            var key = MatchKey(parent, enrichment, At(sources, i));
+            if (key is null || !index.TryGetValue(key, out var related))
                 continue;
             Set(
                 parent,
@@ -41,9 +41,8 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         var index = new Dictionary<string, List<TRelated>>();
         await foreach (var item in via.Read(new Where(new Operator.In(enrichment.RelatedKey, keys.Values.ToList()))))
         {
-            var by = Get(item!, enrichment.RelatedKey);
-            if (by is null) continue;
-            var cacheKey = KeyOf(by);
+            var cacheKey = RowMatchKey(item!, enrichment);
+            if (cacheKey is null) continue;
             if (!index.TryGetValue(cacheKey, out var list))
                 index[cacheKey] = list = [];
             list.Add(item);
@@ -51,12 +50,12 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment, At(sources, i));
+            var key = MatchKey(parent, enrichment, At(sources, i));
             if (key is null) continue;
             Set(
                 parent,
                 enrichment.DestinationProperty,
-                index.GetValueOrDefault(KeyOf(key)) ?? []);
+                index.GetValueOrDefault(key) ?? []);
         }
     }
 

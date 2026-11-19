@@ -15,6 +15,11 @@ public sealed class Api
     readonly ReviewsRepository reviews;
     readonly GameStatesRepository states;
     readonly ContactsRepository contacts;
+    readonly SkillsRepository skills;
+    readonly SkillTreesRepository skillTrees;
+    readonly ItemsRepository items;
+    readonly ItemLinksRepository itemLinks;
+    readonly ItemGraphsRepository itemGraphs;
 
     public Api(
         UsersRepository users,
@@ -22,7 +27,12 @@ public sealed class Api
         GamesRepository games,
         ReviewsRepository reviews,
         GameStatesRepository states,
-        ContactsRepository contacts)
+        ContactsRepository contacts,
+        SkillsRepository skills,
+        SkillTreesRepository skillTrees,
+        ItemsRepository items,
+        ItemLinksRepository itemLinks,
+        ItemGraphsRepository itemGraphs)
     {
         this.users = users;
         this.categories = categories;
@@ -30,6 +40,11 @@ public sealed class Api
         this.reviews = reviews;
         this.states = states;
         this.contacts = contacts;
+        this.skills = skills;
+        this.skillTrees = skillTrees;
+        this.items = items;
+        this.itemLinks = itemLinks;
+        this.itemGraphs = itemGraphs;
     }
 
     public async Task<(int Status, string Body)> Handle(string method, string target, string? body)
@@ -66,6 +81,17 @@ public sealed class Api
                 "POST /contacts" => Post(contacts, StampContact(Read<Contact>(body))),
                 "PUT /contacts" => Put(contacts, query, StampContact(Read<Contact>(body))),
                 "DELETE /contacts" => Delete(contacts, query),
+                "GET /skills" => Get(skills, query, ["Id", "Name"]),
+                "POST /skills" => Post(skills, StampSkill(Read<Skill>(body))),
+                "PUT /skills" => Put(skills, query, StampSkill(Read<Skill>(body))),
+                "DELETE /skills" => Delete(skills, query),
+                "GET /skill_tree" => Get(skillTrees, query, ["Id", "Name"]),
+                "GET /items" => Get(items, query, ["Id", "Name"]),
+                "POST /items" => Post(items, StampItem(Read<Item>(body))),
+                "PUT /items" => Put(items, query, StampItem(Read<Item>(body))),
+                "DELETE /items" => Delete(items, query),
+                "POST /item_links" => Post(itemLinks, StampLink(Read<ItemLink>(body))),
+                "GET /item_graph" => Get(itemGraphs, query, ["Id", "Name"]),
                 _ => Task.FromResult((404, "")),
             });
         }
@@ -88,7 +114,7 @@ public sealed class Api
         return (200, JsonObject.ToString(await List(categories, filter)));
     }
 
-    static async Task<(int Status, string Body)> Get<T>(ICRUDRepository<T> repo, Dictionary<string, string> query, string[] keys) =>
+    static async Task<(int Status, string Body)> Get<T>(IReadonlyRepository<T> repo, Dictionary<string, string> query, string[] keys) =>
         (200, JsonObject.ToString(await List(repo, WhereOf(query, keys))));
 
     static async Task<(int Status, string Body)> Post<T>(ICRUDRepository<T> repo, T row) =>
@@ -128,6 +154,24 @@ public sealed class Api
     {
         Stamp(category);
         return category;
+    }
+
+    static Skill StampSkill(Skill skill)
+    {
+        Stamp(skill);
+        return skill;
+    }
+
+    static Item StampItem(Item item)
+    {
+        Stamp(item);
+        return item;
+    }
+
+    static ItemLink StampLink(ItemLink link)
+    {
+        Stamp(link);
+        return link;
     }
 
     static Game StampGame(Game game)
@@ -182,6 +226,9 @@ public sealed class Api
         else if (row is Review review) review.Id = id;
         else if (row is GameState state) state.Id = id;
         else if (row is Contact contact) contact.Id = id;
+        else if (row is Skill skill) skill.Id = id;
+        else if (row is Item item) item.Id = id;
+        else if (row is ItemLink link) link.Id = id;
     }
 
     static async Task<List<T>> List<T>(IReadonlyRepository<T> repo, IWhere? query)

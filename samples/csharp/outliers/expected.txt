@@ -1,0 +1,8 @@
+graph blade core
+graph core blade,potion
+graph potion
+region 1-1/west 1-2/coast
+region 1-2/coast
+tree apple
+tree food fruit apple
+tree fruit apple

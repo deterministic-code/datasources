@@ -7,7 +7,7 @@ public sealed class GroupsRepository : CRUDRepository<Backend.Types.Datasource.G
     public static IReadonlyRepository<Backend.Types.Datasource.Group> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.Datasource.Group>(connection, Options(connection));
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.Group> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.Datasource.Group> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.Group>()
             .Add(new()
             {

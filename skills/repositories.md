@@ -167,7 +167,7 @@ var row = await repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L27-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L23-L25) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L50-L92)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L27-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L23-L25) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L50-L94)
 
 ```rust
 fn snake_then_plural() -> TransformMapper<String, String> {
@@ -205,6 +205,8 @@ execute_sql(
 let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
+options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+options.schema = super::boolean_schema();
 let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let by_id = repo
     .read_single_where(&Where::binary("Id", eq, 1_i64), None)
@@ -282,7 +284,7 @@ CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, 
 
 Create omits `id`, then writes the inserted id onto the user. Update and delete use that id.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L23-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L624-L656)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L23-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L645-L677)
 
 ```csharp
 sealed class User
@@ -321,13 +323,15 @@ var gone = await usersRepo.ReadSingleById(created.Id);
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L613-L662)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L653-L704)
 
 ```rust
 let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.ids = vec!["Id".into()];
+options.read_properties = vec!["Id".into(), "Username".into(), "IsEnabled".into()];
+options.schema = super::super::boolean_schema();
 let users_repo = ds.create_repository::<Row>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
@@ -370,7 +374,7 @@ let gone = users_repo
 }
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L27-L31) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L229-L256)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L27-L31) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L245-L272)
 
 ```typescript
 class User {
@@ -418,7 +422,7 @@ CREATE TABLE User (id int, is_enabled bool NOT NULL, username string NOT NULL, C
 
 `User` maps onto `user`. Create writes each user and its roles. Enrichment fills `UserType` from that row. Update renames ada, switches the type to member, and adds the owner role when the version matches.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L197-L206) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L185-L189) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L191-L195) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L208-L295)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L218-L227) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L206-L210) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L212-L216) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L229-L316)
 
 ```csharp
 record User
@@ -570,7 +574,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L697-L853)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L739-L895)
 
 ```rust
 let ds = default().unwrap();
@@ -768,7 +772,7 @@ let gone = users_repo.read_single_by_id(&key).await.unwrap();
 no row
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L278-L286) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L268-L271) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L273-L276) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L288-L369)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L294-L302) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L284-L287) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L289-L292) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L304-L385)
 
 ```typescript
 class User {

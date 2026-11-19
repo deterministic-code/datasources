@@ -118,15 +118,31 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
   protected enrichmentOf(item: PlannedEnrichment, casing: ICasingStrategy): Record<string, unknown> {
     return {
       destination: this.quote(item.destination),
+      destinationIdent: item.destination,
       source: this.quote(item.source),
       relatedKey: this.quote(item.relatedKey),
       relatedProperty: item.relatedProperty === undefined ? undefined : this.quote(item.relatedProperty),
       dictionaryKey: item.dictionaryKey === undefined ? undefined : this.quote(item.dictionaryKey),
+      composite: item.keys !== undefined && item.keys.length > 1 ? {} : undefined,
+      keyPairs:
+        item.keys !== undefined && item.keys.length > 1
+          ? item.keys.map((pair, index) => ({
+              source: this.quote(pair.source),
+              related: this.quote(pair.relatedKey),
+              comma: index > 0 ? {} : undefined,
+            }))
+          : undefined,
       via: childField(casing, item.via),
       viaType: item.viaType,
       object: item.kind === "object" ? {} : undefined,
       dictionary: item.kind === "dictionary" ? {} : undefined,
-      list: item.kind === "list" || item.kind === "linked" ? {} : undefined,
+      list: item.kind === "list" || item.kind === "linked" || item.kind === "tree" || item.kind === "graph" ? {} : undefined,
+      tree: item.kind === "tree" ? {} : undefined,
+      graph: item.kind === "graph" ? {} : undefined,
+      parentFk: item.parentFk === undefined ? undefined : this.quote(item.parentFk),
+      relatedFk: item.relatedFk === undefined ? undefined : this.quote(item.relatedFk),
+      link: item.link === undefined ? undefined : childField(casing, item.link),
+      linkType: item.linkType,
       linked: isLinked(item)
         ? {
             link: childField(casing, item.link),

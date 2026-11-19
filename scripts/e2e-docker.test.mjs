@@ -93,7 +93,7 @@ test("samples share a slot cap, rust stays single, and both scripts run in one c
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const text = readFileSync(log, "utf8");
   const runs = text.split("\n").filter((line) => line.includes("sqlite.sh && sh mysql-postgres.sh"));
-  assert.equal(runs.length, 12);
+  assert.equal(runs.length, 15);
   assert.equal(text.includes("e2e-node.Dockerfile"), true);
   assert.equal(text.includes("e2e-dotnet.Dockerfile"), true);
   assert.equal(text.includes("e2e-rust.Dockerfile"), true);
@@ -107,7 +107,7 @@ test("--local shares a slot cap, rust stays single, and both scripts run in one 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const text = readFileSync(log, "utf8");
   const runs = text.split("\n").filter((line) => line.includes("sqlite.sh --local && sh mysql-postgres.sh --local"));
-  assert.equal(runs.length, 12);
+  assert.equal(runs.length, 15);
   const { max, maxRust } = overlap(log);
   assert.equal(maxRust, 1);
   assert.ok(max >= 2 && max <= 3, `max ${max}`);
@@ -152,6 +152,7 @@ test("csharp compose isolates global packages per project", () => {
     "samples/csharp/contacts-crud-enriched-medium-rest/compose.yml",
     "samples/csharp/complex-game-rest/compose.yml",
     "samples/csharp/user-roles-simple-cli/compose.yml",
+    "samples/csharp/outliers/compose.yml",
     "quick_starts/contacts_cli/csharp/compose.yml",
   ];
   for (const file of files) {

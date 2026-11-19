@@ -7,6 +7,7 @@ use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
+use crate::readonly_enrichment_strategy::where_equals;
 use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -34,12 +35,10 @@ pub(crate) async fn load<T: Entity, TChild: Entity>(
     enrichment: &Enrichment,
     parent: &T,
 ) -> Result<Vec<TChild>> {
-    let Some(key) = parent.cell(&enrichment.source_property) else {
+    let Some(clause) = parent_match_where(parent, enrichment) else {
         return Ok(Vec::new());
     };
-    writer
-        .read_where(&Where::new(Operator::equals(enrichment.related_key.clone(), key)), None)
-        .try_collect::<Vec<_>>().await
+    writer.read_where(&clause, None).try_collect::<Vec<_>>().await
 }
 
 pub(crate) fn children_where<TParent: Entity, TChild: Entity>(
@@ -50,13 +49,16 @@ pub(crate) fn children_where<TParent: Entity, TChild: Entity>(
     if !writer.id_names().is_empty() {
         return None;
     }
-    let key = parent
-        .cell(&enrichment.source_property)
-        .filter(|value| *value != Value::Null)?;
-    Some(Where::new(Operator::equals(
-        enrichment.related_key.clone(),
-        key,
-    )))
+    parent_match_where(parent, enrichment)
+}
+
+fn parent_match_where<T: Entity>(parent: &T, enrichment: &Enrichment) -> Option<Where> {
+    let mut pairs = Vec::new();
+    for (source, related) in enrichment.pairs() {
+        let value = parent.cell(&source).filter(|value| *value != Value::Null)?;
+        pairs.push((related, value));
+    }
+    where_equals(pairs)
 }
 
 pub(crate) fn link_where(association: &Association, parent_key: &Value, related_key: &Value) -> Where {

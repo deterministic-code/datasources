@@ -22,6 +22,7 @@ import {
   CreateTriggerStatement,
   type StatementNaming,
 } from "@deterministic-code/datasources";
+import { referencePairs } from "./reference-target.ts";
 import { dialectDriver, type SqlDialect } from "./sql-dialect.ts";
 import {
   fieldOverlay,
@@ -166,7 +167,7 @@ const diffTable = (
         }),
       );
     }
-    if (field.references !== undefined && (!afterFields.has(field.name) || refsOf(afterFields.get(field.name)!) !== refsOf(field))) {
+    if (referencePairs(field.references).length === 1 && (!afterFields.has(field.name) || refsOf(afterFields.get(field.name)!) !== refsOf(field))) {
       out.push(dropForeignKeyStatementOf(beforeNaming, beforeTables, before, field));
     }
   }
@@ -218,7 +219,7 @@ const diffTable = (
         }),
       );
     }
-    if (field.references !== undefined && (!beforeFields.has(field.name) || refsOf(beforeFields.get(field.name)!) !== refsOf(field))) {
+    if (referencePairs(field.references).length === 1 && (!beforeFields.has(field.name) || refsOf(beforeFields.get(field.name)!) !== refsOf(field))) {
         out.push(addForeignKeyStatementOf(afterNaming, afterTables, after, field));
     }
   }

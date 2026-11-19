@@ -89,6 +89,9 @@ mod typed_list_enrichment;
 #[cfg(test)]
 #[path = "../tests/bulk_write_enrichment.rs"]
 mod bulk_write_enrichment;
+#[cfg(test)]
+#[path = "../tests/tree_graph_enrichment.rs"]
+mod tree_graph_enrichment;
 
 #[cfg(test)]
 mod tests {
