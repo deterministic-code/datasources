@@ -7,7 +7,8 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
         var payload = Children(writer, enrichment, parent);
         foreach (var related in payload)
-            Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
+            foreach (var pair in enrichment.Pairs())
+                Stamp(related, pair.RelatedKey, Get(parent, pair.SourceProperty));
         var keys = writer.Ids;
         var keep = payload.Where(row => HasKey(row, keys)).Select(row => KeyOf(row, keys)).ToHashSet();
         foreach (var row in existing.Where(row => !keep.Contains(KeyOf(row, keys))))

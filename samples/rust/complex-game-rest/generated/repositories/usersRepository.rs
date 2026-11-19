@@ -21,7 +21,7 @@ pub struct UsersRepository {
 }
 
 impl UsersRepository {
-    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn options(connection: Arc<dyn Connection>) -> Result<CRUDRepositoryOptions> {
     let options = CRUDRepositoryBuilder::new()
     .add({
         let mut options = CRUDRepositoryOptions::default();
@@ -69,13 +69,18 @@ impl UsersRepository {
     })
     .for_connection(connection.as_ref())?;
 
+        Ok(options)
+    }
+
+    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+        let options = Self::options(Arc::clone(&connection))?;
         let user_settings = UserSettingsRepository::new(Arc::clone(&connection))?;
         let role = RolesRepository::new(Arc::clone(&connection))?;
         let user_role = UserRolesRepository::new(Arc::clone(&connection))?;
         let group = GroupsRepository::new(Arc::clone(&connection))?;
         let user_group = UserGroupsRepository::new(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<User>::new(Arc::clone(&connection), options)?;
-        repo.add_enriched(Enrichment::new("settings", "id", "user_id", Some("value".into()), EnrichmentPropertyType::Dictionary), &user_settings, None);
+        repo.add_enriched(Enrichment::new("settings", "id", "user_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("name"), &user_settings, None);
         repo.add_linked(Enrichment::new("roles", "id", "id", Some("name".into()), EnrichmentPropertyType::List).linked(Association::new("user_id", "role_id")), &role, Arc::clone(&user_role.inner) as Arc<dyn ICRUDRepository<_>>, None);
         repo.add_linked(Enrichment::new("groups", "id", "id", Some("name".into()), EnrichmentPropertyType::List).linked(Association::new("user_id", "group_id")), &group, Arc::clone(&user_group.inner) as Arc<dyn ICRUDRepository<_>>, None);
         Ok(Self { inner: Arc::new(repo), user_settings, role, user_role, group, user_group })
@@ -100,9 +105,11 @@ impl UsersRepository {
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "username".into(), "password".into(), "is_enabled".into()];
         let user_settings = UserSettingsRepository::new(Arc::clone(&connection))?;
         let role = RolesRepository::new(Arc::clone(&connection))?;
+        let user_role = UserRolesRepository::new(Arc::clone(&connection))?;
         let group = GroupsRepository::new(Arc::clone(&connection))?;
+        let user_group = UserGroupsRepository::new(Arc::clone(&connection))?;
         let mut repo = ReadonlyRepository::<User>::new(connection, options)?;
-        repo.add_enriched(Enrichment::new("settings", "id", "user_id", Some("value".into()), EnrichmentPropertyType::Dictionary), &user_settings, None);
+        repo.add_enriched(Enrichment::new("settings", "id", "user_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("name"), &user_settings, None);
         repo.add_enriched(Enrichment::new("roles", "id", "id", Some("name".into()), EnrichmentPropertyType::List), &role, None);
         repo.add_enriched(Enrichment::new("groups", "id", "id", Some("name".into()), EnrichmentPropertyType::List), &group, None);
         Ok(repo)
@@ -207,60 +214,14 @@ impl ICRUDRepository<User> for UsersRepository {
 }
 
 pub fn users_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-    let options = CRUDRepositoryBuilder::new()
-    .add({
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "User".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("User".into(), "user_bases".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("username".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("password".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("is_enabled".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "username".into(), "password".into(), "is_enabled".into()];
-        options.create_properties = Some(vec!["username".into(), "password".into(), "is_enabled".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "username".into(), "password".into(), "is_enabled".into()]);
-        options
-    })
-    .add_for("sqlite", {
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "User".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("User".into(), "user_bases".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("username".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("password".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("is_enabled".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "username".into(), "password".into(), "is_enabled".into()];
-        options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "username".into(), "password".into(), "is_enabled".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "username".into(), "password".into(), "is_enabled".into()]);
-        options
-    })
-    .for_connection(connection.as_ref())?;
-
+        let options = UsersRepository::options(Arc::clone(&connection))?;
         let user_settings = Arc::new(super::userSettingsRepository::user_settings_row_repository(Arc::clone(&connection))?);
         let role = Arc::new(super::rolesRepository::roles_row_repository(Arc::clone(&connection))?);
         let user_role = Arc::new(super::userRolesRepository::user_roles_row_repository(Arc::clone(&connection))?);
         let group = Arc::new(super::groupsRepository::groups_row_repository(Arc::clone(&connection))?);
         let user_group = Arc::new(super::userGroupsRepository::user_groups_row_repository(Arc::clone(&connection))?);
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
-        repo.add_enriched(Enrichment::new("settings", "id", "user_id", Some("value".into()), EnrichmentPropertyType::Dictionary), Arc::clone(&user_settings), None);
+        repo.add_enriched(Enrichment::new("settings", "id", "user_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("name"), Arc::clone(&user_settings), None);
         repo.add_linked(Enrichment::new("roles", "id", "id", Some("name".into()), EnrichmentPropertyType::List).linked(Association::new("user_id", "role_id")), Arc::clone(&role), Arc::clone(&user_role) as Arc<dyn ICRUDRepository<_>>, None);
         repo.add_linked(Enrichment::new("groups", "id", "id", Some("name".into()), EnrichmentPropertyType::List).linked(Association::new("user_id", "group_id")), Arc::clone(&group), Arc::clone(&user_group) as Arc<dyn ICRUDRepository<_>>, None);
         Ok(repo)

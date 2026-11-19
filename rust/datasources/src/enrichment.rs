@@ -13,6 +13,7 @@ pub struct Enrichment {
     pub r#type: EnrichmentPropertyType,
     pub association: Option<Association>,
     pub dictionary_key: Option<String>,
+    pub keys: Vec<(String, String)>,
 }
 
 impl Enrichment {
@@ -31,6 +32,23 @@ impl Enrichment {
             r#type,
             association: None,
             dictionary_key: None,
+            keys: Vec::new(),
+        }
+    }
+
+    pub fn with_keys(mut self, keys: &[(&str, &str)]) -> Self {
+        self.keys = keys
+            .iter()
+            .map(|(source, related)| ((*source).to_string(), (*related).to_string()))
+            .collect();
+        self
+    }
+
+    pub fn pairs(&self) -> Vec<(String, String)> {
+        if self.keys.is_empty() {
+            vec![(self.source_property.clone(), self.related_key.clone())]
+        } else {
+            self.keys.clone()
         }
     }
 
@@ -53,10 +71,11 @@ impl Enrichment {
 
     pub fn value_columns(&self, schema: &Schema) -> Result<Vec<String>> {
         let map_key = self.map_key()?;
+        let related: Vec<String> = self.pairs().into_iter().map(|(_, name)| name).collect();
         Ok(schema
             .columns
             .iter()
-            .filter(|(name, column)| !column.is_id && *name != &self.related_key && *name != map_key)
+            .filter(|(name, column)| !column.is_id && *name != map_key && !related.iter().any(|key| key == *name))
             .map(|(name, _)| name.clone())
             .collect())
     }

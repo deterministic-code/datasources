@@ -12,7 +12,12 @@ var api = new Api(
     new GamesRepository(connection),
     new ReviewsRepository(connection),
     new GameStatesRepository(connection),
-    new ContactsRepository(connection));
+    new ContactsRepository(connection),
+    new SkillsRepository(connection),
+    new SkillTreesRepository(connection),
+    new ItemsRepository(connection),
+    new ItemLinksRepository(connection),
+    new ItemGraphsRepository(connection));
 var roles = new RolesRepository(connection);
 var groups = new GroupsRepository(connection);
 var sources = new ContactSourcesRepository(connection);
@@ -135,6 +140,36 @@ var updated = await Call(api, "GET", $"/contacts?id={contactId}", null, 200);
 RequireAdaChildren(updated, "Work", "Cambridge", "555-0111");
 if (AddressByLine1(ContactRow(updated), "1 College").GetProperty("addressTypeName").GetString() != "Home")
     throw new InvalidOperationException("update home address");
+
+var combat = await Call(api, "POST", "/skills", Json(new { name = "combat", parentSkillId = (long?)null }), 201);
+var combatId = combat.GetProperty("id").GetInt64();
+var melee = await Call(api, "POST", "/skills", Json(new { name = "melee", parentSkillId = combatId }), 201);
+var meleeId = melee.GetProperty("id").GetInt64();
+await Call(api, "POST", "/skills", Json(new { name = "sword", parentSkillId = meleeId }), 201);
+var nest = await Call(api, "GET", $"/skill_tree?id={combatId}", null, 200);
+if (nest[0].GetProperty("children")[0].GetProperty("name").GetString() != "melee"
+    || nest[0].GetProperty("children")[0].GetProperty("children")[0].GetProperty("name").GetString() != "sword"
+    || nest[0].GetProperty("children")[0].GetProperty("children")[0].GetProperty("children").GetArrayLength() != 0)
+    throw new InvalidOperationException("skill nest");
+
+var loopA = await Call(api, "POST", "/skills", Json(new { name = "loop-a", parentSkillId = (long?)null }), 201);
+var loopB = await Call(api, "POST", "/skills", Json(new { name = "loop-b", parentSkillId = loopA.GetProperty("id").GetInt64() }), 201);
+var loopC = await Call(api, "POST", "/skills", Json(new { name = "loop-c", parentSkillId = loopB.GetProperty("id").GetInt64() }), 201);
+await Call(api, "PUT", $"/skills?id={loopA.GetProperty("id").GetInt64()}", Json(new { name = "loop-a", parentSkillId = loopC.GetProperty("id").GetInt64() }), 200);
+var cycle = await Call(api, "GET", $"/skill_tree?id={loopA.GetProperty("id").GetInt64()}", null, 200);
+if (cycle[0].GetProperty("children")[0].GetProperty("name").GetString() != "loop-b"
+    || cycle[0].GetProperty("children")[0].GetProperty("children")[0].GetProperty("name").GetString() != "loop-c"
+    || cycle[0].GetProperty("children")[0].GetProperty("children")[0].GetProperty("children").GetArrayLength() != 0)
+    throw new InvalidOperationException("skill cycle");
+
+var sword = await Call(api, "POST", "/items", Json(new { name = "sword" }), 201);
+var shield = await Call(api, "POST", "/items", Json(new { name = "shield" }), 201);
+var potion = await Call(api, "POST", "/items", Json(new { name = "potion" }), 201);
+await Call(api, "POST", "/item_links", Json(new { fromItemId = sword.GetProperty("id").GetInt64(), toItemId = shield.GetProperty("id").GetInt64() }), 201);
+await Call(api, "POST", "/item_links", Json(new { fromItemId = sword.GetProperty("id").GetInt64(), toItemId = potion.GetProperty("id").GetInt64() }), 201);
+var graph = await Call(api, "GET", $"/item_graph?id={sword.GetProperty("id").GetInt64()}", null, 200);
+var names = graph[0].GetProperty("edges").EnumerateArray().Select(edge => edge.GetProperty("name").GetString()).OrderBy(name => name).ToArray();
+if (string.Join(",", names) != "potion,shield") throw new InvalidOperationException("item graph");
 
 foreach (var target in new[]
 {

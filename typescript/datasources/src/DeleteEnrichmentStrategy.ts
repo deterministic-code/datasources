@@ -1,4 +1,4 @@
-import type { Enrichment } from "./Enrichment.ts";
+import { enrichmentMatches, type Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { Operator, Where } from "./statements/index.ts";
@@ -10,6 +10,17 @@ type Props = Record<string, Scalar | object>;
 
 const get = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
   (item as never as Props)[name];
+
+const matchWhere = <TParent>(enrichment: Enrichment, parent: TParent): Where | undefined => {
+  const parts: Operator[] = [];
+  for (const match of enrichmentMatches(enrichment)) {
+    const key = get(parent, match.sourceProperty);
+    if (key === undefined || key === null) return undefined;
+    parts.push(new Operator.Equals(match.relatedKey, key as Scalar));
+  }
+  const [first, ...rest] = parts;
+  return first === undefined ? undefined : new Where(rest.reduce((left, right) => new Operator.And(left, right), first));
+};
 
 export abstract class DeleteEnrichmentStrategy<T> {
   abstract deleteChildren<TChild extends object>(
@@ -26,10 +37,10 @@ export abstract class DeleteEnrichmentStrategy<T> {
     enrichment: Enrichment,
     parent: TParent,
   ): Promise<TChild[]> => {
-    const key = get(parent, enrichment.sourceProperty);
-    if (key === undefined || key === null) return [];
+    const where = matchWhere(enrichment, parent);
+    if (where === undefined) return [];
     const items: TChild[] = [];
-    for await (const item of writer.read(new Where(new Operator.Equals(enrichment.relatedKey, key))))
+    for await (const item of writer.read(where))
       items.push(item);
     return items;
   };
@@ -38,13 +49,7 @@ export abstract class DeleteEnrichmentStrategy<T> {
     writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: TParent,
-  ): Where | undefined => {
-    if (writer.ids.length > 0) return undefined;
-    const key = get(parent, enrichment.sourceProperty);
-    return key === undefined || key === null
-      ? undefined
-      : new Where(new Operator.Equals(enrichment.relatedKey, key));
-  };
+  ): Where | undefined => (writer.ids.length > 0 ? undefined : matchWhere(enrichment, parent));
 
   static linkKey = linkKey;
 

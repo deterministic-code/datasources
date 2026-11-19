@@ -1,4 +1,4 @@
-import { mapPayload, type Enrichment } from "./Enrichment.ts";
+import { enrichmentMatches, mapPayload, type Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
@@ -101,8 +101,10 @@ export abstract class CreateEnrichmentStrategy<T> {
   collectChildren<TChild>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): TChild[] {
     const children = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer);
     if (children.length === 0) return children;
-    const key = this.requiredKey(parent, enrichment);
-    for (const child of children) this.stamp(child, enrichment.relatedKey, key);
+    for (const match of enrichmentMatches(enrichment)) {
+      const key = this.requiredValue(parent, match.sourceProperty, enrichment.destinationProperty);
+      for (const child of children) this.stamp(child, match.relatedKey, key);
+    }
     return children;
   }
 
@@ -157,9 +159,12 @@ export abstract class CreateEnrichmentStrategy<T> {
     return ids;
   };
 
-  protected requiredKey = <TParent>(parent: TParent, enrichment: Enrichment): Scalar => {
-    const key = this.getCell(parent, enrichment.sourceProperty);
-    if (!this.presentCell(key)) throw new DatasourceError(`${enrichment.destinationProperty} requires "${enrichment.sourceProperty}"`);
+  protected requiredValue = <TParent>(parent: TParent, name: string, into: string): Scalar => {
+    const key = this.getCell(parent, name);
+    if (!this.presentCell(key)) throw new DatasourceError(`${into} requires "${name}"`);
     return key;
   };
+
+  protected requiredKey = <TParent>(parent: TParent, enrichment: Enrichment): Scalar =>
+    this.requiredValue(parent, enrichment.sourceProperty, enrichment.destinationProperty);
 }

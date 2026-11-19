@@ -14,9 +14,9 @@ import {
   tableByName,
 } from "@deterministic-code/generators-common/spec-types";
 import { CreateTableStatement, type StatementNaming } from "@deterministic-code/datasources";
-import { referenceTarget } from "./reference-target.ts";
+import { referencePairs, referenceTarget } from "./reference-target.ts";
 
-export { referenceTarget };
+export { referencePairs, referenceTarget };
 
 /** Flattened `datasource.*` flags. Stored procedures are opt-in `"true"`. */
 export const datasourceSettings = (settings: Record<string, string>) => ({
@@ -127,13 +127,8 @@ export const hasAuditColumns = (table: {
 
 export type SqlFile = { path: string; content: string };
 
-const referenceParents = (
-  references: TypeField["references"],
-): string[] => {
-  if (references === undefined) return [];
-  if (Array.isArray(references)) return [references[0]];
-  return [references.split(".")[0]!];
-};
+const referenceParents = (references: TypeField["references"]): string[] =>
+  [...new Set(referencePairs(references).map((pair) => pair.type))];
 
 const topoSort = (tables: LiveTable[]): LiveTable[] => {
   const names = new Set(tables.map((t) => t.name));

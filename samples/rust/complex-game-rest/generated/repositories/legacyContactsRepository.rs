@@ -11,7 +11,7 @@ pub struct LegacyContactsRepository {
 }
 
 impl LegacyContactsRepository {
-    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn options() -> Result<CRUDRepositoryOptions> {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "LegacyContact".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
@@ -29,6 +29,11 @@ impl LegacyContactsRepository {
     options.create_properties = Some(vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()]);
     options.update_properties = Some(vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()]);
 
+        Ok(options)
+    }
+
+    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+        let options = Self::options()?;
         let repo = CRUDRepository::<LegacyContact>::new(connection, options)?;
         Ok(Self { inner: Arc::new(repo) })
     }
@@ -150,22 +155,6 @@ impl ICRUDRepository<LegacyContact> for LegacyContactsRepository {
 }
 
 pub fn legacy_contacts_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "LegacyContact".into();
-    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-        ("LegacyContact".into(), "legacy_contacts".into()),
-    ])));
-    options.schema = Schema::new(HashMap::from([
-        ("key".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-        ("first_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-        ("last_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-        ("email".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false, is_id: false }),
-        ("imported_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false, is_id: false }),
-    ]));
-    options.ids = vec![];
-    options.read_properties = vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()];
-    options.create_properties = Some(vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()]);
-    options.update_properties = Some(vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()]);
-
+        let options = LegacyContactsRepository::options()?;
     CRUDRepository::<datasources::Row>::new(connection, options)
 }

@@ -7,7 +7,7 @@ public sealed class UserSettingsRepository : CRUDRepository<Backend.Types.Dataso
     public static IReadonlyRepository<Backend.Types.Datasource.UserSetting> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.Datasource.UserSetting>(connection, Options(connection));
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.UserSetting> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.Datasource.UserSetting> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.UserSetting>()
             .Add(new()
             {

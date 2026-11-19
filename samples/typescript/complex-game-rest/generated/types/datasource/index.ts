@@ -22,3 +22,6 @@ export { gamesCategory, GamesCategory } from "./gamesCategory";
 export { gameState, GameState } from "./gameState";
 export { gameSetting, GameSetting } from "./gameSetting";
 export { review, Review } from "./review";
+export { skill, Skill } from "./skill";
+export { item, Item } from "./item";
+export { itemLink, ItemLink } from "./itemLink";

@@ -11,7 +11,7 @@ pub struct ContactGroupMembersRepository {
 }
 
 impl ContactGroupMembersRepository {
-    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn options(connection: Arc<dyn Connection>) -> Result<CRUDRepositoryOptions> {
     let options = CRUDRepositoryBuilder::new()
     .add({
         let mut options = CRUDRepositoryOptions::default();
@@ -57,6 +57,11 @@ impl ContactGroupMembersRepository {
     })
     .for_connection(connection.as_ref())?;
 
+        Ok(options)
+    }
+
+    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+        let options = Self::options(Arc::clone(&connection))?;
         let repo = CRUDRepository::<ContactGroupMember>::new(connection, options)?;
         Ok(Self { inner: Arc::new(repo) })
     }
@@ -180,50 +185,6 @@ impl ICRUDRepository<ContactGroupMember> for ContactGroupMembersRepository {
 }
 
 pub fn contact_group_members_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-    let options = CRUDRepositoryBuilder::new()
-    .add({
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "ContactGroupMember".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("ContactGroupMember".into(), "contact_group_members".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("contact_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
-            ("contact_group_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "contact_group_id".into()];
-        options.create_properties = Some(vec!["contact_id".into(), "contact_group_id".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "contact_id".into(), "contact_group_id".into()]);
-        options
-    })
-    .add_for("sqlite", {
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "ContactGroupMember".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("ContactGroupMember".into(), "contact_group_members".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("contact_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
-            ("contact_group_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "contact_group_id".into()];
-        options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "contact_id".into(), "contact_group_id".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "contact_id".into(), "contact_group_id".into()]);
-        options
-    })
-    .for_connection(connection.as_ref())?;
-
+        let options = ContactGroupMembersRepository::options(Arc::clone(&connection))?;
     CRUDRepository::<datasources::Row>::new(connection, options)
 }

@@ -1,0 +1,23 @@
+[package]
+name = "outliers"
+version = "0.1.0"
+edition = "2021"
+autobins = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "outliers"
+path = "src/main.rs"
+
+[[bin]]
+name = "matrix"
+path = "src/bin/matrix.rs"
+
+[dependencies]
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[lints.rust]
+warnings = "deny"

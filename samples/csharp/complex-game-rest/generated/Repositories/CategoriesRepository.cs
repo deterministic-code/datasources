@@ -7,7 +7,7 @@ public sealed class CategoriesRepository : CRUDRepository<Backend.Types.View.Cat
     public static IReadonlyRepository<Backend.Types.View.Category> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.View.Category>(connection, Options(connection));
 
-    static CRUDRepositoryOptions<Backend.Types.View.Category> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.View.Category> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.Category>()
             .Add(new()
             {

@@ -15,7 +15,7 @@ public sealed class UsersRepository : CRUDRepository<Backend.Types.View.User>
         UserRole = new UserRolesRepository(connection);
         Group = new GroupsRepository(connection);
         UserGroup = new UserGroupsRepository(connection);
-        AddEnriched(new("Settings", "Id", "UserId", "Value", Type: EnrichmentPropertyType.Dictionary), UserSettings);
+        AddEnriched(new("Settings", "Id", "UserId", "Value", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"), UserSettings);
         AddLinked(new("Roles", "Id", "Id", "Name", Association: new("UserId", "RoleId")), Role, UserRole);
         AddLinked(new("Groups", "Id", "Id", "Name", Association: new("UserId", "GroupId")), Group, UserGroup);
     }
@@ -28,13 +28,13 @@ public sealed class UsersRepository : CRUDRepository<Backend.Types.View.User>
         var UserRole = new UserRolesRepository(connection);
         var Group = new GroupsRepository(connection);
         var UserGroup = new UserGroupsRepository(connection);
-        repo.AddEnriched(new("Settings", "Id", "UserId", "Value", Type: EnrichmentPropertyType.Dictionary), UserSettings);
+        repo.AddEnriched(new("Settings", "Id", "UserId", "Value", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"), UserSettings);
         repo.AddEnriched(new("Roles", "Id", "Id", "Name", Type: EnrichmentPropertyType.List), Role);
         repo.AddEnriched(new("Groups", "Id", "Id", "Name", Type: EnrichmentPropertyType.List), Group);
         return repo;
     }
 
-    static CRUDRepositoryOptions<Backend.Types.View.User> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.View.User> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.User>()
             .Add(new()
             {

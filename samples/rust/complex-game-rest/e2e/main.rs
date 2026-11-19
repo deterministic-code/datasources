@@ -171,6 +171,50 @@ async fn main() -> Result<()> {
         return Err(DatasourceError::message("update home address"));
     }
 
+    let combat = call(&api, "POST", "/skills", Some(json(&[("name", Value::String("combat".into()))])), 201).await?;
+    let combat_id = combat["id"].as_i64().ok_or_else(|| DatasourceError::message("combat id"))?;
+    let melee = call(&api, "POST", "/skills", Some(json(&[("name", Value::String("melee".into())), ("parent_skill_id", combat_id.into())])), 201).await?;
+    let melee_id = melee["id"].as_i64().ok_or_else(|| DatasourceError::message("melee id"))?;
+    call(&api, "POST", "/skills", Some(json(&[("name", Value::String("sword".into())), ("parent_skill_id", melee_id.into())])), 201).await?;
+    let nest = call(&api, "GET", &format!("/skill_tree?id={combat_id}"), None, 200).await?;
+    if nest[0]["children"][0]["name"] != "melee" || nest[0]["children"][0]["children"][0]["name"] != "sword" {
+        return Err(DatasourceError::message("skill nest"));
+    }
+    if nest[0]["children"][0]["children"][0]["children"].as_array().map(Vec::len) != Some(0) {
+        return Err(DatasourceError::message("skill nest leaf"));
+    }
+    let loop_a = call(&api, "POST", "/skills", Some(json(&[("name", Value::String("loop-a".into()))])), 201).await?;
+    let loop_a_id = loop_a["id"].as_i64().ok_or_else(|| DatasourceError::message("loop-a id"))?;
+    let loop_b = call(&api, "POST", "/skills", Some(json(&[("name", Value::String("loop-b".into())), ("parent_skill_id", loop_a_id.into())])), 201).await?;
+    let loop_b_id = loop_b["id"].as_i64().ok_or_else(|| DatasourceError::message("loop-b id"))?;
+    let loop_c = call(&api, "POST", "/skills", Some(json(&[("name", Value::String("loop-c".into())), ("parent_skill_id", loop_b_id.into())])), 201).await?;
+    let loop_c_id = loop_c["id"].as_i64().ok_or_else(|| DatasourceError::message("loop-c id"))?;
+    call(&api, "PUT", &format!("/skills?id={loop_a_id}"), Some(json(&[("name", Value::String("loop-a".into())), ("parent_skill_id", loop_c_id.into())])), 200).await?;
+    let cycle = call(&api, "GET", &format!("/skill_tree?id={loop_a_id}"), None, 200).await?;
+    if cycle[0]["children"][0]["name"] != "loop-b" || cycle[0]["children"][0]["children"][0]["name"] != "loop-c" {
+        return Err(DatasourceError::message("skill cycle"));
+    }
+    if cycle[0]["children"][0]["children"][0]["children"].as_array().map(Vec::len) != Some(0) {
+        return Err(DatasourceError::message("skill cycle cut"));
+    }
+    let sword = call(&api, "POST", "/items", Some(json(&[("name", Value::String("sword".into()))])), 201).await?;
+    let shield = call(&api, "POST", "/items", Some(json(&[("name", Value::String("shield".into()))])), 201).await?;
+    let potion = call(&api, "POST", "/items", Some(json(&[("name", Value::String("potion".into()))])), 201).await?;
+    let sword_id = sword["id"].as_i64().ok_or_else(|| DatasourceError::message("sword id"))?;
+    call(&api, "POST", "/item_links", Some(json(&[("from_item_id", sword_id.into()), ("to_item_id", shield["id"].clone())])), 201).await?;
+    call(&api, "POST", "/item_links", Some(json(&[("from_item_id", sword_id.into()), ("to_item_id", potion["id"].clone())])), 201).await?;
+    let graph = call(&api, "GET", &format!("/item_graph?id={sword_id}"), None, 200).await?;
+    let mut names: Vec<String> = graph[0]["edges"]
+        .as_array()
+        .ok_or_else(|| DatasourceError::message("edges"))?
+        .iter()
+        .map(|edge| edge["name"].as_str().unwrap_or("").to_string())
+        .collect();
+    names.sort();
+    if names.join(",") != "potion,shield" {
+        return Err(DatasourceError::message("item graph"));
+    }
+
     for target in [
         format!("/contacts?id={contact_id}"),
         format!("/reviews?id={review_id}"),

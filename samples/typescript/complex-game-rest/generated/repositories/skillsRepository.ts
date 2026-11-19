@@ -1,0 +1,20 @@
+import { Skill } from "../types/datasource/skill";
+import { CRUDRepository, CRUDRepositoryBuilder, DictionaryMapper, ReadonlyRepository, Schema, type IConnection } from "@deterministic-code/datasources";
+export const options = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<Skill>()
+    .add({ type: Skill, entity: "Skill", entityMapper: new DictionaryMapper([["Skill", "skills"]]), propertyMappings: new DictionaryMapper([["parentSkillId", "parent_skill_id"]]), ids: ["id"], createProperties: ["parentSkillId", "name"], updateProperties: ["uuid", "parentSkillId", "name"], readProperties: ["id", "uuid", "created", "updated", "version", "parentSkillId", "name"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, parentSkillId: { type: "biginteger", nullable: true, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) })
+    .add("sqlite", { type: Skill, entity: "Skill", entityMapper: new DictionaryMapper([["Skill", "skills"]]), propertyMappings: new DictionaryMapper([["parentSkillId", "parent_skill_id"]]), ids: ["id"], createProperties: ["uuid", "created", "version", "parentSkillId", "name"], updateProperties: ["uuid", "created", "version", "parentSkillId", "name"], readProperties: ["id", "uuid", "created", "updated", "version", "parentSkillId", "name"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, parentSkillId: { type: "biginteger", nullable: true, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) })
+    .for(connection);
+
+const readonlyOptions = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<Skill>()
+    .add({ type: Skill, entity: "Skill", entityMapper: new DictionaryMapper([["Skill", "skills"]]), propertyMappings: new DictionaryMapper([["parentSkillId", "parent_skill_id"]]), readProperties: ["id", "uuid", "created", "updated", "version", "parentSkillId", "name"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, parentSkillId: { type: "biginteger", nullable: true, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) })
+    .add("sqlite", { type: Skill, entity: "Skill", entityMapper: new DictionaryMapper([["Skill", "skills"]]), propertyMappings: new DictionaryMapper([["parentSkillId", "parent_skill_id"]]), readProperties: ["id", "uuid", "created", "updated", "version", "parentSkillId", "name"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, parentSkillId: { type: "biginteger", nullable: true, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) })
+    .for(connection);
+
+export class SkillsRepository extends CRUDRepository<Skill> {
+  constructor(connection: IConnection) {
+    super(connection, options(connection));
+  }
+  static createReadonly = (connection: IConnection) => new ReadonlyRepository<Skill>(connection, readonlyOptions(connection));
+}

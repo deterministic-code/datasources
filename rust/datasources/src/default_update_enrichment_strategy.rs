@@ -48,9 +48,11 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
         let key_name = enrichment.map_key()?;
         related.sort_by(|left, right| dict_key(left, key_name).cmp(&dict_key(right, key_name)));
     }
-    if let Some(key) = parent.cell(&enrichment.source_property) {
-        for child in &mut related {
-            set(child, &enrichment.related_key, key.clone())?;
+    for (source_name, related_key) in enrichment.pairs() {
+        if let Some(key) = parent.cell(&source_name) {
+            for child in &mut related {
+                set(child, &related_key, key.clone())?;
+            }
         }
     }
     let ids = writer.id_names();

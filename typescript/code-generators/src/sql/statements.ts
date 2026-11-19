@@ -38,6 +38,7 @@ import {
   fieldOverlay,
   fieldStem,
   overlayOf,
+  referencePairs,
   resolveReference,
   tableIdentity,
   tableStem,
@@ -82,7 +83,7 @@ export const createTableStatementOf = (
         ),
     );
   const foreignKeys = table.fields
-    .filter((field) => field.references !== undefined)
+    .filter((field) => referencePairs(field.references).length === 1)
     .map((field) => foreignKeyOf(naming, tables, table, field));
   const pk =
     keys.length > 1

@@ -758,7 +758,7 @@ first_name
 email_address
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L43-L52)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L50-L59)
 
 ```rust
 let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
@@ -809,7 +809,7 @@ FirstName
 EmailAddress
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L54-L63)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L61-L70)
 
 ```rust
 let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
@@ -2629,7 +2629,7 @@ first_name
 email_address
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L43-L52)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L50-L59)
 
 ```rust
 let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
@@ -2682,7 +2682,7 @@ FirstName
 EmailAddress
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L54-L63)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L61-L70)
 
 ```rust
 let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);

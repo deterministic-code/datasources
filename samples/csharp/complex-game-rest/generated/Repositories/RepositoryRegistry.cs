@@ -23,11 +23,16 @@ public static class RepositoryRegistry
         factory.Register("Game", "Games", connection => new GamesRepository(connection), connection => GamesRepository.CreateReadonly(connection));
         factory.Register("GamesCategory", "GamesCategories", connection => new GamesCategoriesRepository(connection), connection => GamesCategoriesRepository.CreateReadonly(connection));
         factory.Register("Group", "Groups", connection => new GroupsRepository(connection), connection => GroupsRepository.CreateReadonly(connection));
+        factory.Register("ItemGraph", "ItemGraphs", connection => new ItemGraphsRepository(connection), connection => ItemGraphsRepository.CreateReadonly(connection));
+        factory.Register("ItemLink", "ItemLinks", connection => new ItemLinksRepository(connection), connection => ItemLinksRepository.CreateReadonly(connection));
+        factory.Register("Item", "Items", connection => new ItemsRepository(connection), connection => ItemsRepository.CreateReadonly(connection));
         factory.Register("LegacyContact", "LegacyContacts", connection => new LegacyContactsRepository(connection), connection => LegacyContactsRepository.CreateReadonly(connection));
         factory.Register("Phone", "Phones", connection => new PhonesRepository(connection), connection => PhonesRepository.CreateReadonly(connection));
         factory.Register("PhoneType", "PhoneTypes", connection => new PhoneTypesRepository(connection), connection => PhoneTypesRepository.CreateReadonly(connection));
         factory.Register("Review", "Reviews", connection => new ReviewsRepository(connection), connection => ReviewsRepository.CreateReadonly(connection));
         factory.Register("Role", "Roles", connection => new RolesRepository(connection), connection => RolesRepository.CreateReadonly(connection));
+        factory.Register("SkillTree", "SkillTrees", connection => new SkillTreesRepository(connection), connection => SkillTreesRepository.CreateReadonly(connection));
+        factory.Register("Skill", "Skills", connection => new SkillsRepository(connection), connection => SkillsRepository.CreateReadonly(connection));
         factory.Register("User", "Users", connection => new UsersRepository(connection), connection => UsersRepository.CreateReadonly(connection));
         factory.Register("UserGroup", "UserGroups", connection => new UserGroupsRepository(connection), connection => UserGroupsRepository.CreateReadonly(connection));
         factory.Register("UserRole", "UserRoles", connection => new UserRolesRepository(connection), connection => UserRolesRepository.CreateReadonly(connection));

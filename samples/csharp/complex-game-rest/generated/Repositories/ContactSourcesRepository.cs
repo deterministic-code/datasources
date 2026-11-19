@@ -1,13 +1,13 @@
 using Datasources;
 
-public sealed class ContactSourcesRepository : CRUDRepository<Backend.Types.Datasource.ContactSource>
+public sealed class ContactSourcesRepository : ReadonlyRepository<Backend.Types.Datasource.ContactSource>
 {
     public ContactSourcesRepository(IConnection connection) : base(connection, Options(connection)) { }
 
     public static IReadonlyRepository<Backend.Types.Datasource.ContactSource> CreateReadonly(IConnection connection) =>
-        new ReadonlyRepository<Backend.Types.Datasource.ContactSource>(connection, Options(connection));
+        new ContactSourcesRepository(connection);
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.ContactSource> Options(IConnection connection) =>
+    public static ReadonlyRepositoryMappingOptions<Backend.Types.Datasource.ContactSource> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.ContactSource>()
             .Add(new()
             {
@@ -23,10 +23,7 @@ public sealed class ContactSourcesRepository : CRUDRepository<Backend.Types.Data
                     ["Name"] = "name",
                     ["Description"] = "description",
                 }),
-                Ids = ["Id"],
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
-                CreateProperties = ["Name", "Description"],
-                UpdateProperties = ["Uuid", "Name", "Description"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),
@@ -52,10 +49,7 @@ public sealed class ContactSourcesRepository : CRUDRepository<Backend.Types.Data
                     ["Name"] = "name",
                     ["Description"] = "description",
                 }),
-                Ids = ["Id"],
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
-                CreateProperties = ["Uuid", "Created", "Version", "Name", "Description"],
-                UpdateProperties = ["Uuid", "Created", "Version", "Name", "Description"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),

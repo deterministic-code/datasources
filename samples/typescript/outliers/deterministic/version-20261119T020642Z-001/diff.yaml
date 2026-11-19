@@ -1,0 +1,117 @@
+datasource.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    includes:
+      - types:
+          filter: tag == "datasource_type"
+    types: []
+datasource_seeds.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    seeds:
+      - category:
+          - id1:
+              name: food
+              parent_category_id: 3
+          - id2:
+              name: fruit
+              parent_category_id: 1
+          - id3:
+              name: apple
+              parent_category_id: 2
+settings.yaml:
+  added: true
+  content:
+    settings:
+      backend:
+        datasources: sqlite,mysql,postgres
+types.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    types:
+      - category:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - parent_category_id:
+                references: category.id
+                is_nullable: true
+            - name:
+                type: string
+                size: 128
+      - category_tree:
+          tags:
+            - view_type
+            - tree
+            - readonly_lookup
+          inherits: category
+          fields:
+            - children:
+                type: category_tree[]
+                references: category.parent_category_id
+      - region_category:
+          tags:
+            - datasource_type
+          fields:
+            - region_id:
+                type: integer
+                is_id: true
+            - category_id:
+                type: integer
+                is_id: true
+            - parent_region_id:
+                references: region_category.region_id
+                is_nullable: true
+            - parent_category_id:
+                references: region_category.category_id
+                is_nullable: true
+            - name:
+                type: string
+                size: 128
+      - region_category_tree:
+          tags:
+            - view_type
+            - tree
+            - readonly_lookup
+          inherits: region_category
+          fields:
+            - children:
+                type: region_category_tree[]
+                references:
+                  - region_category.parent_region_id
+                  - region_category.parent_category_id
+      - node:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - value:
+                type: string
+                size: 128
+      - node_edge:
+          tags:
+            - datasource_type
+            - many_to_many
+          fields:
+            - from_node_id:
+                references: node.id
+            - to_node_id:
+                references: node.id
+      - node_graph:
+          tags:
+            - view_type
+            - graph
+            - readonly_lookup
+          inherits: node
+          fields:
+            - edges:
+                type: node_graph[]
+                references: node_edge.from_node_id

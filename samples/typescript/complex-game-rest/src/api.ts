@@ -10,7 +10,12 @@ import { CategoriesRepository } from "../generated/repositories/categoriesReposi
 import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
 import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
 import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
+import { ItemGraphsRepository } from "../generated/repositories/itemGraphsRepository.ts";
+import { ItemLinksRepository } from "../generated/repositories/itemLinksRepository.ts";
+import { ItemsRepository } from "../generated/repositories/itemsRepository.ts";
 import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
+import { SkillsRepository } from "../generated/repositories/skillsRepository.ts";
+import { SkillTreesRepository } from "../generated/repositories/skillTreesRepository.ts";
 import { UsersRepository } from "../generated/repositories/usersRepository.ts";
 import type { Contact } from "../generated/types/view/contact.ts";
 import type { User } from "../generated/types/view/user.ts";
@@ -18,6 +23,9 @@ import type { Game } from "../generated/types/view/game.ts";
 import type { Category } from "../generated/types/view/category.ts";
 import type { Review } from "../generated/types/datasource/review.ts";
 import type { GameState } from "../generated/types/datasource/gameState.ts";
+import type { Skill } from "../generated/types/datasource/skill.ts";
+import type { Item } from "../generated/types/datasource/item.ts";
+import type { ItemLink } from "../generated/types/datasource/itemLink.ts";
 import { clock } from "./clock.ts";
 import { toJson } from "./jsonObject.ts";
 
@@ -31,6 +39,11 @@ export class Api {
     private readonly reviews: ReviewsRepository,
     private readonly states: GameStatesRepository,
     private readonly contacts: ContactsRepository,
+    private readonly skills: SkillsRepository,
+    private readonly skillTrees: SkillTreesRepository,
+    private readonly items: ItemsRepository,
+    private readonly itemLinks: ItemLinksRepository,
+    private readonly itemGraphs: ItemGraphsRepository,
   ) {}
 
   handle = async (method: string, target: string, body: string | undefined): Promise<HttpResult> => {
@@ -63,6 +76,17 @@ export class Api {
         "POST /contacts": () => post(this.contacts, stampContact(read(body))),
         "PUT /contacts": () => put(this.contacts, query, stampContact(read(body)), (row, id) => { row.id = id; }),
         "DELETE /contacts": () => remove(this.contacts, query),
+        "GET /skills": () => get(this.skills, query, ["id", "name"]),
+        "POST /skills": () => post(this.skills, stampRow(read(body) as Skill)),
+        "PUT /skills": () => put(this.skills, query, stampRow(read(body) as Skill), (row, id) => { row.id = id; }),
+        "DELETE /skills": () => remove(this.skills, query),
+        "GET /skill_tree": () => get(this.skillTrees, query, ["id", "name"]),
+        "GET /items": () => get(this.items, query, ["id", "name"]),
+        "POST /items": () => post(this.items, stampRow(read(body) as Item)),
+        "PUT /items": () => put(this.items, query, stampRow(read(body) as Item), (row, id) => { row.id = id; }),
+        "DELETE /items": () => remove(this.items, query),
+        "POST /item_links": () => post(this.itemLinks, stampRow(read(body) as ItemLink)),
+        "GET /item_graph": () => get(this.itemGraphs, query, ["id", "name"]),
       }[`${method.toUpperCase()} ${path}`] ?? (() => Promise.resolve({ status: 404, body: "" })))();
     } catch (error) {
       return error instanceof RequestError
@@ -134,7 +158,11 @@ const stampRow = <T extends { uuid?: string; created?: Date; updated?: Date; ver
   return row;
 };
 
-const get = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>, keys: string[]): Promise<HttpResult> =>
+const get = async <T>(
+  repo: { read: (query?: IWhere) => AsyncIterable<T> },
+  query: Record<string, string>,
+  keys: string[],
+): Promise<HttpResult> =>
   ({ status: 200, body: toJson(await list(repo, whereOf(query, keys))) });
 
 const post = async <T>(repo: ICRUDRepository<T>, row: T): Promise<HttpResult> =>

@@ -8,6 +8,11 @@ export type Association = {
   related: string;
 };
 
+export type EnrichmentMatch = {
+  sourceProperty: string;
+  relatedKey: string;
+};
+
 export type Enrichment = {
   destinationProperty: string;
   sourceProperty: string;
@@ -16,7 +21,13 @@ export type Enrichment = {
   type?: EnrichmentPropertyType;
   association?: Association;
   dictionaryKey?: string;
+  keys?: EnrichmentMatch[];
 };
+
+export const enrichmentMatches = (enrichment: Enrichment): EnrichmentMatch[] =>
+  enrichment.keys !== undefined && enrichment.keys.length > 0
+    ? enrichment.keys
+    : [{ sourceProperty: enrichment.sourceProperty, relatedKey: enrichment.relatedKey }];
 
 export const dictionaryMapKey = (enrichment: Enrichment): string => {
   if (enrichment.dictionaryKey === undefined)
@@ -26,8 +37,9 @@ export const dictionaryMapKey = (enrichment: Enrichment): string => {
 
 export const dictionaryValueColumns = (schema: Schema, enrichment: Enrichment): string[] => {
   const mapKey = dictionaryMapKey(enrichment);
+  const related = new Set(enrichmentMatches(enrichment).map((match) => match.relatedKey));
   return Object.entries(schema.columns)
-    .filter(([name, column]) => column.isId !== true && name !== enrichment.relatedKey && name !== mapKey)
+    .filter(([name, column]) => column.isId !== true && !related.has(name) && name !== mapKey)
     .map(([name]) => name);
 };
 

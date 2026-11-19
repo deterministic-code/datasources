@@ -45,13 +45,14 @@ pub(crate) async fn create_children<T: Entity, TChild: Entity>(
     if related.is_empty() {
         return Ok(());
     }
-    let key = required(
-        parent,
-        &enrichment.source_property,
-        &enrichment.destination_property,
-    )?;
-    for child in &mut related {
-        set(child, &enrichment.related_key, key.clone())?;
+    let pairs = enrichment.pairs();
+    for (source_name, related_key) in &pairs {
+        let key = required(parent, source_name, &enrichment.destination_property)?;
+        for child in &mut related {
+            set(child, related_key, key.clone())?;
+        }
+    }
+    for child in &related {
         writer.create(child.clone()).await?;
     }
     Ok(())

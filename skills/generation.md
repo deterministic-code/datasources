@@ -176,6 +176,85 @@ const updated = await ds.users.update(created);
 const deleted = await ds.users.delete(created);
 ```
 
+### Tree and graph views
+
+A `tree` or `graph` tag on a `view_type` fills nested children on read. The inherited `datasource_type` stays a flat table. Tag the view `readonly_lookup` so create, update, and delete stay on that table's repository.
+
+A single-parent tree. Roots are rows whose parent key is null.
+
+```yaml
+- category:
+    tags: [datasource_type]
+    fields:
+      - id: { type: integer, is_id: true }
+      - parent_category_id:
+          references: category.id
+          is_nullable: true
+      - name: { type: string, size: 128 }
+- category_tree:
+    tags: [view_type, tree, readonly_lookup]
+    inherits: category
+    fields:
+      - children:
+          type: category_tree[]
+          references: category.parent_category_id
+```
+
+A composite parent matches every key pair.
+
+```yaml
+- region_category_tree:
+    tags: [view_type, tree, readonly_lookup]
+    inherits: region_category
+    fields:
+      - children:
+          type: region_category_tree[]
+          references: [region_category.parent_region_id, region_category.parent_category_id]
+```
+
+A graph uses a `many_to_many` junction whose foreign keys both point at the node.
+
+```yaml
+- node_graph:
+    tags: [view_type, graph, readonly_lookup]
+    inherits: node
+    fields:
+      - edges:
+          type: node_graph[]
+          references: node_edge.from_node_id
+```
+
+`generate all` registers a tree with `TreeReadonlyEnrichmentStrategy` / `TreeReadonlyEnrichmentStrategy` / `TreeReadonlyEnrichmentStrategy` and a flat `ReadonlyRepository` / `ReadonlyRepository` / `ReadonlyRepository` via. A graph adds the junction child and `GraphReadonlyEnrichmentStrategy` / `GraphReadonlyEnrichmentStrategy` / `GraphReadonlyEnrichmentStrategy`. An id already on the walk path is dropped, so a cycle still returns.
+
+##### C#
+
+```csharp
+AddEnriched(
+    new("Children", "Id", "ParentCategoryId", Type: EnrichmentPropertyType.List),
+    new ReadonlyRepository<CategoryTree>(connection, Options()),
+    new TreeReadonlyEnrichmentStrategy<CategoryTree>());
+```
+
+##### Rust
+
+```rust
+repo.add_enriched(
+    Enrichment::new("Children", "Id", "ParentCategoryId", None, EnrichmentPropertyType::List),
+    ReadonlyRepository::<CategoryTree>::new(connection, options())?,
+    Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+);
+```
+
+##### TypeScript
+
+```typescript
+this.addEnriched(
+  { destinationProperty: "children", sourceProperty: "id", relatedKey: "parentCategoryId", type: "list" },
+  new ReadonlyRepository<CategoryTree>(connection, readonlyOptions(connection)),
+  new TreeReadonlyEnrichmentStrategy(),
+);
+```
+
 ### Users and roles
 
 The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`. A `roles` list on `user` that references `user_role.user_id` generates a linked enrichment: `AddLinked` / `addLinked` / `add_linked`.

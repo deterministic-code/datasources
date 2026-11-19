@@ -104,9 +104,12 @@ public abstract class CreateEnrichmentStrategy<T>
     {
         var children = Children(writer, enrichment, parent);
         if (children.Count == 0) return children;
-        var key = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
-        foreach (var child in children)
-            Stamp(child, enrichment.RelatedKey, key.ToObject());
+        foreach (var pair in enrichment.Pairs())
+        {
+            var key = Required(parent, pair.SourceProperty, enrichment.DestinationProperty);
+            foreach (var child in children)
+                Stamp(child, pair.RelatedKey, key.ToObject());
+        }
         return children;
     }
 

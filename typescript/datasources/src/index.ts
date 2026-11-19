@@ -65,7 +65,8 @@ export { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts"
 export type { IEnriched } from "./IEnriched.ts";
 export type { IRepositoryTree } from "./IRepositoryTree.ts";
 export type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
-export type { Association, Enrichment } from "./Enrichment.ts";
+export type { Association, Enrichment, EnrichmentMatch } from "./Enrichment.ts";
+export { enrichmentMatches } from "./Enrichment.ts";
 export { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 export type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 export { lookupRow } from "./IWriteEnrichmentStrategy.ts";
@@ -82,6 +83,8 @@ export { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrate
 export { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
 export { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
+export { TreeReadonlyEnrichmentStrategy } from "./TreeReadonlyEnrichmentStrategy.ts";
+export { GraphReadonlyEnrichmentStrategy } from "./GraphReadonlyEnrichmentStrategy.ts";
 export { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStrategy.ts";
 export { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 export type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";

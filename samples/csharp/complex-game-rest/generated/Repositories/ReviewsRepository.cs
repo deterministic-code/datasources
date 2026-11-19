@@ -7,7 +7,7 @@ public sealed class ReviewsRepository : CRUDRepository<Backend.Types.Datasource.
     public static IReadonlyRepository<Backend.Types.Datasource.Review> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.Datasource.Review>(connection, Options(connection));
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.Review> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.Datasource.Review> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.Review>()
             .Add(new()
             {

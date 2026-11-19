@@ -7,7 +7,7 @@ public sealed class ContactSettingsRepository : CRUDRepository<Backend.Types.Dat
     public static IReadonlyRepository<Backend.Types.Datasource.ContactSetting> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.Datasource.ContactSetting>(connection, Options(connection));
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.ContactSetting> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.Datasource.ContactSetting> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.ContactSetting>()
             .Add(new()
             {

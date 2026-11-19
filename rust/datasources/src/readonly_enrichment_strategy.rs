@@ -45,21 +45,14 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
     ) -> Result<()> {
         let mut cache: HashMap<String, Option<TRelated>> = HashMap::new();
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-            else {
+            let Some(cache_key) = match_key(parent, enrichment, source_at(sources, index)) else {
                 continue;
             };
-            let cache_key = key_of(&key);
             if !cache.contains_key(&cache_key) {
-                let related = via
-                    .read_single_where(
-                        &Where::new(Operator::equals(
-                            enrichment.related_key.clone(),
-                            key.clone(),
-                        )),
-                        None,
-                    )
-                    .await?;
+                let Some(clause) = match_where(parent, enrichment, source_at(sources, index)) else {
+                    continue;
+                };
+                let related = via.read_single_where(&clause, None).await?;
                 cache.insert(cache_key.clone(), related);
             }
             let Some(related) = cache.get(&cache_key).cloned().flatten() else {
@@ -85,20 +78,10 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-            else {
+            let Some(clause) = match_where(parent, enrichment, source_at(sources, index)) else {
                 continue;
             };
-            let related = via
-                .read_where(
-                    &Where::new(Operator::equals(
-                        enrichment.related_key.clone(),
-                        key,
-                    )),
-                    None,
-                )
-                .try_collect::<Vec<_>>()
-                .await?;
+            let related = via.read_where(&clause, None).try_collect::<Vec<_>>().await?;
             assign_related(parent, &enrichment.destination_property, related)?;
         }
         Ok(())
@@ -112,20 +95,10 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
     sources: Option<&[Option<Row>]>,
 ) -> Result<()> {
     for (index, parent) in parents.iter_mut().enumerate() {
-        let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-        else {
+        let Some(clause) = match_where(parent, enrichment, source_at(sources, index)) else {
             continue;
         };
-        let related = via
-            .read_where(
-                &Where::new(Operator::equals(
-                    enrichment.related_key.clone(),
-                    key,
-                )),
-                None,
-            )
-            .try_collect::<Vec<_>>()
-            .await?;
+        let related = via.read_where(&clause, None).try_collect::<Vec<_>>().await?;
         let key_name = enrichment.map_key()?;
         let value_columns = enrichment.value_columns(via.schema())?;
         let rows = related
@@ -218,4 +191,49 @@ pub(crate) fn source_at<'a>(sources: Option<&'a [Option<Row>]>, index: usize) ->
 
 pub(crate) fn key_of(key: &Value) -> String {
     key.wire_text()
+}
+
+pub(crate) fn where_equals(pairs: impl IntoIterator<Item = (String, Value)>) -> Option<Where> {
+    let mut condition: Option<Operator> = None;
+    for (column, value) in pairs {
+        let equals = Operator::equals(column, value);
+        condition = Some(match condition {
+            None => equals,
+            Some(left) => Operator::and(left, equals),
+        });
+    }
+    condition.map(Where::new)
+}
+
+pub(crate) fn match_where<T: Entity>(
+    parent: &T,
+    enrichment: &Enrichment,
+    source: Option<&Row>,
+) -> Option<Where> {
+    let mut pairs = Vec::new();
+    for (source_name, related) in enrichment.pairs() {
+        pairs.push((related, source_key_of(parent, &source_name, source)?));
+    }
+    where_equals(pairs)
+}
+
+pub(crate) fn match_key<T: Entity>(
+    parent: &T,
+    enrichment: &Enrichment,
+    source: Option<&Row>,
+) -> Option<String> {
+    let mut parts = Vec::new();
+    for (source_name, _) in enrichment.pairs() {
+        parts.push(key_of(&source_key_of(parent, &source_name, source)?));
+    }
+    Some(parts.join("\u{0}"))
+}
+
+pub(crate) fn row_match_key<T: Entity>(row: &T, enrichment: &Enrichment) -> Option<String> {
+    let mut parts = Vec::new();
+    for (_, related) in enrichment.pairs() {
+        let key = row.cell(&related).filter(|value| *value != Value::Null)?;
+        parts.push(key_of(&key));
+    }
+    Some(parts.join("\u{0}"))
 }

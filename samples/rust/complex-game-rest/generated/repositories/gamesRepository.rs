@@ -17,7 +17,7 @@ pub struct GamesRepository {
 }
 
 impl GamesRepository {
-    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+    pub fn options(connection: Arc<dyn Connection>) -> Result<CRUDRepositoryOptions> {
     let options = CRUDRepositoryBuilder::new()
     .add({
         let mut options = CRUDRepositoryOptions::default();
@@ -69,11 +69,16 @@ impl GamesRepository {
     })
     .for_connection(connection.as_ref())?;
 
+        Ok(options)
+    }
+
+    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
+        let options = Self::options(Arc::clone(&connection))?;
         let game_settings = GameSettingsRepository::new(Arc::clone(&connection))?;
         let categories = CategoriesRepository::new(Arc::clone(&connection))?;
         let games_categories = GamesCategoriesRepository::new(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<Game>::new(Arc::clone(&connection), options)?;
-        repo.add_enriched(Enrichment::new("settings", "id", "game_id", Some("value".into()), EnrichmentPropertyType::Dictionary), &game_settings, None);
+        repo.add_enriched(Enrichment::new("settings", "id", "game_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("name"), &game_settings, None);
         repo.add_linked(Enrichment::new("categories", "id", "id", Some("name".into()), EnrichmentPropertyType::List).linked(Association::new("game_id", "category_id")), &categories, Arc::clone(&games_categories.inner) as Arc<dyn ICRUDRepository<_>>, None);
         Ok(Self { inner: Arc::new(repo), game_settings, categories, games_categories })
     }
@@ -99,8 +104,9 @@ impl GamesRepository {
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into(), "location".into(), "is_enabled".into(), "is_deleted".into()];
         let game_settings = GameSettingsRepository::new(Arc::clone(&connection))?;
         let categories = CategoriesRepository::new(Arc::clone(&connection))?;
+        let games_categories = GamesCategoriesRepository::new(Arc::clone(&connection))?;
         let mut repo = ReadonlyRepository::<Game>::new(connection, options)?;
-        repo.add_enriched(Enrichment::new("settings", "id", "game_id", Some("value".into()), EnrichmentPropertyType::Dictionary), &game_settings, None);
+        repo.add_enriched(Enrichment::new("settings", "id", "game_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("name"), &game_settings, None);
         repo.add_enriched(Enrichment::new("categories", "id", "id", Some("name".into()), EnrichmentPropertyType::List), &categories, None);
         Ok(repo)
     }
@@ -204,62 +210,12 @@ impl ICRUDRepository<Game> for GamesRepository {
 }
 
 pub fn games_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-    let options = CRUDRepositoryBuilder::new()
-    .add({
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "Game".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("Game".into(), "games_bases".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("location".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("is_enabled".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
-            ("is_deleted".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into(), "location".into(), "is_enabled".into(), "is_deleted".into()];
-        options.create_properties = Some(vec!["name".into(), "description".into(), "location".into(), "is_enabled".into(), "is_deleted".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "name".into(), "description".into(), "location".into(), "is_enabled".into(), "is_deleted".into()]);
-        options
-    })
-    .add_for("sqlite", {
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "Game".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("Game".into(), "games_bases".into()),
-        ])));
-        options.schema = Schema::new(HashMap::from([
-            ("id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: true }),
-            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true, is_id: false }),
-            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
-            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("location".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
-            ("is_enabled".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
-            ("is_deleted".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
-        ]));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into(), "location".into(), "is_enabled".into(), "is_deleted".into()];
-        options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "name".into(), "description".into(), "location".into(), "is_enabled".into(), "is_deleted".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "name".into(), "description".into(), "location".into(), "is_enabled".into(), "is_deleted".into()]);
-        options
-    })
-    .for_connection(connection.as_ref())?;
-
+        let options = GamesRepository::options(Arc::clone(&connection))?;
         let game_settings = Arc::new(super::gameSettingsRepository::game_settings_row_repository(Arc::clone(&connection))?);
         let categories = Arc::new(super::categoriesRepository::categories_row_repository(Arc::clone(&connection))?);
         let games_categories = Arc::new(super::gamesCategoriesRepository::games_categories_row_repository(Arc::clone(&connection))?);
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
-        repo.add_enriched(Enrichment::new("settings", "id", "game_id", Some("value".into()), EnrichmentPropertyType::Dictionary), Arc::clone(&game_settings), None);
+        repo.add_enriched(Enrichment::new("settings", "id", "game_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("name"), Arc::clone(&game_settings), None);
         repo.add_linked(Enrichment::new("categories", "id", "id", Some("name".into()), EnrichmentPropertyType::List).linked(Association::new("game_id", "category_id")), Arc::clone(&categories), Arc::clone(&games_categories) as Arc<dyn ICRUDRepository<_>>, None);
         Ok(repo)
 }

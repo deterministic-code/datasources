@@ -16,13 +16,14 @@ export type PlannedEnrichment = {
   relatedKey: string;
   relatedProperty?: string;
   dictionaryKey?: string;
-  kind: "list" | "object" | "linked" | "dictionary";
+  kind: "list" | "object" | "linked" | "dictionary" | "tree" | "graph";
   via: string;
   viaType: string;
   link?: string;
   linkType?: string;
   parentFk?: string;
   relatedFk?: string;
+  keys?: { source: string; relatedKey: string }[];
 };
 
 export type OptimisticConcurrency = {
@@ -82,11 +83,23 @@ export type LinkedEnrichment = PlannedEnrichment & {
 
 export const isLinked = (item: PlannedEnrichment): item is LinkedEnrichment => item.kind === "linked";
 
+export type GraphEnrichment = PlannedEnrichment & {
+  kind: "graph";
+  link: string;
+  linkType: string;
+  parentFk: string;
+  relatedFk: string;
+};
+
+export const isGraph = (item: PlannedEnrichment): item is GraphEnrichment => item.kind === "graph";
+
+export const isSelfVia = (item: PlannedEnrichment): boolean => item.kind === "tree" || item.kind === "graph";
+
 export const children = (model: RepositoryModel): Array<{ specName: string; typeName: string }> => {
   const rows = new Map<string, string>();
   for (const item of model.enrichments) {
-    rows.set(item.via, item.viaType);
-    if (isLinked(item)) rows.set(item.link, item.linkType);
+    if (!isSelfVia(item)) rows.set(item.via, item.viaType);
+    if (isLinked(item) || isGraph(item)) rows.set(item.link, item.linkType);
   }
   return [...rows].map(([specName, typeName]) => ({ specName, typeName }));
 };

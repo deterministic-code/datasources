@@ -1,0 +1,25 @@
+#![allow(dead_code, unused_imports, non_snake_case)]
+#[path = "types/datasource/category.rs"]
+pub mod category;
+#[path = "types/datasource/regionCategory.rs"]
+pub mod regionCategory;
+#[path = "types/datasource/node.rs"]
+pub mod node;
+#[path = "types/datasource/nodeEdge.rs"]
+pub mod nodeEdge;
+#[path = "types/view/categoryTree.rs"]
+pub mod categoryTree;
+#[path = "types/view/regionCategoryTree.rs"]
+pub mod regionCategoryTree;
+#[path = "types/view/nodeGraph.rs"]
+pub mod nodeGraph;
+pub use category::*;
+pub use regionCategory::*;
+pub use node::*;
+pub use nodeEdge::*;
+pub use categoryTree::*;
+pub use regionCategoryTree::*;
+pub use nodeGraph::*;
+mod schema_objects;
+pub mod repositories;
+pub use repositories::repositoryRegistry::Repositories;

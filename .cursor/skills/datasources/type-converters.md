@@ -575,7 +575,7 @@ const row = converter.reverseConvert(item);
 
 #### Field converter
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L164-L175)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L177-L188)
 
 ```csharp
 var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dictionary<string, TypeConverter<Value, Value>>
@@ -585,7 +585,7 @@ var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dict
 var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L192-L209)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L243-L260)
 
 ```rust
 let converter = RowTypeConverter::new(HashMap::from([(

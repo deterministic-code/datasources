@@ -1,0 +1,3 @@
+settings:
+  backend:
+    datasources: sqlite,mysql,postgres

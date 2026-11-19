@@ -20,7 +20,7 @@ public sealed class AddressesRepository : CRUDRepository<Backend.Types.View.Addr
         return repo;
     }
 
-    static CRUDRepositoryOptions<Backend.Types.View.Address> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.View.Address> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.Address>()
             .Add(new()
             {

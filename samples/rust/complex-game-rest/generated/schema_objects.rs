@@ -33,6 +33,12 @@ impl SchemaObject for GamesCategory {}
 
 impl SchemaObject for Group {}
 
+impl SchemaObject for ItemGraph {}
+
+impl SchemaObject for ItemLink {}
+
+impl SchemaObject for Item {}
+
 impl SchemaObject for LegacyContact {}
 
 impl SchemaObject for PhoneType {}
@@ -40,6 +46,10 @@ impl SchemaObject for PhoneType {}
 impl SchemaObject for Review {}
 
 impl SchemaObject for Role {}
+
+impl SchemaObject for SkillTree {}
+
+impl SchemaObject for Skill {}
 
 impl SchemaObject for User {}
 

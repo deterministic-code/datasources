@@ -1,13 +1,13 @@
 using Datasources;
 
-public sealed class PhoneTypesRepository : CRUDRepository<Backend.Types.Datasource.PhoneType>
+public sealed class PhoneTypesRepository : ReadonlyRepository<Backend.Types.Datasource.PhoneType>
 {
     public PhoneTypesRepository(IConnection connection) : base(connection, Options(connection)) { }
 
     public static IReadonlyRepository<Backend.Types.Datasource.PhoneType> CreateReadonly(IConnection connection) =>
-        new ReadonlyRepository<Backend.Types.Datasource.PhoneType>(connection, Options(connection));
+        new PhoneTypesRepository(connection);
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.PhoneType> Options(IConnection connection) =>
+    public static ReadonlyRepositoryMappingOptions<Backend.Types.Datasource.PhoneType> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.PhoneType>()
             .Add(new()
             {
@@ -23,10 +23,7 @@ public sealed class PhoneTypesRepository : CRUDRepository<Backend.Types.Datasour
                     ["Name"] = "name",
                     ["Description"] = "description",
                 }),
-                Ids = ["Id"],
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
-                CreateProperties = ["Name", "Description"],
-                UpdateProperties = ["Uuid", "Name", "Description"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),
@@ -52,10 +49,7 @@ public sealed class PhoneTypesRepository : CRUDRepository<Backend.Types.Datasour
                     ["Name"] = "name",
                     ["Description"] = "description",
                 }),
-                Ids = ["Id"],
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
-                CreateProperties = ["Uuid", "Created", "Version", "Name", "Description"],
-                UpdateProperties = ["Uuid", "Created", "Version", "Name", "Description"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),

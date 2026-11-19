@@ -1,5 +1,6 @@
 import { CreateTableStatement } from "@deterministic-code/datasources";
 import { createCasing } from "@deterministic-code/datasources-code-generators/sql/common/default-casing";
+import { referencePairs } from "@deterministic-code/datasources-code-generators/sql/common/reference-target";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { Paths } from "@deterministic-code/generators-common/paths";
 import {
@@ -14,14 +15,52 @@ import type { DatasourceTable, IDeterministic, Type, TypeField } from "@determin
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
 
-const referenceOf = (references: TypeField["references"]): { type: string; field: string } | undefined => {
-  if (references === undefined) return undefined;
-  const [type, field] = [references].flat().join(".").split(".");
-  return type !== undefined && field !== undefined && type.length > 0 && field.length > 0 ? { type, field } : undefined;
+const referenceOf = (references: TypeField["references"]): { type: string; field: string } | undefined =>
+  referencePairs(references)[0];
+
+const compositeKeys = (
+  authored: Type,
+  field: TypeField,
+  pairs: { type: string; field: string }[],
+  expanded: Map<string, Type>,
+  property: (name: string) => string,
+): { source: string; relatedKey: string }[] => {
+  const child = pairs[0].type;
+  if (!pairs.every((pair) => pair.type === child)) {
+    throw new Error(`${authored.name}.${field.name} composite references must name one type`);
+  }
+  const columns = new Set(expanded.get(authored.name)!.fields.map((item) => item.name));
+  for (const pair of pairs) {
+    if (!columns.has(pair.field))
+      throw new Error(`${authored.name}.${field.name} composite reference ${pair.type}.${pair.field} has no column on ${authored.name}`);
+  }
+  return pairs.map((pair) => ({ source: property(pair.field), relatedKey: property(pair.field) }));
+};
+
+const treeKeys = (
+  authored: Type,
+  field: TypeField,
+  pairs: { type: string; field: string }[],
+  expanded: Map<string, Type>,
+  property: (name: string) => string,
+): { source: string; relatedKey: string }[] => {
+  const shape = expanded.get(authored.name)!;
+  return pairs.map((pair) => {
+    const fk = shape.fields.find((item) => item.name === pair.field);
+    const target = referenceOf(fk?.references);
+    if (target === undefined)
+      throw new Error(`${authored.name}.${field.name} tree reference ${pair.type}.${pair.field} has no parent key`);
+    return { source: property(target.field), relatedKey: property(pair.field) };
+  });
 };
 
 const childNames = (model: RepositoryModel): string[] => [
-  ...new Set(model.enrichments.flatMap((item) => (item.link === undefined ? [item.via] : [item.via, item.link]))),
+  ...new Set(
+    model.enrichments.flatMap((item) => {
+      const names = item.link === undefined ? [item.via] : [item.via, item.link];
+      return names.filter((name) => name !== model.specName);
+    }),
+  ),
 ];
 
 const guardCycles = (models: RepositoryModel[]): void => {
@@ -86,12 +125,21 @@ export const planRepositories = (
     return asView?.tags.includes("view_type") === true && asView.inherits !== undefined && included.has(asView.inherits);
   };
   const tableModels = spec.datasource.flatMap((table): RepositoryModel[] => {
-    const authored = viewByTable.get(table.name) ?? types.get(table.name);
-    if (skip(table, authored)) return [];
-    const shape = expanded.get(authored!.name);
-    if (shape === undefined) throw new Error(`${authored!.name}: no expanded type`);
+    const overlay = viewByTable.get(table.name) ?? types.get(table.name);
+    if (skip(table, overlay)) return [];
+    const sourceType = types.get(table.name);
+    const authoredTypes =
+      sourceType !== undefined &&
+      sourceType !== overlay &&
+      overlay!.tags.includes("readonly_lookup") &&
+      sourceType.tags.includes("datasource_type")
+        ? [overlay!, sourceType]
+        : [overlay!];
+    return authoredTypes.map((authored): RepositoryModel => {
+    const shape = expanded.get(authored.name);
+    if (shape === undefined) throw new Error(`${authored.name}: no expanded type`);
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
-    const enrichments = relations(authored!, casing, types, expanded, repoName, identity, typeName);
+    const enrichments = relations(authored, casing, types, expanded, repoName, identity, typeName);
     const skipColumns = new Set(enrichments.filter((item) => item.kind === "object").map((item) => item.destination));
     const schema = persistedColumnFields(shape).flatMap((field) => {
       const from = property(field.name);
@@ -107,13 +155,11 @@ export const planRepositories = (
     const names = new Set(schema.filter((column) => !skipColumns.has(column.from)).map((column) => column.from));
     const columns = persistedColumnFields(shape).filter((field) => names.has(property(field.name)));
     const ids = identityColumns(shape, table);
-    const tableType = types.get(table.name);
-    const parent = authored!.inherits === undefined ? undefined : types.get(authored!.inherits);
+    const parent = authored.inherits === undefined ? undefined : types.get(authored.inherits);
     const readonly =
-      isReadonlyLookup(authored!) ||
-      (parent !== undefined && isReadonlyLookup(parent)) ||
-      (tableType !== undefined && isReadonlyLookup(tableType));
-    const inherited = expanded.get(authored!.inherits ?? "") ?? parent;
+      isReadonlyLookup(authored) ||
+      (parent !== undefined && isReadonlyLookup(parent));
+    const inherited = expanded.get(authored.inherits ?? "") ?? parent;
     const sqlColumn = (fieldName: string): string =>
       CreateTableStatement.columnName(overlays.get(fieldName)?.mapping ?? fieldName, naming.naming);
     const yamlFields = [
@@ -140,11 +186,10 @@ export const planRepositories = (
         readProperties.push(item.source);
       }
     }
-    return [
-      {
-        specName: authored!.name,
-        typeName: typeName(authored!.name),
-        typeHome: authored!.tags.includes("view_type") ? "view" : "datasource",
+    return {
+        specName: authored.name,
+        typeName: typeName(authored.name),
+        typeHome: authored.tags.includes("view_type") ? "view" : "datasource",
         table: CreateTableStatement.tableName(table.mapping ?? table.name, naming.naming),
         propertyMappings: [...mapped].map(([from, to]) => ({ from, to })),
         ids: ids.map(property),
@@ -159,8 +204,8 @@ export const planRepositories = (
         optimisticConcurrency: readonly ? undefined : concurrencyToken(table, shape, property),
         enrichments,
         readonly,
-      },
-    ];
+      };
+    });
   });
   const usedMaps = new Set(
     spec.types.flatMap((type) => type.fields.filter((field) => field.isMap === true).map((field) => field.base)),
@@ -265,6 +310,9 @@ const relations = (
   const planned: PlannedEnrichment[] = [];
   for (const field of authored.fields) {
     if (!isCollectionField(field)) continue;
+    const pairs = referencePairs(field.references);
+    const keys = pairs.length > 1 ? compositeKeys(authored, field, pairs, expanded, property) : undefined;
+    const matched = keys?.[0];
     if (field.isMap === true) {
       const dict = expanded.get(field.base) ?? types.get(field.base);
       const owner = referenceOf(field.references);
@@ -284,13 +332,14 @@ const relations = (
       if (keyRef === undefined) throw new Error(`${dict.name}.key has no references`);
       planned.push({
         destination: property(field.name),
-        source: identity(authored.inherits ?? authored.name),
-        relatedKey: property(owner.field),
+        source: matched?.source ?? identity(authored.inherits ?? authored.name),
+        relatedKey: matched?.relatedKey ?? property(owner.field),
         relatedProperty: nested === undefined ? property(roleColumn("value")) : undefined,
         dictionaryKey: property(keyRef.field),
         kind: "dictionary",
         via: via.via,
         viaType: via.viaType,
+        ...(keys !== undefined ? { keys } : {}),
       });
       continue;
     }
@@ -299,7 +348,31 @@ const relations = (
     const target = types.get(ref.type);
     const other = target?.fields.find((item) => item.name !== ref.field && referenceOf(item.references) !== undefined);
     const otherRef = other === undefined ? undefined : referenceOf(other.references);
-    if (target?.tags.includes("many_to_many") === true && other !== undefined && otherRef !== undefined) {
+    const hostTable = authored.inherits ?? authored.name;
+    const graphSelf =
+      authored.tags.includes("graph") === true &&
+      field.base === authored.name &&
+      target?.tags.includes("many_to_many") === true &&
+      other !== undefined &&
+      otherRef !== undefined &&
+      (otherRef.type === hostTable || otherRef.type === authored.name);
+    const treeSelf = authored.tags.includes("tree") === true && field.base === authored.name;
+    if (graphSelf && other !== undefined && otherRef !== undefined) {
+      const via = named(otherRef.type);
+      const link = named(ref.type);
+      planned.push({
+        destination: property(field.name),
+        source: identity(hostTable),
+        relatedKey: identity(otherRef.type),
+        kind: "graph",
+        via: via.via,
+        viaType: via.viaType,
+        link: link.via,
+        linkType: link.viaType,
+        parentFk: property(ref.field),
+        relatedFk: property(other.name),
+      });
+    } else if (target?.tags.includes("many_to_many") === true && other !== undefined && otherRef !== undefined) {
       const via = named(otherRef.type);
       const link = named(ref.type);
       const relatedType = types.get(otherRef.type) ?? expanded.get(otherRef.type);
@@ -317,15 +390,29 @@ const relations = (
         parentFk: property(ref.field),
         relatedFk: property(other.name),
       });
+    } else if (treeSelf) {
+      const via = named(ref.type);
+      const treePairs = pairs.length > 1 ? treeKeys(authored, field, pairs, expanded, property) : undefined;
+      const first = treePairs?.[0];
+      planned.push({
+        destination: property(field.name),
+        source: first?.source ?? identity(hostTable),
+        relatedKey: first?.relatedKey ?? property(ref.field),
+        kind: "tree",
+        via: via.via,
+        viaType: via.viaType,
+        ...(treePairs !== undefined ? { keys: treePairs } : {}),
+      });
     } else {
       const via = named(ref.type);
       planned.push({
         destination: property(field.name),
-        source: identity(authored.inherits ?? authored.name),
-        relatedKey: property(ref.field),
+        source: matched?.source ?? identity(authored.inherits ?? authored.name),
+        relatedKey: matched?.relatedKey ?? property(ref.field),
         kind: "list",
         via: via.via,
         viaType: via.viaType,
+        ...(keys !== undefined ? { keys } : {}),
       });
     }
   }

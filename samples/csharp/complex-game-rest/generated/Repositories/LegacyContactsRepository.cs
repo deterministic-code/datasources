@@ -7,7 +7,7 @@ public sealed class LegacyContactsRepository : CRUDRepository<Backend.Types.View
     public static IReadonlyRepository<Backend.Types.View.LegacyContact> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.View.LegacyContact>(connection, Options());
 
-    static CRUDRepositoryOptions<Backend.Types.View.LegacyContact> Options() => new()
+    public static CRUDRepositoryOptions<Backend.Types.View.LegacyContact> Options() => new()
     {
         Entity = "LegacyContact",
         EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["LegacyContact"] = "legacy_contacts" }),

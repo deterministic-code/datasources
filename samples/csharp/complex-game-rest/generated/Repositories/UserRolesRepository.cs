@@ -7,7 +7,7 @@ public sealed class UserRolesRepository : CRUDRepository<Backend.Types.Datasourc
     public static IReadonlyRepository<Backend.Types.Datasource.UserRole> CreateReadonly(IConnection connection) =>
         new ReadonlyRepository<Backend.Types.Datasource.UserRole>(connection, Options(connection));
 
-    static CRUDRepositoryOptions<Backend.Types.Datasource.UserRole> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.Datasource.UserRole> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.Datasource.UserRole>()
             .Add(new()
             {

@@ -20,7 +20,7 @@ public sealed class PhonesRepository : CRUDRepository<Backend.Types.View.Phone>
         return repo;
     }
 
-    static CRUDRepositoryOptions<Backend.Types.View.Phone> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.View.Phone> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.Phone>()
             .Add(new()
             {
