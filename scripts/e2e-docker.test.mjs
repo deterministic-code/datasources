@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const scripts = dirname(fileURLToPath(import.meta.url));
 const driver = join(scripts, "e2e-docker.sh");
 
-const runDriver = (args, { sleep = "0", fail = "" } = {}) => {
+const runDriver = (args, { sleep = "0", fail = "", diff = "" } = {}) => {
   const home = mkdtempSync(join(tmpdir(), "e2e-docker-"));
   const bin = join(home, "bin");
   const log = join(home, "docker.log");
@@ -30,6 +30,10 @@ case " $* " in
     unlock
     sleep "$FAKE_DOCKER_SLEEP"
     if [ "$COMPOSE_PROJECT_NAME" = "$FAKE_DOCKER_FAIL" ]; then
+      exit 1
+    fi
+    if [ "$COMPOSE_PROJECT_NAME" = "$FAKE_DOCKER_DIFF" ]; then
+      printf '%s\\n' '--- expected.txt' '+++ -' '-created 1 Ada' '+created 3 Ada'
       exit 1
     fi
     lock
@@ -54,6 +58,7 @@ exit 0
         DOCKER_LOCK: lock,
         FAKE_DOCKER_SLEEP: sleep,
         FAKE_DOCKER_FAIL: fail,
+        FAKE_DOCKER_DIFF: diff,
       },
     }),
   };
@@ -97,25 +102,37 @@ test("samples share a slot cap, rust stays single, and both scripts run in one c
   assert.ok(max >= 2 && max <= 3, `max ${max}`);
 });
 
-test("--local stays serial so CLI installs do not share one checkout", () => {
-  const { log, result } = runDriver(["--local", "typescript"], { sleep: "0.4" });
+test("--local shares a slot cap, rust stays single, and both scripts run in one container", () => {
+  const { log, result } = runDriver(["--local"], { sleep: "0.6" });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  const runs = readFileSync(log, "utf8")
-    .split("\n")
-    .filter((line) => line.includes("sqlite.sh --local && sh mysql-postgres.sh --local"));
-  assert.equal(runs.length, 4);
-  assert.equal(overlap(log).max, 1);
+  const text = readFileSync(log, "utf8");
+  const runs = text.split("\n").filter((line) => line.includes("sqlite.sh --local && sh mysql-postgres.sh --local"));
+  assert.equal(runs.length, 12);
+  const { max, maxRust } = overlap(log);
+  assert.equal(maxRust, 1);
+  assert.ok(max >= 2 && max <= 3, `max ${max}`);
 });
 
-test("--local installs the CLI once per sample and still runs both scripts", () => {
+test("--local prepares the CLI once and mounts the checkout read-only", () => {
   const { log, result } = runDriver(["--local", "samples/typescript/contacts-simple-cli"]);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  const runs = readFileSync(log, "utf8")
-    .split("\n")
-    .filter((line) => line.includes("compose run"));
+  const text = readFileSync(log, "utf8");
+  const prepares = text.split("\n").filter((line) => line.includes("npm run prepare --prefix"));
+  assert.equal(prepares.length, 1);
+  assert.match(
+    prepares[0],
+    /npm install --prefix \/datasources\/cli && npm run prepare --prefix \/datasources\/cli && npm install --prefix \/datasources\/typescript && npm run build --prefix \/datasources\/typescript/,
+  );
+  const runs = text.split("\n").filter((line) => line.includes("compose run"));
   assert.equal(runs.length, 1);
-  assert.match(runs[0], /\/datasources\/cli\/node_modules/);
-  assert.match(runs[0], /npm run prepare --prefix/);
+  assert.match(runs[0], /:\/datasources:ro/);
+  assert.match(runs[0], /\/cli:\/datasources\/cli:ro/);
+  assert.match(runs[0], /\/typescript:\/datasources\/typescript:ro/);
+  assert.match(runs[0], /\/csharp:\/datasources\/csharp:ro/);
+  assert.match(runs[0], /DATASOURCES_BUILD_ROOT=\/tmp\/datasources-build/);
+  assert.match(runs[0], /DATASOURCES_TS_PREBUILT=1/);
+  assert.equal(runs[0].includes("npm install --prefix"), false);
+  assert.equal(runs[0].includes("cp -R"), false);
   assert.match(runs[0], /sqlite\.sh --local && sh mysql-postgres\.sh --local/);
 });
 
@@ -140,13 +157,23 @@ test("csharp compose isolates global packages per project", () => {
   for (const file of files) {
     const text = readFileSync(join(root, file), "utf8");
     assert.match(text, /NUGET_PACKAGES: \/nuget\/packages\/\$\{COMPOSE_PROJECT_NAME/);
+    assert.match(text, /NUGET_HTTP_CACHE_PATH: \/nuget\/http-cache\/\$\{COMPOSE_PROJECT_NAME/);
     assert.equal(text.includes("NUGET_PACKAGES: /nuget\n"), false, file);
+    assert.equal(text.includes("NUGET_HTTP_CACHE_PATH: /nuget/http-cache\n"), false, file);
   }
 });
 
 test("a failing sample exits non-zero", () => {
   const { result } = runDriver(["typescript"], {
     fail: "e2e-samples-typescript-contacts-simple-cli",
+  });
+  assert.notEqual(result.status, 0);
+  assert.equal(result.error, undefined);
+});
+
+test("an expected.txt diff exits non-zero", () => {
+  const { result } = runDriver(["typescript"], {
+    diff: "e2e-samples-typescript-contacts-simple-cli",
   });
   assert.notEqual(result.status, 0);
   assert.equal(result.error, undefined);

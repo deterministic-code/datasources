@@ -50,15 +50,19 @@ const generatorPkgs = [
   "@deterministic-code/deterministic-generators-common",
 ];
 
+const localPackages = (names: Provider[]): string[] => [
+  "typescript/datasources",
+  "typescript/code-generators",
+  ...names.map((name) => `typescript/providers/${name}`),
+];
+
 const localBuild = (local: LocalInstall, names: Provider[]): Proc[] =>
-  [
-    "typescript/datasources",
-    "typescript/code-generators",
-    ...names.map((name) => `typescript/providers/${name}`),
-  ].map((path) => ({
-    command: "npm",
-    args: ["run", "build", "--prefix", resolve(local.repo, path)],
-  }));
+  process.env.DATASOURCES_TS_PREBUILT
+    ? []
+    : localPackages(names).map((path) => ({
+        command: "npm",
+        args: ["run", "build", "--prefix", resolve(local.repo, path)],
+      }));
 
 const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
   ...(local ? localBuild(local, names) : []),
@@ -69,9 +73,7 @@ const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
       ...(local
         ? [
             "--install-links",
-            fileSpec(local, "typescript/datasources"),
-            fileSpec(local, "typescript/code-generators"),
-            ...names.map((name) => fileSpec(local, `typescript/providers/${name}`)),
+            ...localPackages(names).map((path) => fileSpec(local, path)),
             ...generatorPkgs,
           ]
         : [host.ts.core, ...names.map((name) => catalog[name].npm)]),

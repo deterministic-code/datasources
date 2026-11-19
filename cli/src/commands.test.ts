@@ -172,4 +172,27 @@ describe("commands", () => {
       `file:${resolve(".", "typescript/providers/sqlite")}`,
     ]);
   });
+
+  it("skips TypeScript package builds when DATASOURCES_TS_PREBUILT is set", () => {
+    const root = cliDatasourcesRepo;
+    const local = { repo: root, cwd: "app" };
+    const previous = process.env.DATASOURCES_TS_PREBUILT;
+    process.env.DATASOURCES_TS_PREBUILT = "1";
+    try {
+      expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local).map((c) => c.args)).toEqual([
+        [
+          "install",
+          "--install-links",
+          `file:${resolve(root, "typescript/datasources")}`,
+          `file:${resolve(root, "typescript/code-generators")}`,
+          `file:${resolve(root, "typescript/providers/sqlite")}`,
+          "@deterministic-code/generators-common",
+          "@deterministic-code/deterministic-generators-common",
+        ],
+      ]);
+    } finally {
+      if (previous === undefined) delete process.env.DATASOURCES_TS_PREBUILT;
+      else process.env.DATASOURCES_TS_PREBUILT = previous;
+    }
+  });
 });
