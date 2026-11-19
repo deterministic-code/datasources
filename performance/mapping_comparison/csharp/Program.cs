@@ -12,10 +12,9 @@ var readIters = int.Parse(Environment.GetEnvironmentVariable("PERF_READ_ITERS") 
 var batched = provider == "sqlite";
 _ = Datasource.Default;
 var startupMs = processClock.Elapsed.TotalMilliseconds;
-var results = await Task.WhenAll(
-    PerformanceTestDefaultRead(),
-    PerformanceTestDictionaryRead(),
-    PerformanceTestPropertyMappedRead());
+var defaultRead = await PerformanceTestDefaultRead();
+var dictionaryRead = await PerformanceTestDictionaryRead();
+var propertyMappedRead = await PerformanceTestPropertyMappedRead();
 Console.WriteLine(JsonSerializer.Serialize(new
 {
     sample = "mapping_comparison",
@@ -24,8 +23,15 @@ Console.WriteLine(JsonSerializer.Serialize(new
     rows,
     chunk = Math.Min(chunk, rows),
     startupMs,
-    tests = new { defaultRead = results[0], dictionaryRead = results[1], propertyMappedRead = results[2] },
+    tests = new { defaultRead, dictionaryRead, propertyMappedRead },
 }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+
+double CpuMs()
+{
+    var process = Process.GetCurrentProcess();
+    process.Refresh();
+    return process.TotalProcessorTime.TotalMilliseconds;
+}
 
 async Task<object> PerformanceTestDefaultRead()
 {
@@ -38,6 +44,7 @@ async Task<object> PerformanceTestDefaultRead()
     var connection = await ds.CreateConnection();
     await connection.Open();
     double seedMs = 0;
+    double seedCpuMs = 0;
     try
     {
         var addressesBulk = batched
@@ -54,28 +61,31 @@ async Task<object> PerformanceTestDefaultRead()
         async Task Setup()
         {
             var seeded = SeedContacts(rows);
+            var cpu = CpuMs();
             var clock = Stopwatch.StartNew();
             for (var at = 0; at < seeded.Count; at += chunk)
                 await contactsBulk.Create(seeded.GetRange(at, Math.Min(chunk, seeded.Count - at)));
             seedMs = clock.Elapsed.TotalMilliseconds;
+            seedCpuMs = CpuMs() - cpu;
             await CountContacts(connection);
         }
-        async Task<(double ms, double perSec, object counts)> PerformanceDefaultRead()
+        async Task<(double ms, double cpuMs, double perSec, object counts)> PerformanceDefaultRead()
         {
             var repo = ds.CreateRepository<Contact>("Contacts");
             var loaded = await Collect(repo.Read());
             Check(loaded, "default");
             var times = new List<double>();
+            var cpu = CpuMs();
             for (var iter = 0; iter < readIters; iter++)
             {
                 var clock = Stopwatch.StartNew();
                 loaded = await Collect(repo.Read());
-                Check(loaded, "default");
                 times.Add(clock.Elapsed.TotalMilliseconds);
             }
-            times.Sort();
-            var ms = times.Count % 2 == 1 ? times[times.Count / 2] : (times[times.Count / 2 - 1] + times[times.Count / 2]) / 2;
-            return (ms, rows / (ms / 1000), new { contacts = loaded.Count, addresses = loaded.Sum(row => row.Addresses.Count), emails = loaded.Sum(row => row.Emails.Count) });
+            var cpuMs = CpuMs() - cpu;
+            Check(loaded, "default");
+            var ms = times.Average();
+            return (ms, cpuMs, rows / (ms / 1000), new { contacts = loaded.Count, addresses = loaded.Sum(row => row.Addresses.Count), emails = loaded.Sum(row => row.Emails.Count) });
         }
         async Task Teardown()
         {
@@ -85,7 +95,7 @@ async Task<object> PerformanceTestDefaultRead()
         await Setup();
         var read = await PerformanceDefaultRead();
         await Teardown();
-        return new { seedMs, readMs = read.ms, readPerSec = read.perSec, read.counts };
+        return new { seedMs, seedCpuMs, readMs = read.ms, readCpuMs = read.cpuMs, readPerSec = read.perSec, read.counts };
     }
     finally
     {
@@ -104,6 +114,7 @@ async Task<object> PerformanceTestDictionaryRead()
     var connection = await ds.CreateConnection();
     await connection.Open();
     double seedMs = 0;
+    double seedCpuMs = 0;
     try
     {
         var snake = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
@@ -112,74 +123,8 @@ async Task<object> PerformanceTestDictionaryRead()
             "Id", "Uuid", "Created", "Updated", "Version", "Name", "GivenName", "AdditionalName", "Pronunciation",
             "FamilyName", "NickName", "JobTitle", "Organization", "IsStarred", "IsFavorite", "IsDeleted", "GenderTypeId",
         ];
-        string[] addressColumns =
-        [
-            "Id", "Uuid", "Created", "Updated", "Version", "ContactId", "DisplayName", "Line1", "Line2", "Line3",
-            "Neighborhood", "District", "City", "StateProvince", "PostalCode", "CountryCode", "FormattedAddress",
-            "Latitude", "Longitude", "IsPrimary",
-        ];
-        string[] emailColumns =
-        [
-            "Id", "Uuid", "Created", "Updated", "Version", "EmailTypeId", "ContactId", "Address", "DisplayName", "IsPrimary",
-        ];
         DictionaryMapper<string> Props(IEnumerable<string> names) =>
             new(names.ToDictionary(name => name, name => snake.Map(name)));
-        var contactSchema = new Schema(new Dictionary<string, SchemaColumn>
-        {
-            ["Id"] = new("integer", false, false, true),
-            ["Uuid"] = new("uuid", false, true),
-            ["Created"] = new("datetime", false, true),
-            ["Updated"] = new("datetime", false, true),
-            ["Version"] = new("binary", false, true),
-            ["Name"] = new("string", false, false),
-            ["GivenName"] = new("string", false, false),
-            ["AdditionalName"] = new("string", false, true),
-            ["Pronunciation"] = new("string", false, true),
-            ["FamilyName"] = new("string", false, true),
-            ["NickName"] = new("string", false, true),
-            ["JobTitle"] = new("string", false, true),
-            ["Organization"] = new("string", false, true),
-            ["IsStarred"] = new("boolean", false, false),
-            ["IsFavorite"] = new("boolean", false, false),
-            ["IsDeleted"] = new("boolean", false, false),
-            ["GenderTypeId"] = new("integer", false, false),
-        });
-        var addressSchema = new Schema(new Dictionary<string, SchemaColumn>
-        {
-            ["Id"] = new("integer", false, false, true),
-            ["Uuid"] = new("uuid", false, true),
-            ["Created"] = new("datetime", false, true),
-            ["Updated"] = new("datetime", false, true),
-            ["Version"] = new("binary", false, true),
-            ["ContactId"] = new("integer", false, false),
-            ["DisplayName"] = new("string", false, true),
-            ["Line1"] = new("string", false, false),
-            ["Line2"] = new("string", false, true),
-            ["Line3"] = new("string", false, true),
-            ["Neighborhood"] = new("string", false, true),
-            ["District"] = new("string", false, true),
-            ["City"] = new("string", false, false),
-            ["StateProvince"] = new("string", false, true),
-            ["PostalCode"] = new("string", false, true),
-            ["CountryCode"] = new("string", false, false),
-            ["FormattedAddress"] = new("string", false, true),
-            ["Latitude"] = new("decimal", true, false),
-            ["Longitude"] = new("decimal", true, false),
-            ["IsPrimary"] = new("boolean", false, true),
-        });
-        var emailSchema = new Schema(new Dictionary<string, SchemaColumn>
-        {
-            ["Id"] = new("integer", false, false, true),
-            ["Uuid"] = new("uuid", false, true),
-            ["Created"] = new("datetime", false, true),
-            ["Updated"] = new("datetime", false, true),
-            ["Version"] = new("binary", false, true),
-            ["EmailTypeId"] = new("integer", false, false),
-            ["ContactId"] = new("integer", false, false),
-            ["Address"] = new("string", false, false),
-            ["DisplayName"] = new("string", false, true),
-            ["IsPrimary"] = new("boolean", false, false),
-        });
         var addressesBulk = batched
             ? new BulkCRUDRepository<Address>(connection, AddressesRepository.Options(), new BatchCommandIBulkWriteStrategy<Address>())
             : new BulkCRUDRepository<Address>(connection, AddressesRepository.Options(), new StoredProcedureBulkWriteStrategy<Address>("bulk_create_addresses", "bulk_update_addresses", "bulk_delete_addresses"));
@@ -191,56 +136,74 @@ async Task<object> PerformanceTestDictionaryRead()
             : new BulkCRUDRepository<Contact>(connection, ContactsRepository.Options(), new StoredProcedureBulkWriteStrategy<Contact>("bulk_create_contacts", "bulk_update_contacts", "bulk_delete_contacts"));
         contactsBulk.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), addressesBulk);
         contactsBulk.AddEnriched(new("Emails", "Id", "ContactId", Type: EnrichmentPropertyType.List), emailsBulk);
-        var addresses = new ReadonlyRepository<Address>(connection, new()
-        {
-            Entity = "Address",
-            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Address"] = "addresses" }),
-            PropertyMappings = Props(addressColumns),
-            ReadProperties = addressColumns,
-            Schema = addressSchema,
-        });
-        var emails = new ReadonlyRepository<Email>(connection, new()
-        {
-            Entity = "Email",
-            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Email"] = "emails" }),
-            PropertyMappings = Props(emailColumns),
-            ReadProperties = emailColumns,
-            Schema = emailSchema,
-        });
         var contacts = new ReadonlyRepository<Contact>(connection, new()
         {
             Entity = "Contact",
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts" }),
             PropertyMappings = Props(contactColumns),
             ReadProperties = contactColumns,
-            Schema = contactSchema,
+            Schema = new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["Id"] = new("integer", false, false, true),
+                ["Uuid"] = new("uuid", false, true),
+                ["Created"] = new("datetime", false, true),
+                ["Updated"] = new("datetime", false, true),
+                ["Version"] = new("binary", false, true),
+                ["Name"] = new("string", false, false),
+                ["GivenName"] = new("string", false, false),
+                ["AdditionalName"] = new("string", false, true),
+                ["Pronunciation"] = new("string", false, true),
+                ["FamilyName"] = new("string", false, true),
+                ["NickName"] = new("string", false, true),
+                ["JobTitle"] = new("string", false, true),
+                ["Organization"] = new("string", false, true),
+                ["IsStarred"] = new("boolean", false, false),
+                ["IsFavorite"] = new("boolean", false, false),
+                ["IsDeleted"] = new("boolean", false, false),
+                ["GenderTypeId"] = new("integer", false, false),
+            }),
         });
-        contacts.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), addresses);
-        contacts.AddEnriched(new("Emails", "Id", "ContactId", Type: EnrichmentPropertyType.List), emails);
+        var Address = new AddressesRepository(connection);
+        var Email = new EmailsRepository(connection);
+        var Phone = new PhonesRepository(connection);
+        var ContactAttribute = new ContactAttributesRepository(connection);
+        var Label = new LabelsRepository(connection);
+        var ContactLabel = new ContactLabelsRepository(connection);
+        contacts.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), Address);
+        contacts.AddEnriched(new("Emails", "Id", "ContactId", Type: EnrichmentPropertyType.List), Email);
+        contacts.AddEnriched(new("Phones", "Id", "ContactId", Type: EnrichmentPropertyType.List), Phone);
+        contacts.AddEnriched(new("Attributes", "Id", "ContactId", "Value", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"), ContactAttribute);
+        contacts.AddEnriched(
+            new("Labels", "Id", "Id", "Name", Type: EnrichmentPropertyType.List, Association: new("ContactId", "LabelId")),
+            Label,
+            new GraphReadonlyEnrichmentStrategy<Contact, Backend.Types.Datasource.ContactLabel>(ContactLabel));
         async Task Setup()
         {
             var seeded = SeedContacts(rows);
+            var cpu = CpuMs();
             var clock = Stopwatch.StartNew();
             for (var at = 0; at < seeded.Count; at += chunk)
                 await contactsBulk.Create(seeded.GetRange(at, Math.Min(chunk, seeded.Count - at)));
             seedMs = clock.Elapsed.TotalMilliseconds;
+            seedCpuMs = CpuMs() - cpu;
             await CountContacts(connection);
         }
-        async Task<(double ms, double perSec, object counts)> PerformanceDictionaryRead()
+        async Task<(double ms, double cpuMs, double perSec, object counts)> PerformanceDictionaryRead()
         {
             var loaded = await Collect(contacts.Read());
             Check(loaded, "dictionary");
             var times = new List<double>();
+            var cpu = CpuMs();
             for (var iter = 0; iter < readIters; iter++)
             {
                 var clock = Stopwatch.StartNew();
                 loaded = await Collect(contacts.Read());
-                Check(loaded, "dictionary");
                 times.Add(clock.Elapsed.TotalMilliseconds);
             }
-            times.Sort();
-            var ms = times.Count % 2 == 1 ? times[times.Count / 2] : (times[times.Count / 2 - 1] + times[times.Count / 2]) / 2;
-            return (ms, rows / (ms / 1000), new { contacts = loaded.Count, addresses = loaded.Sum(row => row.Addresses.Count), emails = loaded.Sum(row => row.Emails.Count) });
+            var cpuMs = CpuMs() - cpu;
+            Check(loaded, "dictionary");
+            var ms = times.Average();
+            return (ms, cpuMs, rows / (ms / 1000), new { contacts = loaded.Count, addresses = loaded.Sum(row => row.Addresses.Count), emails = loaded.Sum(row => row.Emails.Count) });
         }
         async Task Teardown()
         {
@@ -250,7 +213,7 @@ async Task<object> PerformanceTestDictionaryRead()
         await Setup();
         var read = await PerformanceDictionaryRead();
         await Teardown();
-        return new { seedMs, readMs = read.ms, readPerSec = read.perSec, read.counts };
+        return new { seedMs, seedCpuMs, readMs = read.ms, readCpuMs = read.cpuMs, readPerSec = read.perSec, read.counts };
     }
     finally
     {
@@ -269,6 +232,7 @@ async Task<object> PerformanceTestPropertyMappedRead()
     var connection = await ds.CreateConnection();
     await connection.Open();
     double seedMs = 0;
+    double seedCpuMs = 0;
     try
     {
         var addressesBulk = batched
@@ -285,28 +249,31 @@ async Task<object> PerformanceTestPropertyMappedRead()
         async Task Setup()
         {
             var seeded = SeedContacts(rows);
+            var cpu = CpuMs();
             var clock = Stopwatch.StartNew();
             for (var at = 0; at < seeded.Count; at += chunk)
                 await contactsBulk.Create(seeded.GetRange(at, Math.Min(chunk, seeded.Count - at)));
             seedMs = clock.Elapsed.TotalMilliseconds;
+            seedCpuMs = CpuMs() - cpu;
             await CountContacts(connection);
         }
-        async Task<(double ms, double perSec, object counts)> PerformancePropertyMappedRead()
+        async Task<(double ms, double cpuMs, double perSec, object counts)> PerformancePropertyMappedRead()
         {
             var repo = ContactsRepository.CreateReadonly(connection);
             var loaded = await Collect(repo.Read());
             Check(loaded, "propertyMapped");
             var times = new List<double>();
+            var cpu = CpuMs();
             for (var iter = 0; iter < readIters; iter++)
             {
                 var clock = Stopwatch.StartNew();
                 loaded = await Collect(repo.Read());
-                Check(loaded, "propertyMapped");
                 times.Add(clock.Elapsed.TotalMilliseconds);
             }
-            times.Sort();
-            var ms = times.Count % 2 == 1 ? times[times.Count / 2] : (times[times.Count / 2 - 1] + times[times.Count / 2]) / 2;
-            return (ms, rows / (ms / 1000), new { contacts = loaded.Count, addresses = loaded.Sum(row => row.Addresses.Count), emails = loaded.Sum(row => row.Emails.Count) });
+            var cpuMs = CpuMs() - cpu;
+            Check(loaded, "propertyMapped");
+            var ms = times.Average();
+            return (ms, cpuMs, rows / (ms / 1000), new { contacts = loaded.Count, addresses = loaded.Sum(row => row.Addresses.Count), emails = loaded.Sum(row => row.Emails.Count) });
         }
         async Task Teardown()
         {
@@ -316,7 +283,7 @@ async Task<object> PerformanceTestPropertyMappedRead()
         await Setup();
         var read = await PerformancePropertyMappedRead();
         await Teardown();
-        return new { seedMs, readMs = read.ms, readPerSec = read.perSec, read.counts };
+        return new { seedMs, seedCpuMs, readMs = read.ms, readCpuMs = read.cpuMs, readPerSec = read.perSec, read.counts };
     }
     finally
     {
@@ -429,7 +396,7 @@ static string WithDatasource(string url, string name)
 static async Task Exec(IConnection connection, string sql) =>
     await connection.CreateCommand().Execute(Native.N(sql));
 
-async Task<object> CountContacts(IConnection connection)
+async Task CountContacts(IConnection connection)
 {
     var reader = await connection.CreateCommand().ExecuteReader(Native.N("SELECT COUNT(*) AS n FROM contacts"));
     try
@@ -437,7 +404,6 @@ async Task<object> CountContacts(IConnection connection)
         await reader.Next();
         var contacts = Convert.ToInt32(reader.Current!["n"].ToObject());
         if (contacts != rows) throw new InvalidOperationException($"create count contacts={contacts}");
-        return new { contacts };
     }
     finally
     {
@@ -464,6 +430,8 @@ void Check(List<Contact> loaded, string label)
     {
         if (row.Addresses.Count != 2 || row.Emails.Count != 2)
             throw new InvalidOperationException($"{label} related {row.GivenName}");
+        if (row.Phones.Count != 0 || row.Attributes.Count != 0 || row.Labels.Count != 0)
+            throw new InvalidOperationException($"{label} empty fills {row.GivenName}");
         if (row.Uuid == Guid.Empty || row.Addresses.Any(item => item.Uuid == Guid.Empty) || row.Emails.Any(item => item.Uuid == Guid.Empty))
             throw new InvalidOperationException($"{label} uuid {row.GivenName}");
         if (!Mapped(row.Created) || !Mapped(row.Updated)

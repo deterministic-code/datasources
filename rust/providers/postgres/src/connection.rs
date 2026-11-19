@@ -6,7 +6,35 @@ use datasources::{
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tokio_postgres::NoTls;
+use tokio_postgres::types::Type;
+use tokio_postgres::{Client, NoTls, Statement};
+
+pub(crate) struct PostgresSession {
+    pub(crate) client: Client,
+    statements: HashMap<String, Statement>,
+}
+
+impl PostgresSession {
+    fn new(client: Client) -> Self {
+        Self {
+            client,
+            statements: HashMap::new(),
+        }
+    }
+
+    pub(crate) async fn prepared(&mut self, sql: &str, types: &[Type]) -> Result<Statement> {
+        if let Some(statement) = self.statements.get(sql) {
+            return Ok(statement.clone());
+        }
+        let statement = self
+            .client
+            .prepare_typed(sql, types)
+            .await
+            .map_err(map_err)?;
+        self.statements.insert(sql.to_string(), statement.clone());
+        Ok(statement)
+    }
+}
 
 pub(crate) fn isolation_sql(isolation: IsolationLevel) -> &'static str {
     match isolation {
@@ -32,7 +60,7 @@ pub struct PostgresConnection {
     pub url: String,
     pub schema: Option<String>,
     pub(crate) opened: Arc<Mutex<bool>>,
-    pub(crate) client: Arc<tokio::sync::Mutex<Option<tokio_postgres::Client>>>,
+    pub(crate) client: Arc<tokio::sync::Mutex<Option<PostgresSession>>>,
     pub(crate) ready: Arc<tokio::sync::Notify>,
 }
 
@@ -68,7 +96,7 @@ impl PostgresConnection {
 
     pub(crate) async fn lock_client(
         &self,
-    ) -> Result<tokio::sync::MutexGuard<'_, Option<tokio_postgres::Client>>> {
+    ) -> Result<tokio::sync::MutexGuard<'_, Option<PostgresSession>>> {
         loop {
             let notified = self.ready.notified();
             tokio::pin!(notified);
@@ -94,10 +122,10 @@ impl PostgresConnection {
 
     pub(crate) async fn exec(&self, sql: &str) -> Result<()> {
         let slot = self.lock_client().await?;
-        let client = slot
+        let session = slot
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        client.batch_execute(sql).await.map_err(map_err)
+        session.client.batch_execute(sql).await.map_err(map_err)
     }
 }
 
@@ -140,7 +168,7 @@ impl Connection for PostgresConnection {
                 .await
                 .map_err(map_err)?;
         }
-        *slot = Some(client);
+        *slot = Some(PostgresSession::new(client));
         drop(slot);
         *self.opened.lock().unwrap() = true;
         Ok(())

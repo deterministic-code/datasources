@@ -6,6 +6,7 @@ import {
   DatasourceFactory,
   DatasourceUrlParser,
   DictionaryMapper,
+  GraphReadonlyEnrichmentStrategy,
   Native,
   ReadonlyRepository,
   Schema,
@@ -18,7 +19,13 @@ import {
 import { unlinkSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import "../generated/repositories/repositoryRegistry.ts";
+import { AddressesRepository } from "../generated/repositories/addressesRepository.ts";
+import { ContactAttributesRepository } from "../generated/repositories/contactAttributesRepository.ts";
+import { ContactLabelsRepository } from "../generated/repositories/contactLabelsRepository.ts";
 import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
+import { EmailsRepository } from "../generated/repositories/emailsRepository.ts";
+import { LabelsRepository } from "../generated/repositories/labelsRepository.ts";
+import { PhonesRepository } from "../generated/repositories/phonesRepository.ts";
 import { Address, address } from "../generated/types/view/address.ts";
 import { Contact, contact } from "../generated/types/view/contact.ts";
 import { Email, email } from "../generated/types/view/email.ts";
@@ -30,6 +37,7 @@ const rows = Number(process.env.PERF_ROWS ?? 25000);
 const chunk = Number(process.env.PERF_CHUNK ?? 500);
 const readIters = Number(process.env.PERF_READ_ITERS ?? 3);
 Datasource.default;
+const startupMs = performance.now() - processStarted;
 
 const of = <T extends object>(create: string, update: string, remove: string): IBulkWriteStrategy<T> => {
   if (provider === "sqlite") return new BatchCommandIBulkWriteStrategy<T>();
@@ -40,10 +48,11 @@ const each = async <T>(items: T[], write: (batch: T[]) => Promise<unknown>) => {
   for (let at = 0; at < items.length; at += chunk) await write(items.slice(at, at + chunk));
 };
 
-const median = (values: number[]) => {
-  const sorted = [...values].sort((left, right) => left - right);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+
+const cpuMs = (from: NodeJS.CpuUsage) => {
+  const used = process.cpuUsage(from);
+  return (used.user + used.system) / 1000;
 };
 
 const seedContacts = (total: number) => {
@@ -51,20 +60,20 @@ const seedContacts = (total: number) => {
   for (let i = 1; i <= total; i++) {
     contacts.push(
       contact({
-        name: `Contact ${i}`,
-        givenName: `Given${i}`,
-        familyName: `Family${i}`,
-        genderTypeId: 1 + (i % 3),
-        isStarred: i % 2 === 0,
-        isFavorite: i % 3 === 0,
-        isDeleted: i % 5 === 0,
-        addresses: [
-          address({ line1: `${i} Line 1`, city: `City${i % 50}`, countryCode: "US", isPrimary: true, latitude: null, longitude: null }),
-          address({ line1: `${i} Line 2`, city: `City${(i + 1) % 50}`, countryCode: "US", isPrimary: false, latitude: null, longitude: null }),
+        Name: `Contact ${i}`,
+        GivenName: `Given${i}`,
+        FamilyName: `Family${i}`,
+        GenderTypeId: 1 + (i % 3),
+        IsStarred: i % 2 === 0,
+        IsFavorite: i % 3 === 0,
+        IsDeleted: i % 5 === 0,
+        Addresses: [
+          address({ Line1: `${i} Line 1`, City: `City${i % 50}`, CountryCode: "US", IsPrimary: true, Latitude: null, Longitude: null }),
+          address({ Line1: `${i} Line 2`, City: `City${(i + 1) % 50}`, CountryCode: "US", IsPrimary: false, Latitude: null, Longitude: null }),
         ],
-        emails: [
-          email({ address: `c${i}.e1@example.com`, displayName: "Email 1", emailTypeId: 1, isPrimary: true }),
-          email({ address: `c${i}.e2@example.com`, displayName: "Email 2", emailTypeId: 2, isPrimary: false }),
+        Emails: [
+          email({ Address: `c${i}.e1@example.com`, DisplayName: "Email 1", EmailTypeId: 1, IsPrimary: true }),
+          email({ Address: `c${i}.e2@example.com`, DisplayName: "Email 2", EmailTypeId: 2, IsPrimary: false }),
         ],
       }),
     );
@@ -78,19 +87,21 @@ const mappedDate = (value: Date) => value instanceof Date && !Number.isNaN(value
 const check = (loaded: Contact[], label: string) => {
   if (loaded.length !== rows) throw new Error(`${label} count ${loaded.length}`);
   for (const row of loaded) {
-    if (row.addresses.length !== 2 || row.emails.length !== 2) throw new Error(`${label} related ${row.givenName}`);
-    if (!uuid.test(row.uuid) || row.addresses.some((item) => !uuid.test(item.uuid)) || row.emails.some((item) => !uuid.test(item.uuid)))
-      throw new Error(`${label} uuid ${row.givenName}`);
-    if (!mappedDate(row.created) || !mappedDate(row.updated)
-      || row.addresses.some((item) => !mappedDate(item.created) || !mappedDate(item.updated))
-      || row.emails.some((item) => !mappedDate(item.created) || !mappedDate(item.updated)))
-      throw new Error(`${label} datetime ${row.givenName}`);
-    if (!row.givenName.startsWith("Given")) throw new Error(`${label} givenName ${row.givenName}`);
-    const n = Number(row.givenName.slice("Given".length));
-    if (!Number.isInteger(n) || row.isStarred !== (n % 2 === 0) || row.isFavorite !== (n % 3 === 0) || row.isDeleted !== (n % 5 === 0))
-      throw new Error(`${label} boolean ${row.givenName}`);
-    if (!row.addresses[0]!.isPrimary || row.addresses[1]!.isPrimary || !row.emails[0]!.isPrimary || row.emails[1]!.isPrimary)
-      throw new Error(`${label} isPrimary ${row.givenName}`);
+    if (row.Addresses.length !== 2 || row.Emails.length !== 2) throw new Error(`${label} related ${row.GivenName}`);
+    if (row.Phones.length !== 0 || Object.keys(row.Attributes).length !== 0 || row.Labels.length !== 0)
+      throw new Error(`${label} empty fills ${row.GivenName}`);
+    if (!uuid.test(row.Uuid) || row.Addresses.some((item) => !uuid.test(item.Uuid)) || row.Emails.some((item) => !uuid.test(item.Uuid)))
+      throw new Error(`${label} uuid ${row.GivenName}`);
+    if (!mappedDate(row.Created) || !mappedDate(row.Updated)
+      || row.Addresses.some((item) => !mappedDate(item.Created) || !mappedDate(item.Updated))
+      || row.Emails.some((item) => !mappedDate(item.Created) || !mappedDate(item.Updated)))
+      throw new Error(`${label} datetime ${row.GivenName}`);
+    if (!row.GivenName.startsWith("Given")) throw new Error(`${label} givenName ${row.GivenName}`);
+    const n = Number(row.GivenName.slice("Given".length));
+    if (!Number.isInteger(n) || row.IsStarred !== (n % 2 === 0) || row.IsFavorite !== (n % 3 === 0) || row.IsDeleted !== (n % 5 === 0))
+      throw new Error(`${label} boolean ${row.GivenName}`);
+    if (!row.Addresses[0]!.IsPrimary || row.Addresses[1]!.IsPrimary || !row.Emails[0]!.IsPrimary || row.Emails[1]!.IsPrimary)
+      throw new Error(`${label} isPrimary ${row.GivenName}`);
   }
 };
 
@@ -200,147 +211,23 @@ const countContacts = async (connection: IConnection) => {
 };
 
 const contactsBulk = (connection: IConnection) => {
-  const sparseContact = new DictionaryMapper([
-    ["givenName", "given_name"],
-    ["additionalName", "additional_name"],
-    ["familyName", "family_name"],
-    ["nickName", "nick_name"],
-    ["jobTitle", "job_title"],
-    ["isStarred", "is_starred"],
-    ["isFavorite", "is_favorite"],
-    ["isDeleted", "is_deleted"],
-    ["genderTypeId", "gender_type_id"],
-  ]);
-  const sparseAddress = new DictionaryMapper([
-    ["contactId", "contact_id"],
-    ["displayName", "display_name"],
-    ["line1", "line_1"],
-    ["line2", "line_2"],
-    ["line3", "line_3"],
-    ["stateProvince", "state_province"],
-    ["postalCode", "postal_code"],
-    ["countryCode", "country_code"],
-    ["formattedAddress", "formatted_address"],
-    ["isPrimary", "is_primary"],
-  ]);
-  const sparseEmail = new DictionaryMapper([
-    ["contactId", "contact_id"],
-    ["displayName", "display_name"],
-    ["isPrimary", "is_primary"],
-    ["emailTypeId", "email_type_id"],
-  ]);
-  const contactColumns = [
-    "id", "uuid", "created", "updated", "version", "name", "givenName", "additionalName", "pronunciation",
-    "familyName", "nickName", "jobTitle", "organization", "isStarred", "isFavorite", "isDeleted", "genderTypeId",
-  ];
-  const addressColumns = [
-    "id", "uuid", "created", "updated", "version", "contactId", "displayName", "line1", "line2", "line3",
-    "neighborhood", "district", "city", "stateProvince", "postalCode", "countryCode", "formattedAddress",
-    "latitude", "longitude", "isPrimary",
-  ];
-  const emailColumns = [
-    "id", "uuid", "created", "updated", "version", "emailTypeId", "contactId", "address", "displayName", "isPrimary",
-  ];
-  const contactSchema = new Schema({
-    id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-    uuid: { type: "uuid", nullable: false, hasDefault: true },
-    created: { type: "datetime", nullable: false, hasDefault: true },
-    updated: { type: "datetime", nullable: false, hasDefault: true },
-    version: { type: "binary", nullable: false, hasDefault: true },
-    name: { type: "string", nullable: false, hasDefault: false },
-    givenName: { type: "string", nullable: false, hasDefault: false },
-    additionalName: { type: "string", nullable: false, hasDefault: true },
-    pronunciation: { type: "string", nullable: false, hasDefault: true },
-    familyName: { type: "string", nullable: false, hasDefault: true },
-    nickName: { type: "string", nullable: false, hasDefault: true },
-    jobTitle: { type: "string", nullable: false, hasDefault: true },
-    organization: { type: "string", nullable: false, hasDefault: true },
-    isStarred: { type: "boolean", nullable: false, hasDefault: false },
-    isFavorite: { type: "boolean", nullable: false, hasDefault: false },
-    isDeleted: { type: "boolean", nullable: false, hasDefault: false },
-    genderTypeId: { type: "integer", nullable: false, hasDefault: false },
-  });
-  const addressSchema = new Schema({
-    id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-    uuid: { type: "uuid", nullable: false, hasDefault: true },
-    created: { type: "datetime", nullable: false, hasDefault: true },
-    updated: { type: "datetime", nullable: false, hasDefault: true },
-    version: { type: "binary", nullable: false, hasDefault: true },
-    contactId: { type: "integer", nullable: false, hasDefault: false },
-    displayName: { type: "string", nullable: false, hasDefault: true },
-    line1: { type: "string", nullable: false, hasDefault: false },
-    line2: { type: "string", nullable: false, hasDefault: true },
-    line3: { type: "string", nullable: false, hasDefault: true },
-    neighborhood: { type: "string", nullable: false, hasDefault: true },
-    district: { type: "string", nullable: false, hasDefault: true },
-    city: { type: "string", nullable: false, hasDefault: false },
-    stateProvince: { type: "string", nullable: false, hasDefault: true },
-    postalCode: { type: "string", nullable: false, hasDefault: true },
-    countryCode: { type: "string", nullable: false, hasDefault: false },
-    formattedAddress: { type: "string", nullable: false, hasDefault: true },
-    latitude: { type: "decimal", nullable: true, hasDefault: false },
-    longitude: { type: "decimal", nullable: true, hasDefault: false },
-    isPrimary: { type: "boolean", nullable: false, hasDefault: true },
-  });
-  const emailSchema = new Schema({
-    id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-    uuid: { type: "uuid", nullable: false, hasDefault: true },
-    created: { type: "datetime", nullable: false, hasDefault: true },
-    updated: { type: "datetime", nullable: false, hasDefault: true },
-    version: { type: "binary", nullable: false, hasDefault: true },
-    emailTypeId: { type: "integer", nullable: false, hasDefault: false },
-    contactId: { type: "integer", nullable: false, hasDefault: false },
-    address: { type: "string", nullable: false, hasDefault: false },
-    displayName: { type: "string", nullable: false, hasDefault: true },
-    isPrimary: { type: "boolean", nullable: false, hasDefault: false },
-  });
   const addressesWrite = new BulkCRUDRepository(
     connection,
-    {
-      type: Address,
-      entity: "Address",
-      entityMapper: new DictionaryMapper([["Address", "addresses"]]),
-      propertyMappings: sparseAddress,
-      ids: ["id"],
-      createProperties: [...addressColumns],
-      updateProperties: [...addressColumns],
-      readProperties: [...addressColumns],
-      schema: addressSchema,
-    },
+    { type: Address, entity: "Address", entityMapper: new DictionaryMapper([["Address", "addresses"]]), propertyMappings: new DictionaryMapper([["Id", "id"], ["Uuid", "uuid"], ["Created", "created"], ["Updated", "updated"], ["Version", "version"], ["ContactId", "contact_id"], ["DisplayName", "display_name"], ["Line1", "line_1"], ["Line2", "line_2"], ["Line3", "line_3"], ["Neighborhood", "neighborhood"], ["District", "district"], ["City", "city"], ["StateProvince", "state_province"], ["PostalCode", "postal_code"], ["CountryCode", "country_code"], ["FormattedAddress", "formatted_address"], ["Latitude", "latitude"], ["Longitude", "longitude"], ["IsPrimary", "is_primary"]]), ids: ["Id"], createProperties: ["Uuid", "Created", "Updated", "Version", "ContactId", "DisplayName", "Line1", "Line2", "Line3", "Neighborhood", "District", "City", "StateProvince", "PostalCode", "CountryCode", "FormattedAddress", "Latitude", "Longitude", "IsPrimary"], updateProperties: ["Uuid", "Created", "Updated", "Version", "ContactId", "DisplayName", "Line1", "Line2", "Line3", "Neighborhood", "District", "City", "StateProvince", "PostalCode", "CountryCode", "FormattedAddress", "Latitude", "Longitude", "IsPrimary"], readProperties: ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "DisplayName", "Line1", "Line2", "Line3", "Neighborhood", "District", "City", "StateProvince", "PostalCode", "CountryCode", "FormattedAddress", "Latitude", "Longitude", "IsPrimary"], schema: new Schema({ Id: { type: "integer", nullable: false, hasDefault: false, isId: true }, Uuid: { type: "uuid", nullable: false, hasDefault: true }, Created: { type: "datetime", nullable: false, hasDefault: true }, Updated: { type: "datetime", nullable: false, hasDefault: true }, Version: { type: "binary", nullable: false, hasDefault: true }, ContactId: { type: "integer", nullable: false, hasDefault: false }, DisplayName: { type: "string", nullable: false, hasDefault: true }, Line1: { type: "string", nullable: false, hasDefault: false }, Line2: { type: "string", nullable: false, hasDefault: true }, Line3: { type: "string", nullable: false, hasDefault: true }, Neighborhood: { type: "string", nullable: false, hasDefault: true }, District: { type: "string", nullable: false, hasDefault: true }, City: { type: "string", nullable: false, hasDefault: false }, StateProvince: { type: "string", nullable: false, hasDefault: true }, PostalCode: { type: "string", nullable: false, hasDefault: true }, CountryCode: { type: "string", nullable: false, hasDefault: false }, FormattedAddress: { type: "string", nullable: false, hasDefault: true }, Latitude: { type: "decimal", nullable: true, hasDefault: false }, Longitude: { type: "decimal", nullable: true, hasDefault: false }, IsPrimary: { type: "boolean", nullable: false, hasDefault: true } }) },
     of<Address>("bulk_create_addresses", "bulk_update_addresses", "bulk_delete_addresses"),
   );
   const emailsWrite = new BulkCRUDRepository(
     connection,
-    {
-      type: Email,
-      entity: "Email",
-      entityMapper: new DictionaryMapper([["Email", "emails"]]),
-      propertyMappings: sparseEmail,
-      ids: ["id"],
-      createProperties: [...emailColumns],
-      updateProperties: [...emailColumns],
-      readProperties: [...emailColumns],
-      schema: emailSchema,
-    },
+    { type: Email, entity: "Email", entityMapper: new DictionaryMapper([["Email", "emails"]]), propertyMappings: new DictionaryMapper([["Id", "id"], ["Uuid", "uuid"], ["Created", "created"], ["Updated", "updated"], ["Version", "version"], ["EmailTypeId", "email_type_id"], ["ContactId", "contact_id"], ["Address", "address"], ["DisplayName", "display_name"], ["IsPrimary", "is_primary"]]), ids: ["Id"], createProperties: ["Uuid", "Created", "Updated", "Version", "EmailTypeId", "ContactId", "Address", "DisplayName", "IsPrimary"], updateProperties: ["Uuid", "Created", "Updated", "Version", "EmailTypeId", "ContactId", "Address", "DisplayName", "IsPrimary"], readProperties: ["Id", "Uuid", "Created", "Updated", "Version", "EmailTypeId", "ContactId", "Address", "DisplayName", "IsPrimary"], schema: new Schema({ Id: { type: "integer", nullable: false, hasDefault: false, isId: true }, Uuid: { type: "uuid", nullable: false, hasDefault: true }, Created: { type: "datetime", nullable: false, hasDefault: true }, Updated: { type: "datetime", nullable: false, hasDefault: true }, Version: { type: "binary", nullable: false, hasDefault: true }, EmailTypeId: { type: "integer", nullable: false, hasDefault: false }, ContactId: { type: "integer", nullable: false, hasDefault: false }, Address: { type: "string", nullable: false, hasDefault: false }, DisplayName: { type: "string", nullable: false, hasDefault: true }, IsPrimary: { type: "boolean", nullable: false, hasDefault: false }, EmailTypeName: { type: "string", nullable: false, hasDefault: false }, Description: { type: "string", nullable: false, hasDefault: true } }) },
     of<Email>("bulk_create_emails", "bulk_update_emails", "bulk_delete_emails"),
   );
   const bulk = new BulkCRUDRepository(
     connection,
-    {
-      type: Contact,
-      entity: "Contact",
-      entityMapper: new DictionaryMapper([["Contact", "contacts"]]),
-      propertyMappings: sparseContact,
-      ids: ["id"],
-      createProperties: [...contactColumns],
-      updateProperties: [...contactColumns],
-      readProperties: [...contactColumns],
-      schema: contactSchema,
-    },
+    { type: Contact, entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["Id", "id"], ["Uuid", "uuid"], ["Created", "created"], ["Updated", "updated"], ["Version", "version"], ["Name", "name"], ["GivenName", "given_name"], ["AdditionalName", "additional_name"], ["Pronunciation", "pronunciation"], ["FamilyName", "family_name"], ["NickName", "nick_name"], ["JobTitle", "job_title"], ["GenderTypeId", "gender_type_id"], ["Organization", "organization"], ["IsStarred", "is_starred"], ["IsFavorite", "is_favorite"], ["IsDeleted", "is_deleted"]]), ids: ["Id"], createProperties: ["Uuid", "Created", "Updated", "Version", "Name", "GivenName", "AdditionalName", "Pronunciation", "FamilyName", "NickName", "JobTitle", "GenderTypeId", "Organization", "IsStarred", "IsFavorite", "IsDeleted"], updateProperties: ["Uuid", "Created", "Updated", "Version", "Name", "GivenName", "AdditionalName", "Pronunciation", "FamilyName", "NickName", "JobTitle", "GenderTypeId", "Organization", "IsStarred", "IsFavorite", "IsDeleted"], readProperties: ["Id", "Uuid", "Created", "Updated", "Version", "Name", "GivenName", "AdditionalName", "Pronunciation", "FamilyName", "NickName", "JobTitle", "GenderTypeId", "Organization", "IsStarred", "IsFavorite", "IsDeleted"], schema: new Schema({ Id: { type: "integer", nullable: false, hasDefault: false, isId: true }, Uuid: { type: "uuid", nullable: false, hasDefault: true }, Created: { type: "datetime", nullable: false, hasDefault: true }, Updated: { type: "datetime", nullable: false, hasDefault: true }, Version: { type: "binary", nullable: false, hasDefault: true }, Name: { type: "string", nullable: false, hasDefault: false }, GivenName: { type: "string", nullable: false, hasDefault: false }, AdditionalName: { type: "string", nullable: false, hasDefault: true }, Pronunciation: { type: "string", nullable: false, hasDefault: true }, FamilyName: { type: "string", nullable: false, hasDefault: true }, NickName: { type: "string", nullable: false, hasDefault: true }, JobTitle: { type: "string", nullable: false, hasDefault: true }, GenderTypeId: { type: "integer", nullable: false, hasDefault: false }, Organization: { type: "string", nullable: false, hasDefault: true }, IsStarred: { type: "boolean", nullable: false, hasDefault: true }, IsFavorite: { type: "boolean", nullable: false, hasDefault: true }, IsDeleted: { type: "boolean", nullable: false, hasDefault: true } }) },
     of<Contact>("bulk_create_contacts", "bulk_update_contacts", "bulk_delete_contacts"),
   );
-  bulk.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, addressesWrite);
-  bulk.addEnriched({ destinationProperty: "emails", sourceProperty: "id", relatedKey: "contactId", type: "list" }, emailsWrite);
+  bulk.addEnriched({ destinationProperty: "Addresses", sourceProperty: "Id", relatedKey: "ContactId", type: "list" }, addressesWrite);
+  bulk.addEnriched({ destinationProperty: "Emails", sourceProperty: "Id", relatedKey: "ContactId", type: "list" }, emailsWrite);
   return bulk;
 };
 
@@ -350,31 +237,37 @@ const performanceTestDefaultRead = async () => {
   const connection = await ds.createConnection();
   await connection.open();
   let seedMs = 0;
+  let seedCpuMs = 0;
   try {
     const bulk = contactsBulk(connection);
     const setup = async () => {
       const seeded = seedContacts(rows);
+      const cpu = process.cpuUsage();
       const started = performance.now();
       await each(seeded, (batch) => bulk.createBulk(batch));
       seedMs = performance.now() - started;
+      seedCpuMs = cpuMs(cpu);
       await countContacts(connection);
     };
     const performanceDefaultRead = async () => {
-      const repo = ds.createRepository<Contact>("Contact", connection);
+      const repo = ds.createRepository<Contact>("Contacts");
       let loaded = await collectAsync(repo.read());
       check(loaded, "default");
       const times: number[] = [];
+      const cpu = process.cpuUsage();
       for (let iter = 0; iter < readIters; iter++) {
         const started = performance.now();
         loaded = await collectAsync(repo.read());
-        check(loaded, "default");
         times.push(performance.now() - started);
       }
-      const ms = median(times);
+      const cpuUsed = cpuMs(cpu);
+      check(loaded, "default");
+      const ms = average(times);
       return {
         ms,
+        cpuMs: cpuUsed,
         perSec: rows / (ms / 1000),
-        counts: { contacts: loaded.length, addresses: loaded.reduce((sum, row) => sum + row.addresses.length, 0), emails: loaded.reduce((sum, row) => sum + row.emails.length, 0) },
+        counts: { contacts: loaded.length, addresses: loaded.reduce((sum, row) => sum + row.Addresses.length, 0), emails: loaded.reduce((sum, row) => sum + row.Emails.length, 0) },
       };
     };
     const teardown = async () => {
@@ -384,7 +277,7 @@ const performanceTestDefaultRead = async () => {
     await setup();
     const read = await performanceDefaultRead();
     await teardown();
-    return { seedMs, readMs: read.ms, readPerSec: read.perSec, counts: read.counts };
+    return { seedMs, seedCpuMs, readMs: read.ms, readCpuMs: read.cpuMs, readPerSec: read.perSec, counts: read.counts };
   } finally {
     if (connection.isOpen) await connection.close().catch(() => undefined);
   }
@@ -396,123 +289,79 @@ const performanceTestDictionaryRead = async () => {
   const connection = await ds.createConnection();
   await connection.open();
   let seedMs = 0;
+  let seedCpuMs = 0;
   try {
-    const snake = new ChangeCasingMapper("camelCase", "snakeCase");
+    const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
     const props = (names: string[]) => new DictionaryMapper(names.map((name) => [name, snake.map(name)]));
     const contactColumns = [
-      "id", "uuid", "created", "updated", "version", "name", "givenName", "additionalName", "pronunciation",
-      "familyName", "nickName", "jobTitle", "organization", "isStarred", "isFavorite", "isDeleted", "genderTypeId",
+      "Id", "Uuid", "Created", "Updated", "Version", "Name", "GivenName", "AdditionalName", "Pronunciation",
+      "FamilyName", "NickName", "JobTitle", "Organization", "IsStarred", "IsFavorite", "IsDeleted", "GenderTypeId",
     ];
-    const addressColumns = [
-      "id", "uuid", "created", "updated", "version", "contactId", "displayName", "line1", "line2", "line3",
-      "neighborhood", "district", "city", "stateProvince", "postalCode", "countryCode", "formattedAddress",
-      "latitude", "longitude", "isPrimary",
-    ];
-    const emailColumns = [
-      "id", "uuid", "created", "updated", "version", "emailTypeId", "contactId", "address", "displayName", "isPrimary",
-    ];
-    const contactSchema = new Schema({
-      id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-      uuid: { type: "uuid", nullable: false, hasDefault: true },
-      created: { type: "datetime", nullable: false, hasDefault: true },
-      updated: { type: "datetime", nullable: false, hasDefault: true },
-      version: { type: "binary", nullable: false, hasDefault: true },
-      name: { type: "string", nullable: false, hasDefault: false },
-      givenName: { type: "string", nullable: false, hasDefault: false },
-      additionalName: { type: "string", nullable: false, hasDefault: true },
-      pronunciation: { type: "string", nullable: false, hasDefault: true },
-      familyName: { type: "string", nullable: false, hasDefault: true },
-      nickName: { type: "string", nullable: false, hasDefault: true },
-      jobTitle: { type: "string", nullable: false, hasDefault: true },
-      organization: { type: "string", nullable: false, hasDefault: true },
-      isStarred: { type: "boolean", nullable: false, hasDefault: false },
-      isFavorite: { type: "boolean", nullable: false, hasDefault: false },
-      isDeleted: { type: "boolean", nullable: false, hasDefault: false },
-      genderTypeId: { type: "integer", nullable: false, hasDefault: false },
-    });
-    const addressSchema = new Schema({
-      id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-      uuid: { type: "uuid", nullable: false, hasDefault: true },
-      created: { type: "datetime", nullable: false, hasDefault: true },
-      updated: { type: "datetime", nullable: false, hasDefault: true },
-      version: { type: "binary", nullable: false, hasDefault: true },
-      contactId: { type: "integer", nullable: false, hasDefault: false },
-      displayName: { type: "string", nullable: false, hasDefault: true },
-      line1: { type: "string", nullable: false, hasDefault: false },
-      line2: { type: "string", nullable: false, hasDefault: true },
-      line3: { type: "string", nullable: false, hasDefault: true },
-      neighborhood: { type: "string", nullable: false, hasDefault: true },
-      district: { type: "string", nullable: false, hasDefault: true },
-      city: { type: "string", nullable: false, hasDefault: false },
-      stateProvince: { type: "string", nullable: false, hasDefault: true },
-      postalCode: { type: "string", nullable: false, hasDefault: true },
-      countryCode: { type: "string", nullable: false, hasDefault: false },
-      formattedAddress: { type: "string", nullable: false, hasDefault: true },
-      latitude: { type: "decimal", nullable: true, hasDefault: false },
-      longitude: { type: "decimal", nullable: true, hasDefault: false },
-      isPrimary: { type: "boolean", nullable: false, hasDefault: true },
-    });
-    const emailSchema = new Schema({
-      id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-      uuid: { type: "uuid", nullable: false, hasDefault: true },
-      created: { type: "datetime", nullable: false, hasDefault: true },
-      updated: { type: "datetime", nullable: false, hasDefault: true },
-      version: { type: "binary", nullable: false, hasDefault: true },
-      emailTypeId: { type: "integer", nullable: false, hasDefault: false },
-      contactId: { type: "integer", nullable: false, hasDefault: false },
-      address: { type: "string", nullable: false, hasDefault: false },
-      displayName: { type: "string", nullable: false, hasDefault: true },
-      isPrimary: { type: "boolean", nullable: false, hasDefault: false },
-    });
     const bulk = contactsBulk(connection);
-    const addresses = new ReadonlyRepository(connection, {
-      type: Address,
-      entity: "Address",
-      entityMapper: new DictionaryMapper([["Address", "addresses"]]),
-      propertyMappings: props([...addressColumns]),
-      readProperties: [...addressColumns],
-      schema: addressSchema,
-    });
-    const emails = new ReadonlyRepository(connection, {
-      type: Email,
-      entity: "Email",
-      entityMapper: new DictionaryMapper([["Email", "emails"]]),
-      propertyMappings: props([...emailColumns]),
-      readProperties: [...emailColumns],
-      schema: emailSchema,
-    });
     const contacts = new ReadonlyRepository(connection, {
       type: Contact,
       entity: "Contact",
       entityMapper: new DictionaryMapper([["Contact", "contacts"]]),
       propertyMappings: props([...contactColumns]),
       readProperties: [...contactColumns],
-      schema: contactSchema,
+      schema: new Schema({
+        Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+        Uuid: { type: "uuid", nullable: false, hasDefault: true },
+        Created: { type: "datetime", nullable: false, hasDefault: true },
+        Updated: { type: "datetime", nullable: false, hasDefault: true },
+        Version: { type: "binary", nullable: false, hasDefault: true },
+        Name: { type: "string", nullable: false, hasDefault: false },
+        GivenName: { type: "string", nullable: false, hasDefault: false },
+        AdditionalName: { type: "string", nullable: false, hasDefault: true },
+        Pronunciation: { type: "string", nullable: false, hasDefault: true },
+        FamilyName: { type: "string", nullable: false, hasDefault: true },
+        NickName: { type: "string", nullable: false, hasDefault: true },
+        JobTitle: { type: "string", nullable: false, hasDefault: true },
+        Organization: { type: "string", nullable: false, hasDefault: true },
+        IsStarred: { type: "boolean", nullable: false, hasDefault: false },
+        IsFavorite: { type: "boolean", nullable: false, hasDefault: false },
+        IsDeleted: { type: "boolean", nullable: false, hasDefault: false },
+        GenderTypeId: { type: "integer", nullable: false, hasDefault: false },
+      }),
     });
-    contacts.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, addresses);
-    contacts.addEnriched({ destinationProperty: "emails", sourceProperty: "id", relatedKey: "contactId", type: "list" }, emails);
+    const Address = new AddressesRepository(connection);
+    const Email = new EmailsRepository(connection);
+    const Phone = new PhonesRepository(connection);
+    const ContactAttribute = new ContactAttributesRepository(connection);
+    const Label = new LabelsRepository(connection);
+    const ContactLabel = new ContactLabelsRepository(connection);
+    contacts.addEnriched({ destinationProperty: "Addresses", sourceProperty: "Id", relatedKey: "ContactId", type: "list" }, Address);
+    contacts.addEnriched({ destinationProperty: "Emails", sourceProperty: "Id", relatedKey: "ContactId", type: "list" }, Email);
+    contacts.addEnriched({ destinationProperty: "Phones", sourceProperty: "Id", relatedKey: "ContactId", type: "list" }, Phone);
+    contacts.addEnriched({ destinationProperty: "Attributes", sourceProperty: "Id", relatedKey: "ContactId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" }, ContactAttribute);
+    contacts.addEnriched({ destinationProperty: "Labels", sourceProperty: "Id", relatedKey: "Id", relatedProperty: "Name", association: { parent: "ContactId", related: "LabelId" }, type: "list" }, Label, new GraphReadonlyEnrichmentStrategy(ContactLabel));
     const setup = async () => {
       const seeded = seedContacts(rows);
+      const cpu = process.cpuUsage();
       const started = performance.now();
       await each(seeded, (batch) => bulk.createBulk(batch));
       seedMs = performance.now() - started;
+      seedCpuMs = cpuMs(cpu);
       await countContacts(connection);
     };
     const performanceDictionaryRead = async () => {
       let loaded = await collectAsync(contacts.read());
       check(loaded, "dictionary");
       const times: number[] = [];
+      const cpu = process.cpuUsage();
       for (let iter = 0; iter < readIters; iter++) {
         const started = performance.now();
         loaded = await collectAsync(contacts.read());
-        check(loaded, "dictionary");
         times.push(performance.now() - started);
       }
-      const ms = median(times);
+      const cpuUsed = cpuMs(cpu);
+      check(loaded, "dictionary");
+      const ms = average(times);
       return {
         ms,
+        cpuMs: cpuUsed,
         perSec: rows / (ms / 1000),
-        counts: { contacts: loaded.length, addresses: loaded.reduce((sum, row) => sum + row.addresses.length, 0), emails: loaded.reduce((sum, row) => sum + row.emails.length, 0) },
+        counts: { contacts: loaded.length, addresses: loaded.reduce((sum, row) => sum + row.Addresses.length, 0), emails: loaded.reduce((sum, row) => sum + row.Emails.length, 0) },
       };
     };
     const teardown = async () => {
@@ -522,7 +371,7 @@ const performanceTestDictionaryRead = async () => {
     await setup();
     const read = await performanceDictionaryRead();
     await teardown();
-    return { seedMs, readMs: read.ms, readPerSec: read.perSec, counts: read.counts };
+    return { seedMs, seedCpuMs, readMs: read.ms, readCpuMs: read.cpuMs, readPerSec: read.perSec, counts: read.counts };
   } finally {
     if (connection.isOpen) await connection.close().catch(() => undefined);
   }
@@ -534,13 +383,16 @@ const performanceTestPropertyMappedRead = async () => {
   const connection = await ds.createConnection();
   await connection.open();
   let seedMs = 0;
+  let seedCpuMs = 0;
   try {
     const bulk = contactsBulk(connection);
     const setup = async () => {
       const seeded = seedContacts(rows);
+      const cpu = process.cpuUsage();
       const started = performance.now();
       await each(seeded, (batch) => bulk.createBulk(batch));
       seedMs = performance.now() - started;
+      seedCpuMs = cpuMs(cpu);
       await countContacts(connection);
     };
     const performancePropertyMappedRead = async () => {
@@ -548,17 +400,20 @@ const performanceTestPropertyMappedRead = async () => {
       let loaded = await collectAsync(repo.read());
       check(loaded, "propertyMapped");
       const times: number[] = [];
+      const cpu = process.cpuUsage();
       for (let iter = 0; iter < readIters; iter++) {
         const started = performance.now();
         loaded = await collectAsync(repo.read());
-        check(loaded, "propertyMapped");
         times.push(performance.now() - started);
       }
-      const ms = median(times);
+      const cpuUsed = cpuMs(cpu);
+      check(loaded, "propertyMapped");
+      const ms = average(times);
       return {
         ms,
+        cpuMs: cpuUsed,
         perSec: rows / (ms / 1000),
-        counts: { contacts: loaded.length, addresses: loaded.reduce((sum, row) => sum + row.addresses.length, 0), emails: loaded.reduce((sum, row) => sum + row.emails.length, 0) },
+        counts: { contacts: loaded.length, addresses: loaded.reduce((sum, row) => sum + row.Addresses.length, 0), emails: loaded.reduce((sum, row) => sum + row.Emails.length, 0) },
       };
     };
     const teardown = async () => {
@@ -568,18 +423,15 @@ const performanceTestPropertyMappedRead = async () => {
     await setup();
     const read = await performancePropertyMappedRead();
     await teardown();
-    return { seedMs, readMs: read.ms, readPerSec: read.perSec, counts: read.counts };
+    return { seedMs, seedCpuMs, readMs: read.ms, readCpuMs: read.cpuMs, readPerSec: read.perSec, counts: read.counts };
   } finally {
     if (connection.isOpen) await connection.close().catch(() => undefined);
   }
 };
 
-const startupMs = performance.now() - processStarted;
-const [defaultRead, dictionaryRead, propertyMappedRead] = await Promise.all([
-  performanceTestDefaultRead(),
-  performanceTestDictionaryRead(),
-  performanceTestPropertyMappedRead(),
-]);
+const defaultRead = await performanceTestDefaultRead();
+const dictionaryRead = await performanceTestDictionaryRead();
+const propertyMappedRead = await performanceTestPropertyMappedRead();
 process.stdout.write(
   `${JSON.stringify({
     sample: "mapping_comparison",

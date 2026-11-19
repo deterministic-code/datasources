@@ -23,10 +23,12 @@ impl<TLink: Entity> GraphReadonlyEnrichmentStrategy<TLink> {
 }
 
 #[async_trait]
-impl<T: Entity, TLink: Entity> ReadonlyEnrichmentStrategy<T, T> for GraphReadonlyEnrichmentStrategy<TLink> {
+impl<T: Entity, TRelated: Entity, TLink: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
+    for GraphReadonlyEnrichmentStrategy<TLink>
+{
     async fn apply(
         &self,
-        via: Arc<dyn IReadonlyRepository<T>>,
+        via: Arc<dyn IReadonlyRepository<TRelated>>,
         enrichment: &Enrichment,
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
@@ -59,7 +61,7 @@ impl<T: Entity, TLink: Entity> ReadonlyEnrichmentStrategy<T, T> for GraphReadonl
         let mut filled = HashSet::new();
         for (offset, parent) in parents.iter_mut().enumerate() {
             let Some(id) = match_key(parent, enrichment, source_at(sources, offset)) else {
-                assign_related::<T, T>(parent, &enrichment.destination_property, Vec::new())?;
+                assign_related::<T, TRelated>(parent, &enrichment.destination_property, Vec::new())?;
                 continue;
             };
             filled.insert(id.clone());
@@ -70,14 +72,14 @@ impl<T: Entity, TLink: Entity> ReadonlyEnrichmentStrategy<T, T> for GraphReadonl
     }
 }
 
-fn walk<T: Entity>(
+fn walk<TRelated: Entity>(
     from: &str,
     enrichment: &Enrichment,
-    nodes: &HashMap<String, T>,
+    nodes: &HashMap<String, TRelated>,
     outgoing: &HashMap<String, Vec<String>>,
     path: &mut HashSet<String>,
     filled: &mut HashSet<String>,
-) -> Result<Vec<T>> {
+) -> Result<Vec<TRelated>> {
     let mut edges = Vec::new();
     for to in outgoing.get(from).cloned().unwrap_or_default() {
         if path.contains(&to) {
@@ -88,7 +90,7 @@ fn walk<T: Entity>(
         };
         let first = filled.insert(to.clone());
         let mut copy = node.clone();
-        assign_related::<T, T>(&mut copy, &enrichment.destination_property, Vec::new())?;
+        assign_related::<TRelated, TRelated>(&mut copy, &enrichment.destination_property, Vec::new())?;
         if first {
             path.insert(to.clone());
             let nested = walk(&to, enrichment, nodes, outgoing, path, filled)?;

@@ -9,26 +9,11 @@ use mysql_async::Conn;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Mutex;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use tokio::task::JoinHandle;
-
-enum Ask {
-    Next,
-    NextResult,
-    Shutdown,
-}
-
-enum Answer {
-    Ready,
-    Row(Option<Row>),
-    More(bool),
-    Err(String),
-}
 
 pub(crate) struct MysqlReader {
-    ask: Mutex<Option<UnboundedSender<Ask>>>,
-    task: Mutex<Option<JoinHandle<()>>>,
-    answer: tokio::sync::Mutex<UnboundedReceiver<Answer>>,
+    sets: Vec<Vec<Row>>,
+    set: Mutex<usize>,
+    index: Mutex<isize>,
     current: Mutex<Option<Row>>,
 }
 
@@ -38,73 +23,18 @@ impl MysqlReader {
         statements: Vec<String>,
         params: HashMap<String, Value>,
     ) -> Result<Self> {
-        let conn = {
-            let mut slot = connection.lock_conn().await?;
-            slot.take()
-                .ok_or_else(|| DatasourceError::message("Connection is not open"))?
-        };
-        let slot = connection.conn.clone();
-        let opened = connection.opened.clone();
-        let ready = connection.ready.clone();
-        let (ask_tx, ask_rx) = tokio::sync::mpsc::unbounded_channel();
-        let (ans_tx, ans_rx) = tokio::sync::mpsc::unbounded_channel();
-        let task = tokio::spawn(async move {
-            let mut conn = conn;
-            if let Err(error) = drive(&mut conn, &statements, &params, ask_rx, &ans_tx).await {
-                let _ = ans_tx.send(Answer::Err(error.to_string()));
-            }
-            let mut held = slot.lock().await;
-            if *opened.lock().unwrap() {
-                *held = Some(conn);
-            }
-            drop(held);
-            ready.notify_waiters();
-        });
-        let mut answer = ans_rx;
-        match answer.recv().await {
-            Some(Answer::Ready) => Ok(Self {
-                ask: Mutex::new(Some(ask_tx)),
-                task: Mutex::new(Some(task)),
-                answer: tokio::sync::Mutex::new(answer),
-                current: Mutex::new(None),
-            }),
-            Some(Answer::Err(error)) => {
-                let _ = ask_tx.send(Ask::Shutdown);
-                let _ = task.await;
-                Err(DatasourceError::message(error))
-            }
-            _ => {
-                let _ = task.await;
-                Err(DatasourceError::message("Reader failed to open"))
-            }
-        }
-    }
-
-    async fn ask(&self, ask: Ask) -> Result<Answer> {
-        let tx = self
-            .ask
-            .lock()
-            .expect("reader")
-            .as_ref()
-            .cloned()
-            .ok_or_else(|| DatasourceError::message("Reader is closed"))?;
-        tx.send(ask)
-            .map_err(|_| DatasourceError::message("Reader is closed"))?;
-        self.answer
-            .lock()
-            .await
-            .recv()
-            .await
-            .ok_or_else(|| DatasourceError::message("Reader is closed"))
-    }
-}
-
-impl Drop for MysqlReader {
-    fn drop(&mut self) {
-        if let Some(tx) = self.ask.lock().expect("reader").take() {
-            let _ = tx.send(Ask::Shutdown);
-        }
-        let _ = self.task.lock().expect("reader").take();
+        let mut slot = connection.lock_conn().await?;
+        let conn = slot
+            .as_mut()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        let sets = result_sets(conn, &statements, &params).await?;
+        drop(slot);
+        Ok(Self {
+            sets,
+            set: Mutex::new(0),
+            index: Mutex::new(-1),
+            current: Mutex::new(None),
+        })
     }
 }
 
@@ -115,54 +45,34 @@ impl Reader for MysqlReader {
     }
 
     async fn close(&self) -> Result<()> {
-        if let Some(tx) = self.ask.lock().expect("reader").take() {
-            let _ = tx.send(Ask::Shutdown);
-        }
-        let task = self.task.lock().expect("reader").take();
-        if let Some(task) = task {
-            let _ = task.await;
-        }
         Ok(())
     }
 
     async fn next(&self) -> Result<bool> {
-        match self.ask(Ask::Next).await? {
-            Answer::Row(row) => {
-                let found = row.is_some();
-                *self.current.lock().expect("reader") = row;
-                Ok(found)
-            }
-            Answer::Err(error) => Err(DatasourceError::message(error)),
-            _ => Err(DatasourceError::message("Reader failed")),
+        let set = *self.set.lock().expect("reader");
+        if set >= self.sets.len() {
+            *self.current.lock().expect("reader") = None;
+            return Ok(false);
+        }
+        let mut index = self.index.lock().expect("reader");
+        *index += 1;
+        let i = *index as usize;
+        if i < self.sets[set].len() {
+            *self.current.lock().expect("reader") = Some(self.sets[set][i].clone());
+            Ok(true)
+        } else {
+            *self.current.lock().expect("reader") = None;
+            Ok(false)
         }
     }
 
     async fn next_result(&self) -> Result<bool> {
         *self.current.lock().expect("reader") = None;
-        match self.ask(Ask::NextResult).await? {
-            Answer::More(more) => Ok(more),
-            Answer::Err(error) => Err(DatasourceError::message(error)),
-            _ => Err(DatasourceError::message("Reader failed")),
-        }
+        *self.index.lock().expect("reader") = -1;
+        let mut set = self.set.lock().expect("reader");
+        *set += 1;
+        Ok(*set < self.sets.len())
     }
-}
-
-async fn drive(
-    conn: &mut Conn,
-    statements: &[String],
-    params: &HashMap<String, Value>,
-    mut ask_rx: UnboundedReceiver<Ask>,
-    ans_tx: &UnboundedSender<Answer>,
-) -> Result<()> {
-    let _ = ans_tx.send(Answer::Ready);
-    let sets = result_sets(conn, statements, params).await?;
-    if sets.is_empty() {
-        return idle(&mut ask_rx, ans_tx).await;
-    }
-    if serve_sets(&sets, &mut ask_rx, ans_tx).await? {
-        return Ok(());
-    }
-    idle(&mut ask_rx, ans_tx).await
 }
 
 async fn result_sets(
@@ -182,11 +92,7 @@ async fn result_sets(
             })
             .map(|(name, value)| (name.clone(), value.clone()))
             .collect();
-        let mut found = iter_sets(conn, sql, &used).await?;
-        if is_call(sql) {
-            found.retain(|rows| !rows.is_empty());
-        }
-        sets.extend(found);
+        sets.extend(iter_sets(conn, sql, &used).await?);
     }
     Ok(sets)
 }
@@ -214,62 +120,6 @@ async fn iter_sets(
     Ok(sets)
 }
 
-fn is_call(sql: &str) -> bool {
-    let rest = sql.trim_start();
-    let Some(word) = rest.get(..4) else {
-        return false;
-    };
-    word.eq_ignore_ascii_case("call")
-        && rest
-            .as_bytes()
-            .get(4)
-            .is_some_and(|byte| byte.is_ascii_whitespace() || *byte == b'(')
-}
-
-async fn serve_sets(
-    sets: &[Vec<Row>],
-    ask_rx: &mut UnboundedReceiver<Ask>,
-    ans_tx: &UnboundedSender<Answer>,
-) -> Result<bool> {
-    let mut set = 0;
-    let mut row = 0;
-    loop {
-        match ask_rx.recv().await {
-            Some(Ask::Next) => {
-                let current = sets.get(set).and_then(|rows| rows.get(row)).cloned();
-                if current.is_some() {
-                    row += 1;
-                }
-                let _ = ans_tx.send(Answer::Row(current));
-            }
-            Some(Ask::NextResult) => {
-                set += 1;
-                row = 0;
-                let more = set < sets.len();
-                let _ = ans_tx.send(Answer::More(more));
-                if !more {
-                    return Ok(false);
-                }
-            }
-            _ => return Ok(true),
-        }
-    }
-}
-
-async fn idle(ask_rx: &mut UnboundedReceiver<Ask>, ans_tx: &UnboundedSender<Answer>) -> Result<()> {
-    loop {
-        match ask_rx.recv().await {
-            Some(Ask::Next) => {
-                let _ = ans_tx.send(Answer::Row(None));
-            }
-            Some(Ask::NextResult) => {
-                let _ = ans_tx.send(Answer::More(false));
-            }
-            _ => return Ok(()),
-        }
-    }
-}
-
 async fn pull<S, T, E>(mut stream: Pin<&mut S>) -> std::result::Result<Option<T>, E>
 where
     S: Stream<Item = std::result::Result<T, E>> + Unpin + ?Sized,
@@ -278,4 +128,3 @@ where
         .await
         .transpose()
 }
-
