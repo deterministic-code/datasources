@@ -102,6 +102,69 @@ public class TreeGraphReadonlyEnrichmentStrategyTests
     }
 
     [Fact]
+    public async Task TreeReadReturnsEachRowOnceUnderTheRoots()
+    {
+        var foodRow = new Row { ["name"] = "food" };
+        var fruitRow = new Row { ["name"] = "fruit" };
+        var appleRow = new Row { ["name"] = "apple" };
+        var connection = await Setup(foodRow, fruitRow, appleRow);
+        var foodId = Id(foodRow);
+        var fruitId = Id(fruitRow);
+        var appleId = Id(appleRow);
+        await SetParent(connection, fruitId, foodId);
+        await SetParent(connection, appleId, fruitId);
+        var via = Open<Category>(connection);
+        var repo = Open<Category>(connection);
+        repo.AddEnriched(
+            new("Children", "Id", "ParentCategoryId", Type: EnrichmentPropertyType.List),
+            via,
+            new TreeReadonlyEnrichmentStrategy<Category>());
+        var roots = await List(repo);
+        Assert.Equal(["food"], roots.Select(row => row.Name));
+        Assert.Equal(["food", "fruit", "apple"], Flatten(roots.Single()).ToList());
+        var fruit = await repo.ReadSingle(new Where(new Operator.Equals("Id", fruitId)));
+        Assert.Equal("fruit", fruit!.Name);
+        Assert.Equal("apple", fruit.Children.Single().Name);
+    }
+
+    [Fact]
+    public async Task TreeReadReturnsTheCompositeRoot()
+    {
+        var connection = new MemoryDriver().Connection(null);
+        await connection.Open();
+        await connection.CreateCommand().Execute("insert", [
+            new Parameter("region_id", 1),
+            new Parameter("category_id", 10),
+            new Parameter("name", "food"),
+        ]);
+        await connection.CreateCommand().Execute("insert", [
+            new Parameter("region_id", 1),
+            new Parameter("category_id", 11),
+            new Parameter("parent_region_id", 1),
+            new Parameter("parent_category_id", 10),
+            new Parameter("name", "fruit"),
+        ]);
+        var via = new ReadonlyRepository<RegionCategory>(connection, new ReadonlyRepositoryMappingOptions<RegionCategory>
+        {
+            PropertyMappings = Snake,
+        });
+        var repo = new ReadonlyRepository<RegionCategory>(connection, new ReadonlyRepositoryMappingOptions<RegionCategory>
+        {
+            PropertyMappings = Snake,
+        });
+        repo.AddEnriched(
+            new("Children", "RegionId", "ParentRegionId", Type: EnrichmentPropertyType.List, Keys: [
+                new EnrichmentMatch("RegionId", "ParentRegionId"),
+                new EnrichmentMatch("CategoryId", "ParentCategoryId"),
+            ]),
+            via,
+            new TreeReadonlyEnrichmentStrategy<RegionCategory>());
+        var roots = await List(repo);
+        Assert.Equal(["food"], roots.Select(row => row.Name));
+        Assert.Equal("fruit", roots.Single().Children.Single().Name);
+    }
+
+    [Fact]
     public async Task GraphFillsEdgesStopsACycleAndCopiesADiamond()
     {
         var aRow = new Row { ["value"] = "a" };
@@ -152,6 +215,21 @@ public class TreeGraphReadonlyEnrichmentStrategyTests
             new GraphReadonlyEnrichmentStrategy<Node, NodeEdge>(loopLink));
         var loop = await loopRepo.ReadSingle();
         Assert.Empty(loop!.Edges);
+    }
+
+    static async Task<List<T>> List<T>(IReadonlyRepository<T> repo)
+    {
+        var rows = new List<T>();
+        await foreach (var row in repo.Read()) rows.Add(row);
+        return rows;
+    }
+
+    static IEnumerable<string> Flatten(Category node)
+    {
+        yield return node.Name;
+        foreach (var child in node.Children)
+            foreach (var name in Flatten(child))
+                yield return name;
     }
 
     static ReadonlyRepository<T> Open<T>(IConnection connection) where T : new() =>

@@ -40,6 +40,11 @@ type Seed = Record<string, Scalar>;
 
 const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
 
+const flatten = (node: Category): string[] => [
+  node.Name,
+  ...node.Children.flatMap(flatten),
+];
+
 const repo = <T>(type: new () => T, connection: IConnection) =>
   new ReadonlyRepository(connection, { type, propertyMappings: snake });
 
@@ -123,6 +128,70 @@ describe("TreeReadonlyEnrichmentStrategy", () => {
     const loaded = await regions.readSingle(new Where(new Operator.Equals("CategoryId", 10)));
     expect(loaded?.Children[0]?.Name).toBe("fruit");
     expect(loaded?.Children[0]?.Children).toEqual([]);
+  });
+
+  it("returns each row once under the roots", async () => {
+    const food: Seed = { name: "food" };
+    const fruit: Seed = { name: "fruit" };
+    const apple: Seed = { name: "apple" };
+    const connection = await setup([food, fruit, apple]);
+    await connection.createCommand().execute("update", [
+      { name: "id", value: fruit.id },
+      { name: "parent_category_id", value: food.id },
+    ]);
+    await connection.createCommand().execute("update", [
+      { name: "id", value: apple.id },
+      { name: "parent_category_id", value: fruit.id },
+    ]);
+    const via = repo(Category, connection);
+    const categories = repo(Category, connection);
+    categories.addEnriched(
+      { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentCategoryId", type: "list" },
+      via,
+      new TreeReadonlyEnrichmentStrategy(),
+    );
+    const roots = await collectAsync(categories.read());
+    expect(roots.map((row) => row.Name)).toEqual(["food"]);
+    expect(flatten(roots[0]!)).toEqual(["food", "fruit", "apple"]);
+    const loaded = await categories.readSingle(new Where(new Operator.Equals("Id", fruit.id)));
+    expect(loaded?.Name).toBe("fruit");
+    expect(loaded?.Children[0]?.Name).toBe("apple");
+  });
+
+  it("returns the composite root", async () => {
+    const connection = new MemoryDriver().connection();
+    await connection.open();
+    await connection.createCommand().execute("insert", [
+      { name: "region_id", value: 1 },
+      { name: "category_id", value: 10 },
+      { name: "name", value: "food" },
+    ]);
+    await connection.createCommand().execute("insert", [
+      { name: "region_id", value: 1 },
+      { name: "category_id", value: 11 },
+      { name: "parent_region_id", value: 1 },
+      { name: "parent_category_id", value: 10 },
+      { name: "name", value: "fruit" },
+    ]);
+    const via = repo(RegionCategory, connection);
+    const regions = repo(RegionCategory, connection);
+    regions.addEnriched(
+      {
+        destinationProperty: "Children",
+        sourceProperty: "RegionId",
+        relatedKey: "ParentRegionId",
+        type: "list",
+        keys: [
+          { sourceProperty: "RegionId", relatedKey: "ParentRegionId" },
+          { sourceProperty: "CategoryId", relatedKey: "ParentCategoryId" },
+        ],
+      },
+      via,
+      new TreeReadonlyEnrichmentStrategy(),
+    );
+    const roots = await collectAsync(regions.read());
+    expect(roots.map((row) => row.Name)).toEqual(["food"]);
+    expect(roots[0]?.Children[0]?.Name).toBe("fruit");
   });
 });
 

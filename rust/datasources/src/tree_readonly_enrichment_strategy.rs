@@ -27,9 +27,16 @@ impl<T: Entity> ReadonlyEnrichmentStrategy<T, T> for TreeReadonlyEnrichmentStrat
                 index.entry(parent_key).or_default().push(item);
             }
         }
+        let mut ids = HashSet::new();
         for (offset, parent) in parents.iter_mut().enumerate() {
             attach(parent, enrichment, &index, &mut HashSet::new(), source_at(sources, offset))?;
+            if let Some(id) = match_key(parent, enrichment, source_at(sources, offset)) {
+                ids.insert(id);
+            }
         }
+        parents.retain(|parent| {
+            row_match_key(parent, enrichment).is_none_or(|parent_key| !ids.contains(&parent_key))
+        });
         Ok(())
     }
 }
