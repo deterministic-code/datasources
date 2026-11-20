@@ -156,9 +156,10 @@ export const planRepositories = (
     const columns = persistedColumnFields(shape).filter((field) => names.has(property(field.name)));
     const ids = identityColumns(shape, table);
     const parent = authored.inherits === undefined ? undefined : types.get(authored.inherits);
+    const treeOrGraph = authored.tags.includes("tree") === true || authored.tags.includes("graph") === true;
     const readonly =
-      isReadonlyLookup(authored) ||
-      (parent !== undefined && isReadonlyLookup(parent));
+      !treeOrGraph &&
+      (isReadonlyLookup(authored) || (parent !== undefined && isReadonlyLookup(parent)));
     const inherited = expanded.get(authored.inherits ?? "") ?? parent;
     const sqlColumn = (fieldName: string): string =>
       CreateTableStatement.columnName(overlays.get(fieldName)?.mapping ?? fieldName, naming.naming);

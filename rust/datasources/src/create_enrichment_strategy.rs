@@ -8,11 +8,14 @@ use crate::schema::Schema;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::value::Value;
 use async_trait::async_trait;
+use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 #[async_trait]
 pub trait CreateEnrichmentStrategy<T: Entity = Row>: Send + Sync {
+    fn as_any(&self) -> &dyn Any;
+
     async fn create_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,

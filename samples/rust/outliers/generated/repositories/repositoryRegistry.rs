@@ -18,7 +18,7 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "CategoryTree",
         "category_trees",
-        |_connection| Err(DatasourceError::message("CategoryTree is a readonly lookup")),
+        |connection| Ok(Arc::new(super::categoryTreesRepository::CategoryTreesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<CategoryTree>>),
         |connection| Arc::new(super::categoryTreesRepository::CategoryTreesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<CategoryTree>>,
     );
     factory.register_named(
@@ -36,7 +36,7 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "NodeGraph",
         "node_graphs",
-        |_connection| Err(DatasourceError::message("NodeGraph is a readonly lookup")),
+        |connection| Ok(Arc::new(super::nodeGraphsRepository::NodeGraphsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<NodeGraph>>),
         |connection| Arc::new(super::nodeGraphsRepository::NodeGraphsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<NodeGraph>>,
     );
     factory.register_named(
@@ -48,7 +48,7 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "RegionCategoryTree",
         "region_category_trees",
-        |_connection| Err(DatasourceError::message("RegionCategoryTree is a readonly lookup")),
+        |connection| Ok(Arc::new(super::regionCategoryTreesRepository::RegionCategoryTreesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<RegionCategoryTree>>),
         |connection| Arc::new(super::regionCategoryTreesRepository::RegionCategoryTreesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<RegionCategoryTree>>,
     );
 }

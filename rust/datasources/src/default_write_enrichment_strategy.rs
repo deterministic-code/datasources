@@ -272,33 +272,29 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                 )));
             }
             if enrichment.association.is_some() {
-                let link = entry.link.as_ref().ok_or_else(|| {
-                    DatasourceError::message(format!(
-                        "Deep write requires a CRUD repository for \"{}\"",
-                        enrichment.destination_property
-                    ))
-                })?;
-                for parent in parents.iter_mut() {
-                    if self.skip(parent, &enrichment.destination_property, mode) {
-                        continue;
-                    }
-                    if let Some(writer) = link.row_writer() {
-                        match mode {
-                            WriteMode::Create => {
-                                self.create.create_linked(writer, enrichment, parent).await?
-                            }
-                            WriteMode::Update => {
-                                self.update.update_linked(writer, enrichment, parent).await?
-                            }
-                            WriteMode::Delete => {
-                                self.delete.delete_linked(writer, enrichment, parent).await?
-                            }
+                if let Some(link) = entry.link.as_ref() {
+                    for parent in parents.iter_mut() {
+                        if self.skip(parent, &enrichment.destination_property, mode) {
+                            continue;
                         }
-                    } else {
-                        link.write(enrichment, parent, mode).await?;
+                        if let Some(writer) = link.row_writer() {
+                            match mode {
+                                WriteMode::Create => {
+                                    self.create.create_linked(writer, enrichment, parent).await?
+                                }
+                                WriteMode::Update => {
+                                    self.update.update_linked(writer, enrichment, parent).await?
+                                }
+                                WriteMode::Delete => {
+                                    self.delete.delete_linked(writer, enrichment, parent).await?
+                                }
+                            }
+                        } else {
+                            link.write(enrichment, parent, mode).await?;
+                        }
                     }
+                    return Ok(());
                 }
-                return Ok(());
             }
             if enrichment.r#type == crate::EnrichmentPropertyType::List
                 && enrichment.related_property.is_some()
@@ -334,6 +330,10 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                                 .await?
                         }
                     }
+                } else if mode == WriteMode::Create {
+                    persist
+                        .write_create(self.create.as_ref(), enrichment, parent)
+                        .await?;
                 } else {
                     persist.write(enrichment, parent, mode).await?;
                 }

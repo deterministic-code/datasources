@@ -1,9 +1,11 @@
 use crate::command::SqliteCommand;
 use crate::connection::SqliteConnection;
 use datasources::{
-    Casing, ChangeCasingMapper, Command, Connection, Entity, Enrichment, EnrichmentPropertyType, Native,
-    Operator, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Row, TreeReadonlyEnrichmentStrategy,
-    Where,
+    Association, Casing, ChangeCasingMapper, Command, Connection, CRUDRepository,
+    CRUDRepositoryOptions, DefaultWriteEnrichmentStrategy, Entity, Enrichment, EnrichmentPropertyType,
+    GraphCreateEnrichmentStrategy, GraphReadonlyEnrichmentStrategy, ICRUDRepository, Native, Operator,
+    ReadonlyRepository, ReadonlyRepositoryMappingOptions, Row, TreeCreateEnrichmentStrategy,
+    TreeReadonlyEnrichmentStrategy, Where, encode_rows,
 };
 use std::sync::Arc;
 
@@ -58,4 +60,322 @@ async fn tree_read_stops_on_a_cycle() {
     let apples = children[0].payload("Children");
     assert_eq!(apples[0].get("Name").unwrap().wire_text(), "apple");
     assert!(apples[0].payload("Children").is_empty());
+}
+
+#[tokio::test]
+async fn tree_create_then_read_matches() {
+    let connection = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+    connection.open().await.unwrap();
+    let command = SqliteCommand::new(Arc::clone(&connection));
+    command
+        .execute_native(
+            &Native::new(
+                "CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, parent_category_id INTEGER, name TEXT NOT NULL)",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let mappings = Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let options = || {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "categories".into();
+        options.ids = vec!["Id".into()];
+        options.create_properties = Some(vec!["Name".into(), "ParentCategoryId".into()]);
+        options.read_properties = vec!["Id".into(), "Name".into(), "ParentCategoryId".into()];
+        options.property_mappings = Some(Arc::clone(&mappings) as _);
+        options
+    };
+    let via = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection) as Arc<dyn Connection>, options()).unwrap());
+    let mut repo = CRUDRepository::<Row>::new(connection, options())
+        .unwrap()
+        .with_write(Arc::new(DefaultWriteEnrichmentStrategy::new(
+            None,
+            None,
+            Some(Arc::new(TreeCreateEnrichmentStrategy::new())),
+            false,
+        )));
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentCategoryId",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        Arc::clone(&via),
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let apple: Row = [("Name".into(), datasources::Value::from("apple"))].into_iter().collect();
+    let fruit: Row = [
+        ("Name".into(), datasources::Value::from("fruit")),
+        ("Children".into(), encode_rows(&[apple])),
+    ]
+    .into_iter()
+    .collect();
+    repo.create(
+        [
+            ("Name".into(), datasources::Value::from("food")),
+            ("Children".into(), encode_rows(&[fruit])),
+        ]
+        .into_iter()
+        .collect(),
+    )
+    .await
+    .unwrap();
+    let food = repo
+        .read_single_where(&Where::new(Operator::equals("Name", "food")), None)
+        .await
+        .unwrap()
+        .unwrap();
+    let children = food.payload("Children");
+    assert_eq!(children[0].get("Name").unwrap().wire_text(), "fruit");
+    assert_eq!(
+        children[0].payload("Children")[0].get("Name").unwrap().wire_text(),
+        "apple"
+    );
+}
+
+#[tokio::test]
+async fn tree_create_throws_on_a_cycle() {
+    let connection = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+    connection.open().await.unwrap();
+    let command = SqliteCommand::new(Arc::clone(&connection));
+    command
+        .execute_native(
+            &Native::new(
+                "CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, parent_category_id INTEGER, name TEXT NOT NULL)",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let mappings = Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let options = || {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "categories".into();
+        options.ids = vec!["Id".into()];
+        options.create_properties = Some(vec!["Name".into(), "ParentCategoryId".into()]);
+        options.read_properties = vec!["Id".into(), "Name".into(), "ParentCategoryId".into()];
+        options.property_mappings = Some(Arc::clone(&mappings) as _);
+        options
+    };
+    let via = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection) as Arc<dyn Connection>, options()).unwrap());
+    let mut repo = CRUDRepository::<Row>::new(connection, options())
+        .unwrap()
+        .with_write(Arc::new(DefaultWriteEnrichmentStrategy::new(
+            None,
+            None,
+            Some(Arc::new(TreeCreateEnrichmentStrategy::new())),
+            false,
+        )));
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentCategoryId",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        Arc::clone(&via),
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let food: Row = [("Name".into(), datasources::Value::from("food"))].into_iter().collect();
+    let apple: Row = [
+        ("Name".into(), datasources::Value::from("apple")),
+        ("Children".into(), encode_rows(&[food.clone()])),
+    ]
+    .into_iter()
+    .collect();
+    let fruit: Row = [
+        ("Name".into(), datasources::Value::from("fruit")),
+        ("Children".into(), encode_rows(&[apple])),
+    ]
+    .into_iter()
+    .collect();
+    let error = repo
+        .create(
+            [
+                ("Name".into(), datasources::Value::from("food")),
+                ("Children".into(), encode_rows(&[fruit])),
+            ]
+            .into_iter()
+            .collect(),
+        )
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("food"), "{error}");
+}
+
+#[tokio::test]
+async fn tree_create_stamps_composite_parents() {
+    let connection = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+    connection.open().await.unwrap();
+    let command = SqliteCommand::new(Arc::clone(&connection));
+    command
+        .execute_native(
+            &Native::new(
+                "CREATE TABLE region_categories (
+                region_id INTEGER NOT NULL,
+                category_id INTEGER NOT NULL,
+                parent_region_id INTEGER,
+                parent_category_id INTEGER,
+                name TEXT NOT NULL,
+                PRIMARY KEY (region_id, category_id),
+                FOREIGN KEY (parent_region_id, parent_category_id) REFERENCES region_categories (region_id, category_id)
+            )",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let mappings = Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let options = || {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "region_categories".into();
+        options.ids = vec!["RegionId".into(), "CategoryId".into()];
+        options.create_properties = Some(vec![
+            "RegionId".into(),
+            "CategoryId".into(),
+            "ParentRegionId".into(),
+            "ParentCategoryId".into(),
+            "Name".into(),
+        ]);
+        options.read_properties = vec![
+            "RegionId".into(),
+            "CategoryId".into(),
+            "ParentRegionId".into(),
+            "ParentCategoryId".into(),
+            "Name".into(),
+        ];
+        options.property_mappings = Some(Arc::clone(&mappings) as _);
+        options
+    };
+    let via = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection) as Arc<dyn Connection>, options()).unwrap());
+    let mut repo = CRUDRepository::<Row>::new(connection, options())
+        .unwrap()
+        .with_write(Arc::new(DefaultWriteEnrichmentStrategy::new(
+            None,
+            None,
+            Some(Arc::new(TreeCreateEnrichmentStrategy::new())),
+            false,
+        )));
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "RegionId",
+            "ParentRegionId",
+            None,
+            EnrichmentPropertyType::List,
+        )
+        .with_keys(&[("RegionId", "ParentRegionId"), ("CategoryId", "ParentCategoryId")]),
+        Arc::clone(&via),
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let coast: Row = [
+        ("RegionId".into(), datasources::Value::from(1i64)),
+        ("CategoryId".into(), datasources::Value::from(2i64)),
+        ("Name".into(), datasources::Value::from("coast")),
+    ]
+    .into_iter()
+    .collect();
+    repo.create(
+        [
+            ("RegionId".into(), datasources::Value::from(1i64)),
+            ("CategoryId".into(), datasources::Value::from(1i64)),
+            ("Name".into(), datasources::Value::from("west")),
+            ("Children".into(), encode_rows(&[coast])),
+        ]
+        .into_iter()
+        .collect(),
+    )
+    .await
+    .unwrap();
+    let west = repo
+        .read_single_where(&Where::new(Operator::equals("Name", "west")), None)
+        .await
+        .unwrap()
+        .unwrap();
+    let child = &west.payload("Children")[0];
+    assert_eq!(child.get("Name").unwrap().wire_text(), "coast");
+    assert_eq!(child.get("ParentRegionId"), Some(&datasources::Value::from(1i64)));
+    assert_eq!(child.get("ParentCategoryId"), Some(&datasources::Value::from(1i64)));
+}
+
+#[tokio::test]
+async fn graph_create_writes_a_loop_then_read() {
+    let connection = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+    connection.open().await.unwrap();
+    let command = SqliteCommand::new(Arc::clone(&connection));
+    command
+        .execute_native(
+            &Native::new("CREATE TABLE nodes (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL)"),
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute_native(
+            &Native::new(
+                "CREATE TABLE edges (id INTEGER PRIMARY KEY AUTOINCREMENT, from_node_id INTEGER NOT NULL, to_node_id INTEGER NOT NULL)",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let mappings = Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let node_options = || {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "nodes".into();
+        options.ids = vec!["Id".into()];
+        options.create_properties = Some(vec!["Value".into()]);
+        options.read_properties = vec!["Id".into(), "Value".into()];
+        options.property_mappings = Some(Arc::clone(&mappings) as _);
+        options
+    };
+    let mut edge_options = CRUDRepositoryOptions::default();
+    edge_options.entity = "edges".into();
+    edge_options.ids = vec!["Id".into()];
+    edge_options.create_properties = Some(vec!["FromNodeId".into(), "ToNodeId".into()]);
+    edge_options.read_properties = vec!["Id".into(), "FromNodeId".into(), "ToNodeId".into()];
+    edge_options.property_mappings = Some(Arc::clone(&mappings) as _);
+    let via = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection) as Arc<dyn Connection>, node_options()).unwrap());
+    let link: Arc<dyn ICRUDRepository> = Arc::new(
+        CRUDRepository::<Row>::new(Arc::clone(&connection) as Arc<dyn Connection>, edge_options).unwrap(),
+    );
+    let mut repo = CRUDRepository::<Row>::new(connection, node_options())
+        .unwrap()
+        .with_write(Arc::new(DefaultWriteEnrichmentStrategy::new(
+            None,
+            None,
+            Some(Arc::new(GraphCreateEnrichmentStrategy::new(Arc::clone(&link)))),
+            false,
+        )));
+    repo.add_enriched(
+        Enrichment::new("Edges", "Id", "Id", None, EnrichmentPropertyType::List)
+            .linked(Association::new("FromNodeId", "ToNodeId")),
+        Arc::clone(&via),
+        Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(Arc::clone(&link)))),
+    );
+    let mut a: Row = [("Value".into(), datasources::Value::from("a"))].into_iter().collect();
+    let b: Row = [
+        ("Value".into(), datasources::Value::from("b")),
+        ("Edges".into(), encode_rows(&[a.clone()])),
+    ]
+    .into_iter()
+    .collect();
+    a.insert("Edges".into(), encode_rows(&[b]));
+    repo.create(a).await.unwrap();
+    let loaded_a = repo
+        .read_single_where(&Where::new(Operator::equals("Value", "a")), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(loaded_a.payload("Edges")[0].get("Value").unwrap().wire_text(), "b");
+    let loaded_b = repo
+        .read_single_where(&Where::new(Operator::equals("Value", "b")), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(loaded_b.payload("Edges")[0].get("Value").unwrap().wire_text(), "a");
 }

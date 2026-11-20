@@ -477,11 +477,15 @@ types:
     const treeCs = Object.values(store.files).find((item) => item.includes("class CategoryTreesRepository")) ?? "";
     const regionCs = Object.values(store.files).find((item) => item.includes("class RegionCategoryTreesRepository")) ?? "";
     const graphCs = Object.values(store.files).find((item) => item.includes("class NodeGraphsRepository")) ?? "";
+    expect(treeCs).toContain("class CategoryTreesRepository : CRUDRepository");
+    expect(treeCs).toContain("TreeCreateEnrichmentStrategy");
     expect(treeCs).toContain("TreeReadonlyEnrichmentStrategy");
-    expect(treeCs).toContain("new ReadonlyRepository<Backend.Types.View.CategoryTree>");
+    expect(treeCs).toContain("new CRUDRepository<Backend.Types.View.CategoryTree>");
     expect(treeCs).not.toContain("public CategoryTreesRepository CategoryTree");
     expect(regionCs).toContain('new EnrichmentMatch("RegionId", "ParentRegionId")');
     expect(regionCs).toContain('new EnrichmentMatch("CategoryId", "ParentCategoryId")');
+    expect(graphCs).toContain("class NodeGraphsRepository : CRUDRepository");
+    expect(graphCs).toContain("GraphCreateEnrichmentStrategy");
     expect(graphCs).toContain("GraphReadonlyEnrichmentStrategy");
     expect(graphCs).toContain("public NodeEdgesRepository NodeEdge");
     expect(graphCs).toContain("new NodeEdgesRepository(connection)");
@@ -493,7 +497,7 @@ types:
     ).parse({});
     const models = planRepositories(spec, "csharp", {});
     expect(models.find((model) => model.specName === "category")?.readonly).toBe(false);
-    expect(models.find((model) => model.specName === "category_tree")?.readonly).toBe(true);
+    expect(models.find((model) => model.specName === "category_tree")?.readonly).toBe(false);
     expect(models.find((model) => model.specName === "category_tree")?.enrichments[0]?.kind).toBe("tree");
     expect(models.find((model) => model.specName === "region_category_tree")?.enrichments[0]?.keys).toEqual([
       { source: "RegionId", relatedKey: "ParentRegionId" },
@@ -514,7 +518,10 @@ types:
     ).toBe(0);
     const treeTs = Object.values(ts.files).find((item) => item.includes("export class CategoryTreesRepository")) ?? "";
     const graphTs = Object.values(ts.files).find((item) => item.includes("export class NodeGraphsRepository")) ?? "";
+    expect(treeTs).toContain("export class CategoryTreesRepository extends CRUDRepository");
+    expect(treeTs).toContain("TreeCreateEnrichmentStrategy");
     expect(treeTs).toContain("TreeReadonlyEnrichmentStrategy");
+    expect(graphTs).toContain("GraphCreateEnrichmentStrategy");
     expect(graphTs).toContain("GraphReadonlyEnrichmentStrategy");
     expect(graphTs).toContain("this.nodeEdge = new NodeEdgesRepository(connection)");
     const rust = mem({
@@ -531,9 +538,16 @@ types:
     ).toBe(0);
     const treeRs = Object.values(rust.files).find((item) => item.includes("pub struct CategoryTreesRepository")) ?? "";
     const graphRs = Object.values(rust.files).find((item) => item.includes("pub struct NodeGraphsRepository")) ?? "";
+    expect(treeRs).toContain("TreeCreateEnrichmentStrategy");
     expect(treeRs).toContain("TreeReadonlyEnrichmentStrategy");
+    expect(graphRs).toContain("GraphCreateEnrichmentStrategy");
     expect(graphRs).toContain("GraphReadonlyEnrichmentStrategy");
+    expect(graphRs).toContain("via_");
     expect(graphRs).toContain("pub node_edge: NodeEdgesRepository");
+    const graphRowRs = Object.values(rust.files).find((item) => item.includes("fn node_graphs_row_repository")) ?? "";
+    expect(graphRowRs).toContain("GraphReadonlyEnrichmentStrategy");
+    expect(graphRowRs).toContain("via_");
+    expect(graphRowRs).toContain("GraphReadonlyEnrichmentStrategy::new(Arc::clone(&node_edge))");
   });
 
   it("rejects a tree composite whose parent key has no references", async () => {
@@ -1063,8 +1077,8 @@ types: []
     expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("use super::super::;");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("impl Repositories for Arc<dyn Datasource>");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<super::contactsRepository::ContactsRepository>");
-    expect(textOf(rust, "contactsRepository.rs")).toContain("let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;");
-    expect(textOf(rust, "addressTypesRepository.rs")).toContain("let repo = ReadonlyRepository::<AddressType>::new(connection, options)?;");
+    expect(textOf(rust, "contactsRepository.rs")).toContain("let mut repo = ReadonlyRepository::<Contact>::new(connection, options.clone())?;");
+    expect(textOf(rust, "addressTypesRepository.rs")).toContain("let repo = ReadonlyRepository::<AddressType>::new(connection, options.clone())?;");
     expect(textOf(rust, "addressTypesRepository.rs")).not.toContain("Association");
     expect(textOf(rust, "addressTypesRepository.rs")).not.toContain("add_enriched");
     expect(textOf(rust, "addressTypesRepository.rs")).not.toContain("Enrichment::");

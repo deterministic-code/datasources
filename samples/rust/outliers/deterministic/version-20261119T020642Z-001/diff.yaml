@@ -6,21 +6,6 @@ datasource.yaml:
       - types:
           filter: tag == "datasource_type"
     types: []
-datasource_seeds.yaml:
-  added: true
-  content:
-    version: 1.0.0
-    seeds:
-      - category:
-          - id1:
-              name: food
-              parent_category_id: 3
-          - id2:
-              name: fruit
-              parent_category_id: 1
-          - id3:
-              name: apple
-              parent_category_id: 2
 settings.yaml:
   added: true
   content:

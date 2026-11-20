@@ -6,12 +6,17 @@ use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use async_trait::async_trait;
+use std::any::Any;
 use std::sync::Arc;
 
 pub struct DefaultCreateEnrichmentStrategy;
 
 #[async_trait]
 impl<T: Entity> CreateEnrichmentStrategy<T> for DefaultCreateEnrichmentStrategy {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     async fn create_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,

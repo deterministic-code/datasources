@@ -1,4 +1,3 @@
-using Backend.Types.Datasource;
 using Backend.Types.View;
 using Datasources;
 using Outliers;
@@ -13,20 +12,30 @@ public static partial class Program
         await using var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         await connection.Open();
-        var regions = new RegionCategoriesRepository(connection);
-        var nodes = new NodesRepository(connection);
-        var edges = new NodeEdgesRepository(connection);
         var trees = new CategoryTreesRepository(connection);
         var regionTrees = new RegionCategoryTreesRepository(connection);
         var graphs = new NodeGraphsRepository(connection);
-        await regions.Create(new RegionCategory { RegionId = 1, CategoryId = 1, Name = "west" });
-        await regions.Create(new RegionCategory { RegionId = 1, CategoryId = 2, ParentRegionId = 1, ParentCategoryId = 1, Name = "coast" });
-        var core = await nodes.Create(new Node { Value = "core" });
-        var blade = await nodes.Create(new Node { Value = "blade" });
-        var potion = await nodes.Create(new Node { Value = "potion" });
-        await edges.Create(new NodeEdge { FromNodeId = core.Id, ToNodeId = blade.Id });
-        await edges.Create(new NodeEdge { FromNodeId = core.Id, ToNodeId = potion.Id });
-        await edges.Create(new NodeEdge { FromNodeId = blade.Id, ToNodeId = core.Id });
+        await trees.Create(new CategoryTree
+        {
+            Name = "food",
+            Children = [new CategoryTree { Name = "fruit", Children = [new CategoryTree { Name = "apple" }] }],
+        });
+        await regionTrees.Create(new RegionCategoryTree
+        {
+            RegionId = 1,
+            CategoryId = 1,
+            Name = "west",
+            Children = [new RegionCategoryTree { RegionId = 1, CategoryId = 2, Name = "coast" }],
+        });
+        await graphs.Create(new NodeGraph
+        {
+            Value = "core",
+            Edges =
+            [
+                new NodeGraph { Value = "blade", Edges = [new NodeGraph { Value = "core" }] },
+                new NodeGraph { Value = "potion" },
+            ],
+        });
         return Format.Transcript(await List(trees), await List(regionTrees), await List(graphs));
     }
 

@@ -142,6 +142,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
       parentFk: item.parentFk === undefined ? undefined : this.quote(item.parentFk),
       relatedFk: item.relatedFk === undefined ? undefined : this.quote(item.relatedFk),
       link: item.link === undefined ? undefined : childField(casing, item.link),
+      linkClass: item.link === undefined ? undefined : this.repositoryClass(item.link, casing),
       linkType: item.linkType,
       linked: isLinked(item)
         ? {
@@ -150,6 +151,21 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
             relatedFk: this.quote(item.relatedFk),
           }
         : undefined,
+    };
+  }
+
+  protected writeOf(model: RepositoryModel, casing: ICasingStrategy): Record<string, unknown> {
+    const graph = model.enrichments.find((item) => item.kind === "graph");
+    return {
+      treeWrite: !model.readonly && model.enrichments.some((item) => item.kind === "tree") ? {} : undefined,
+      graphWrite:
+        !model.readonly && graph?.link !== undefined
+          ? {
+              link: childField(casing, graph.link),
+              linkClass: this.repositoryClass(graph.link, casing),
+              linkType: graph.linkType,
+            }
+          : undefined,
     };
   }
 

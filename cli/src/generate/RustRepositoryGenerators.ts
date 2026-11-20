@@ -66,6 +66,7 @@ class RustRepositoryGenerators extends RepositoryGenerator {
       hasLinked: model.enrichments.some((item) => item.kind === "linked" || item.kind === "graph") ? {} : undefined,
       hasTree: model.enrichments.some((item) => item.kind === "tree") ? {} : undefined,
       hasGraph: model.enrichments.some((item) => item.kind === "graph") ? {} : undefined,
+      ...this.writeOf(model, casing),
       hasSelfVia: model.enrichments.some(isSelfVia) ? {} : undefined,
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },

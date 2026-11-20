@@ -327,6 +327,30 @@ describe("generated rust compiles", () => {
     expect(textOf(texts, "groupsRepository.rs")).toContain("add_linked");
   });
 
+  it("graph", async () => {
+    const texts = await generate(
+      yaml(
+        entity("node", idName("value")) +
+          `  - node_edge:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - from_node_id:
+            references: node.id
+        - to_node_id:
+            references: node.id
+  - node_graph:
+      tags: [view_type, graph, readonly_lookup]
+      inherits: node
+      fields:
+        - edges:
+            type: node_graph[]
+            references: node_edge.from_node_id
+`,
+      ),
+    );
+    expect(textOf(texts, "nodeGraphsRepository.rs")).toContain("GraphReadonlyEnrichmentStrategy::new(Arc::clone(&node_edge))");
+  });
+
   it("optimistic increment", async () => {
     const texts = await generate(account);
     expect(textOf(texts, "accountsRepository.rs")).toContain("pub struct AccountOptimistic");

@@ -39,8 +39,10 @@ import {
   fieldStem,
   overlayOf,
   referencePairs,
+  referenceTarget,
   resolveReference,
   tableIdentity,
+  tableOf,
   tableStem,
   usesGeneratedIdColumn,
   type LiveTable,
@@ -82,9 +84,7 @@ export const createTableStatementOf = (
           [CreateTableStatement.columnName(fieldStem(table, field.name), naming)],
         ),
     );
-  const foreignKeys = table.fields
-    .filter((field) => referencePairs(field.references).length === 1)
-    .map((field) => foreignKeyOf(naming, tables, table, field));
+  const foreignKeys = foreignKeysOf(naming, tables, table);
   const pk =
     keys.length > 1
       ? [new PrimaryKey(PrimaryKey.nameOf(stem, naming, "primary_key"), keys.map((key) => CreateTableStatement.columnName(fieldStem(table, key), naming)))]
@@ -124,6 +124,46 @@ export const uniqueConstraintOf = (
     UniqueConstraint.nameOf(tableStem(table), naming, fieldStem(table, field.name), "unique_constraint"),
     [CreateTableStatement.columnName(fieldStem(table, field.name), naming)],
   );
+
+const foreignKeysOf = (
+  naming: StatementNaming,
+  tables: readonly SqlTable[],
+  table: LiveTable,
+): ForeignKey[] => {
+  const fields = table.fields.filter((field) => referencePairs(field.references).length === 1);
+  const groups = new Map<string, TypeField[]>();
+  for (const field of fields) {
+    const ref = resolveReference(tables, naming, field);
+    const group = groups.get(ref.tableName) ?? [];
+    group.push(field);
+    groups.set(ref.tableName, group);
+  }
+  const keys: ForeignKey[] = [];
+  for (const [tableName, group] of groups) {
+    const logical = referenceTarget(group[0]!.references!)[0];
+    const target = tableOf(tables, logical);
+    const pk = tableIdentity(target).map((col) => CreateTableStatement.columnName(fieldStem(target, col), naming));
+    const refs = group.map((field) => resolveReference(tables, naming, field));
+    const distinct = [...new Set(refs.map((item) => item.columnName))];
+    const coversPk =
+      pk.length > 1 && distinct.length === pk.length && pk.every((col) => distinct.includes(col)) && group.length === pk.length;
+    if (coversPk) {
+      const byRef = new Map(refs.map((item, i) => [item.columnName, group[i]!] as const));
+      const local = pk.map((col) => CreateTableStatement.columnName(fieldStem(table, byRef.get(col)!.name), naming));
+      keys.push(
+        new ForeignKey(
+          ForeignKey.nameOf(tableStem(table), naming, "parent", "foreign_key"),
+          local,
+          tableName,
+          pk,
+        ),
+      );
+      continue;
+    }
+    for (const field of group) keys.push(foreignKeyOf(naming, tables, table, field));
+  }
+  return keys;
+};
 
 export const foreignKeyOf = (
   naming: StatementNaming,
