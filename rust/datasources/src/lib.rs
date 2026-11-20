@@ -52,8 +52,10 @@ mod enrichment_fields;
 mod enrichment_property_type;
 mod enrichment_via;
 mod expect_console_middleware;
+mod graph_create_enrichment_strategy;
 mod graph_readonly_enrichment_strategy;
 mod hashset_optimized_readonly_enrichment_strategy;
+mod tree_create_enrichment_strategy;
 mod tree_readonly_enrichment_strategy;
 mod i_repository;
 mod i_unit_of_work;
@@ -162,6 +164,7 @@ pub use enrichment::Enrichment;
 pub use enrichment_property_type::EnrichmentPropertyType;
 pub use enrichment_via::EnrichmentVia;
 pub use expect_console_middleware::ExpectConsoleMiddleware;
+pub use graph_create_enrichment_strategy::GraphCreateEnrichmentStrategy;
 pub use graph_readonly_enrichment_strategy::GraphReadonlyEnrichmentStrategy;
 pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonlyEnrichmentStrategy;
 pub use i_repository::IRepository;
@@ -181,6 +184,7 @@ pub use mocks::{
     MockSelectStatement, MockTransaction, MockWhere,
 };
 pub use nested_to_object_enrichment_strategy::NestedToObjectEnrichmentStrategy;
+pub use tree_create_enrichment_strategy::TreeCreateEnrichmentStrategy;
 pub use tree_readonly_enrichment_strategy::TreeReadonlyEnrichmentStrategy;
 pub use parameter::Parameter;
 pub use parameter_direction::ParameterDirection;

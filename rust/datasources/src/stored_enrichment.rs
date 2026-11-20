@@ -1,6 +1,9 @@
 use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::cascade_delete_enrichment_strategy::{delete_children, delete_linked};
+use crate::create_enrichment_strategy::CreateEnrichmentStrategy;
 use crate::default_create_enrichment_strategy::{create_children, create_links};
+use crate::graph_create_enrichment_strategy::GraphCreateEnrichmentStrategy;
+use crate::tree_create_enrichment_strategy::TreeCreateEnrichmentStrategy;
 use crate::default_update_enrichment_strategy::{update_children, update_linked};
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
@@ -94,6 +97,13 @@ impl<T: Entity, TRelated: Entity, TLink: Entity> AppliedRead<T>
 pub(crate) trait AppliedPersist<T: Entity>: Send + Sync {
     async fn write(&self, enrichment: &Enrichment, parent: &mut T, mode: WriteMode) -> Result<()>;
 
+    async fn write_create(
+        &self,
+        create: &dyn CreateEnrichmentStrategy<T>,
+        enrichment: &Enrichment,
+        parent: &mut T,
+    ) -> Result<()>;
+
     fn persist_bulk(&self) -> Option<Arc<BulkCRUDRepository>> {
         None
     }
@@ -123,6 +133,25 @@ impl<T: Entity, TChild: Entity> AppliedPersist<T> for AppliedPersistImpl<T, TChi
                 delete_children(self.repository.as_ref(), enrichment, parent, &NoNested).await
             }
         }
+    }
+
+    async fn write_create(
+        &self,
+        create: &dyn CreateEnrichmentStrategy<T>,
+        enrichment: &Enrichment,
+        parent: &mut T,
+    ) -> Result<()> {
+        if let Some(tree) = create.as_any().downcast_ref::<TreeCreateEnrichmentStrategy>() {
+            return tree
+                .create_typed(self.repository.clone(), enrichment, parent)
+                .await;
+        }
+        if let Some(graph) = create.as_any().downcast_ref::<GraphCreateEnrichmentStrategy>() {
+            return graph
+                .create_typed(self.repository.clone(), enrichment, parent)
+                .await;
+        }
+        create_children(self.repository.as_ref(), enrichment, parent).await
     }
 
     fn persist_bulk(&self) -> Option<Arc<BulkCRUDRepository>> {
@@ -158,6 +187,15 @@ impl<T: Entity, TLink: Entity> AppliedPersist<T> for AppliedLinkPersist<T, TLink
             WriteMode::Update => update_linked(self.repository.as_ref(), enrichment, parent).await,
             WriteMode::Delete => delete_linked(self.repository.as_ref(), enrichment, parent).await,
         }
+    }
+
+    async fn write_create(
+        &self,
+        _create: &dyn CreateEnrichmentStrategy<T>,
+        enrichment: &Enrichment,
+        parent: &mut T,
+    ) -> Result<()> {
+        create_links(self.repository.as_ref(), enrichment, parent).await
     }
 
     fn row_writer(&self) -> Option<Arc<dyn ICRUDRepository>> {

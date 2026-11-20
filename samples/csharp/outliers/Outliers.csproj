@@ -11,8 +11,6 @@
   <ItemGroup>
     <Compile Remove="*Tests.cs" />
     <Compile Remove="matrix/**" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../../../csharp/Datasources/Datasources.csproj" />
+    <ProjectReference Include="../../../csharp/Datasources/Datasources.csproj" Condition="Exists('../../../csharp/Datasources/Datasources.csproj')" />
   </ItemGroup>
 </Project>

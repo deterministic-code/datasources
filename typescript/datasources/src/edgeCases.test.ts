@@ -507,7 +507,7 @@ describe("enrichment edges", () => {
         [{ id: 1, Tags: [{ id: 2 }] } as unknown as Item],
         "create",
       ),
-    ).rejects.toThrow(/Tags/);
+    ).resolves.toBeUndefined();
   });
 
   it("rejects custom fills", async () => {

@@ -1,5 +1,6 @@
 use datasources::*;
 use datasources_memory::MemoryDriver;
+use futures_util::TryStreamExt;
 use std::sync::Arc;
 
 fn record(pairs: &[(&str, Value)]) -> Row {
@@ -199,5 +200,250 @@ async fn graph_fills_edges_copies_a_diamond_and_drops_a_self_loop() {
     let mut names: Vec<_> = edges.iter().map(|row| text(row, "Value")).collect();
     names.sort();
     assert_eq!(names, ["b", "c"]);
+}
+
+fn mapped_crud(connection: Arc<dyn Connection>) -> CRUDRepository {
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = vec!["Id".into()];
+    options.property_mappings = Some(Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+    CRUDRepository::<Row>::new(connection, options).unwrap()
+}
+
+fn mapped_write(
+    connection: Arc<dyn Connection>,
+    create: Arc<dyn CreateEnrichmentStrategy>,
+) -> CRUDRepository {
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = vec!["Id".into()];
+    options.property_mappings = Some(Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+    options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
+        None,
+        None,
+        Some(create),
+        false,
+    )));
+    CRUDRepository::<Row>::new(connection, options).unwrap()
+}
+
+#[tokio::test]
+async fn tree_create_writes_parents_first_by_name() {
+    let connection = MemoryDriver.connection(None);
+    connection.open().await.unwrap();
+    let via = Arc::new(mapped_crud(Arc::clone(&connection)));
+    let mut repo = mapped_write(
+        connection,
+        Arc::new(TreeCreateEnrichmentStrategy::new()),
+    );
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentCategoryId",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        Arc::clone(&via) as Arc<dyn ICRUDRepository>,
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let apple = record(&[("Name", Value::from("apple"))]);
+    let fruit = record(&[
+        ("Name", Value::from("fruit")),
+        ("Children", encode_rows(&[apple])),
+    ]);
+    repo.create(record(&[
+        ("Name", Value::from("food")),
+        ("Children", encode_rows(&[fruit])),
+    ]))
+    .await
+    .unwrap();
+    let food = repo
+        .read_single_where(&Where::new(Operator::equals("Name", Value::from("food"))), None)
+        .await
+        .unwrap()
+        .unwrap();
+    let children = food.payload("Children");
+    assert_eq!(text(&children[0], "Name"), "fruit");
+    assert_eq!(text(&children[0].payload("Children")[0], "Name"), "apple");
+}
+
+#[tokio::test]
+async fn tree_create_throws_on_a_cycle() {
+    let connection = MemoryDriver.connection(None);
+    connection.open().await.unwrap();
+    let via = Arc::new(mapped_crud(Arc::clone(&connection)));
+    let mut repo = mapped_write(
+        Arc::clone(&connection),
+        Arc::new(TreeCreateEnrichmentStrategy::new()),
+    );
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentCategoryId",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        Arc::clone(&via) as Arc<dyn ICRUDRepository>,
+        None,
+    );
+    let food = record(&[("Name", Value::from("food"))]);
+    let apple = record(&[
+        ("Name", Value::from("apple")),
+        ("Children", encode_rows(&[food.clone()])),
+    ]);
+    let fruit = record(&[
+        ("Name", Value::from("fruit")),
+        ("Children", encode_rows(&[apple])),
+    ]);
+    let error = repo
+        .create(record(&[
+            ("Name", Value::from("food")),
+            ("Children", encode_rows(&[fruit])),
+        ]))
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("food"), "{error}");
+}
+
+#[tokio::test]
+async fn tree_create_stamps_composite_parents() {
+    let connection = MemoryDriver.connection(None);
+    connection.open().await.unwrap();
+    let mut via_options = CRUDRepositoryOptions::default();
+    via_options.ids = vec!["RegionId".into(), "CategoryId".into()];
+    via_options.property_mappings = Some(Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+    let via = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection), via_options).unwrap());
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = vec!["RegionId".into(), "CategoryId".into()];
+    options.property_mappings = Some(Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+    options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
+        None,
+        None,
+        Some(Arc::new(TreeCreateEnrichmentStrategy::new())),
+        false,
+    )));
+    let mut repo = CRUDRepository::<Row>::new(connection, options).unwrap();
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "RegionId",
+            "ParentRegionId",
+            None,
+            EnrichmentPropertyType::List,
+        )
+        .with_keys(&[("RegionId", "ParentRegionId"), ("CategoryId", "ParentCategoryId")]),
+        Arc::clone(&via) as Arc<dyn ICRUDRepository>,
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    repo.create(record(&[
+        ("RegionId", Value::from(1i64)),
+        ("CategoryId", Value::from(1i64)),
+        ("Name", Value::from("west")),
+        (
+            "Children",
+            encode_rows(&[record(&[
+                ("RegionId", Value::from(1i64)),
+                ("CategoryId", Value::from(2i64)),
+                ("Name", Value::from("coast")),
+            ])]),
+        ),
+    ]))
+    .await
+    .unwrap();
+    let west = repo
+        .read_single_where(&Where::new(Operator::equals("Name", Value::from("west"))), None)
+        .await
+        .unwrap()
+        .unwrap();
+    let child = &west.payload("Children")[0];
+    assert_eq!(text(child, "Name"), "coast");
+    assert_eq!(child.get("ParentRegionId"), Some(&Value::from(1i64)));
+    assert_eq!(child.get("ParentCategoryId"), Some(&Value::from(1i64)));
+}
+
+#[tokio::test]
+async fn graph_create_writes_nodes_then_edges_and_skips_a_diamond() {
+    let nodes = MemoryDriver.connection(None);
+    nodes.open().await.unwrap();
+    let edges = MemoryDriver.connection(None);
+    edges.open().await.unwrap();
+    let via = Arc::new(mapped_crud(Arc::clone(&nodes)));
+    let link: Arc<dyn ICRUDRepository> = Arc::new(mapped_crud(edges));
+    let mut repo = mapped_write(
+        nodes,
+        Arc::new(GraphCreateEnrichmentStrategy::new(Arc::clone(&link))),
+    );
+    repo.add_enriched(
+        Enrichment::new("Edges", "Id", "Id", None, EnrichmentPropertyType::List)
+            .linked(Association::new("FromNodeId", "ToNodeId")),
+        Arc::clone(&via) as Arc<dyn ICRUDRepository>,
+        Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(Arc::clone(&link)))),
+    );
+    let d = record(&[("Value", Value::from("d"))]);
+    repo.create(record(&[
+        ("Value", Value::from("a")),
+        (
+            "Edges",
+            encode_rows(&[
+                record(&[
+                    ("Value", Value::from("b")),
+                    ("Edges", encode_rows(&[d.clone()])),
+                ]),
+                record(&[
+                    ("Value", Value::from("c")),
+                    ("Edges", encode_rows(&[d])),
+                ]),
+            ]),
+        ),
+    ]))
+    .await
+    .unwrap();
+    let node_rows: Vec<_> = via.read(None, None).try_collect().await.unwrap();
+    let edge_rows: Vec<_> = link.read(None, None).try_collect().await.unwrap();
+    assert_eq!(node_rows.len(), 4);
+    assert_eq!(edge_rows.len(), 4);
+}
+
+#[tokio::test]
+async fn graph_create_writes_a_loop() {
+    let nodes = MemoryDriver.connection(None);
+    nodes.open().await.unwrap();
+    let edges = MemoryDriver.connection(None);
+    edges.open().await.unwrap();
+    let via = Arc::new(mapped_crud(Arc::clone(&nodes)));
+    let link: Arc<dyn ICRUDRepository> = Arc::new(mapped_crud(edges));
+    let mut repo = mapped_write(
+        nodes,
+        Arc::new(GraphCreateEnrichmentStrategy::new(Arc::clone(&link))),
+    );
+    repo.add_enriched(
+        Enrichment::new("Edges", "Id", "Id", None, EnrichmentPropertyType::List)
+            .linked(Association::new("FromNodeId", "ToNodeId")),
+        Arc::clone(&via) as Arc<dyn ICRUDRepository>,
+        Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(Arc::clone(&link)))),
+    );
+    let mut a = record(&[("Value", Value::from("a"))]);
+    let b = record(&[
+        ("Value", Value::from("b")),
+        ("Edges", encode_rows(&[a.clone()])),
+    ]);
+    a.insert("Edges".into(), encode_rows(&[b]));
+    repo.create(a).await.unwrap();
+    let node_rows: Vec<_> = via.read(None, None).try_collect().await.unwrap();
+    let edge_rows: Vec<_> = link.read(None, None).try_collect().await.unwrap();
+    assert_eq!(node_rows.len(), 2);
+    assert_eq!(edge_rows.len(), 2);
+    let loaded_a = repo
+        .read_single_where(&Where::new(Operator::equals("Value", Value::from("a"))), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(text(&loaded_a.payload("Edges")[0], "Value"), "b");
+    let loaded_b = repo
+        .read_single_where(&Where::new(Operator::equals("Value", Value::from("b"))), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(text(&loaded_b.payload("Edges")[0], "Value"), "a");
 }
 

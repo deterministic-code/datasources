@@ -1,4 +1,4 @@
-use crate::generated::{Node, NodeEdge, RegionCategory, Repositories};
+use crate::generated::{CategoryTree, NodeGraph, RegionCategoryTree, Repositories};
 use crate::{transcript, GraphNode, RegionNode, TreeNode};
 use datasources::{default, Result};
 use futures_util::TryStreamExt;
@@ -6,30 +6,44 @@ use futures_util::TryStreamExt;
 pub async fn run() -> Result<Vec<String>> {
     crate::datasources_providers::register();
     let ds = default()?;
-    ds.region_categories()
-        .create(RegionCategory { region_id: 1, category_id: 1, name: "west".into(), ..Default::default() })
-        .await?;
-    ds.region_categories()
-        .create(RegionCategory {
-            region_id: 1,
-            category_id: 2,
-            parent_region_id: Some(1),
-            parent_category_id: Some(1),
-            name: "coast".into(),
+    ds.category_trees()
+        .create(CategoryTree {
+            name: "food".into(),
+            children: vec![CategoryTree {
+                name: "fruit".into(),
+                children: vec![CategoryTree { name: "apple".into(), ..Default::default() }],
+                ..Default::default()
+            }],
             ..Default::default()
         })
         .await?;
-    let core = ds.nodes().create(Node { value: "core".into(), ..Default::default() }).await?;
-    let blade = ds.nodes().create(Node { value: "blade".into(), ..Default::default() }).await?;
-    let potion = ds.nodes().create(Node { value: "potion".into(), ..Default::default() }).await?;
-    ds.node_edges()
-        .create(NodeEdge { from_node_id: core.id, to_node_id: blade.id })
+    ds.region_category_trees()
+        .create(RegionCategoryTree {
+            region_id: 1,
+            category_id: 1,
+            name: "west".into(),
+            children: vec![RegionCategoryTree {
+                region_id: 1,
+                category_id: 2,
+                name: "coast".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
         .await?;
-    ds.node_edges()
-        .create(NodeEdge { from_node_id: core.id, to_node_id: potion.id })
-        .await?;
-    ds.node_edges()
-        .create(NodeEdge { from_node_id: blade.id, to_node_id: core.id })
+    ds.node_graphs()
+        .create(NodeGraph {
+            value: "core".into(),
+            edges: vec![
+                NodeGraph {
+                    value: "blade".into(),
+                    edges: vec![NodeGraph { value: "core".into(), ..Default::default() }],
+                    ..Default::default()
+                },
+                NodeGraph { value: "potion".into(), ..Default::default() },
+            ],
+            ..Default::default()
+        })
         .await?;
     let trees = ds
         .category_trees()

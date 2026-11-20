@@ -340,6 +340,41 @@ describe("generate-sql collection fields", () => {
     assert.match(sql, /FOREIGN KEY \("contact_id"\) REFERENCES "contacts"/);
   });
 
+  it("emits one composite foreign key when parent columns cover the target primary key", async () => {
+    const files = await generateSql({
+      reader: memoryReader({
+        "types.yaml": `types:
+  - region_category:
+      tags: [datasource_type]
+      fields:
+        - region_id:
+            type: integer
+            is_id: true
+        - category_id:
+            type: integer
+            is_id: true
+        - parent_region_id:
+            references: region_category.region_id
+            is_nullable: true
+        - parent_category_id:
+            references: region_category.category_id
+            is_nullable: true
+        - name:
+            type: string
+`,
+      }),
+      settings: {},
+    }, ["sqlite"]);
+    const up = files.find((e) => e.filename.endsWith("0001_initial_up.sql"));
+    assert.ok(up, "expected initial up migration");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    assert.match(
+      sql,
+      /FOREIGN KEY \("parent_region_id", "parent_category_id"\) REFERENCES "region_categories" \("region_id", "category_id"\)/,
+    );
+    assert.doesNotMatch(sql, /FOREIGN KEY \("parent_region_id"\) REFERENCES "region_categories" \("region_id"\)/);
+  });
+
   it("emits a dictionary table with unique owner and key, flattening object values", async () => {
     const files = await generateSql({
       reader: memoryReader({

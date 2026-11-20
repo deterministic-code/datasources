@@ -66,13 +66,13 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         if (entry.Enrichment.Type is EnrichmentPropertyType.Custom)
             throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
         var stored = (StoredEnrichment<T>)entry;
-        if (entry.Enrichment is { Association: { } } enrichment)
+        if (entry.Enrichment is { Association: { } } bulkAssociation && stored.Link is not null)
         {
-            var link = Required(stored.Link, enrichment.DestinationProperty);
+            var link = stored.Link;
             foreach (var parent in parents)
             {
-                if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
-                await link.Write(enrichment, create, update, delete, mode, parent);
+                if (Skip(parent, bulkAssociation.DestinationProperty, mode)) continue;
+                await link.Write(bulkAssociation, create, update, delete, mode, parent);
             }
             return;
         }
@@ -91,9 +91,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         if (entry.Enrichment.Type is EnrichmentPropertyType.Custom)
             throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
         var stored = (StoredEnrichment<T>)entry;
-        if (entry.Enrichment is { Association: { } } enrichment)
+        if (entry.Enrichment is { Association: { } } enrichment && stored.Link is not null)
         {
-            var link = Required(stored.Link, enrichment.DestinationProperty);
+            var link = stored.Link;
             foreach (var parent in parents)
             {
                 if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
