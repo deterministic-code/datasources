@@ -323,6 +323,17 @@ const relations = (
     const via = repoName(tableName);
     return { via, viaType: typeName(via) };
   };
+  const viaOf = (tableName: string, fieldBase: string): { via: string; viaType: string } => {
+    const fieldType = types.get(fieldBase);
+    if (
+      fieldType !== undefined &&
+      (fieldType.tags.includes("tree") === true || fieldType.tags.includes("graph") === true) &&
+      (fieldType.inherits === tableName || fieldBase === tableName)
+    ) {
+      return { via: fieldBase, viaType: typeName(fieldBase) };
+    }
+    return named(tableName);
+  };
   const planned: PlannedEnrichment[] = [];
   for (const field of authored.fields) {
     if (!isCollectionField(field)) continue;
@@ -389,9 +400,9 @@ const relations = (
         relatedFk: property(other.name),
       });
     } else if (target?.tags.includes("many_to_many") === true && other !== undefined && otherRef !== undefined) {
-      const via = named(otherRef.type);
+      const via = viaOf(otherRef.type, field.base);
       const link = named(ref.type);
-      const relatedType = types.get(otherRef.type) ?? expanded.get(otherRef.type);
+      const relatedType = types.get(via.via) ?? types.get(otherRef.type) ?? expanded.get(otherRef.type);
       if (relatedType === undefined) throw new Error(`${otherRef.type}: missing type`);
       planned.push({
         destination: property(field.name),
@@ -420,7 +431,7 @@ const relations = (
         ...(treePairs !== undefined ? { keys: treePairs } : {}),
       });
     } else {
-      const via = named(ref.type);
+      const via = viaOf(ref.type, field.base);
       planned.push({
         destination: property(field.name),
         source: matched?.source ?? identity(authored.inherits ?? authored.name),

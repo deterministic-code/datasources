@@ -584,11 +584,27 @@ types:
         - categories:
             type: category[]
             references: game_category.game_id
+  - game_summary:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - categories:
+            type: category_tree[]
+            references: game_summary_category.game_summary_id
   - game_category:
       tags: [datasource_type, many_to_many]
       fields:
         - game_id:
             references: game.id
+        - category_id:
+            references: category.id
+  - game_summary_category:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - game_summary_id:
+            references: game_summary.id
         - category_id:
             references: category.id
 `;
@@ -616,6 +632,8 @@ types:
       "category_tree",
       "game",
       "game_category",
+      "game_summary",
+      "game_summary_category",
     ]);
     expect(models.find((model) => model.specName === "category_tree")?.enrichments[0]).toMatchObject({
       kind: "tree",
@@ -625,12 +643,71 @@ types:
       via: "category",
       viaType: "Category",
     });
+    expect(models.find((model) => model.specName === "game_summary")?.enrichments[0]).toMatchObject({
+      via: "category_tree",
+      viaType: "CategoryTree",
+    });
     const categoriesCs = Object.values(store.files).find((item) => item.includes("class CategoriesRepository")) ?? "";
     const treesCs = Object.values(store.files).find((item) => item.includes("class CategoryTreesRepository")) ?? "";
     const gamesCs = Object.values(store.files).find((item) => item.includes("class GamesRepository")) ?? "";
+    const summariesCs = Object.values(store.files).find((item) => item.includes("class GameSummariesRepository")) ?? "";
     expect(categoriesCs).toContain("class CategoriesRepository : CRUDRepository<Backend.Types.Datasource.Category>");
     expect(treesCs).toContain("class CategoryTreesRepository : CRUDRepository<Backend.Types.View.CategoryTree>");
     expect(gamesCs).not.toContain("CategoryTree");
+    expect(summariesCs).toContain("CategoryTreesRepository");
+  });
+
+  it("wires a graph[] field through the graph repository", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - node:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - value:
+            type: string
+  - node_edge:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - from_node_id:
+            references: node.id
+        - to_node_id:
+            references: node.id
+  - node_graph:
+      tags: [view_type, graph]
+      inherits: node
+      fields:
+        - edges:
+            type: node_graph[]
+            references: node_edge.from_node_id
+  - pack:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - graphs:
+            type: node_graph[]
+            references: pack_node.pack_id
+  - pack_node:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - pack_id:
+            references: pack.id
+        - node_id:
+            references: node_graph.id
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    expect(planRepositories(spec, "csharp", {}).find((model) => model.specName === "pack")?.enrichments[0]).toMatchObject({
+      via: "node_graph",
+      viaType: "NodeGraph",
+    });
   });
 
   it("emits both a readonly_lookup view and the inherited table", async () => {
