@@ -13,7 +13,10 @@ import {
   TreeReadonlyEnrichmentStrategy,
   Where,
 } from "@deterministic-code/datasources";
+import { collectAsync } from "../../../datasources/src/collectAsync.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
+
+const flatten = (node: Category): string[] => [node.Name, ...node.Children.flatMap(flatten)];
 
 class Category {
   Id = 0;
@@ -67,6 +70,86 @@ describe("tree enrichment", () => {
     expect(food?.Children[0]?.Name).toBe("fruit");
     expect(food?.Children[0]?.Children[0]?.Name).toBe("apple");
     expect(food?.Children[0]?.Children[0]?.Children).toEqual([]);
+  });
+
+  it("returns each row once under the roots", async () => {
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const connection = await ds.createConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await command.executeNative(
+      new Native("CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, parent_category_id INTEGER, name TEXT NOT NULL)"),
+    );
+    await command.executeNative(new Native("INSERT INTO categories (id, parent_category_id, name) VALUES (1, NULL, 'food')"));
+    await command.executeNative(new Native("INSERT INTO categories (id, parent_category_id, name) VALUES (2, 1, 'fruit')"));
+    await command.executeNative(new Native("INSERT INTO categories (id, parent_category_id, name) VALUES (3, 2, 'apple')"));
+    const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const via = new ReadonlyRepository(connection, { type: Category, entity: "categories", propertyMappings: snake });
+    const repo = new ReadonlyRepository(connection, { type: Category, entity: "categories", propertyMappings: snake });
+    repo.addEnriched(
+      { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentCategoryId", type: "list" },
+      via,
+      new TreeReadonlyEnrichmentStrategy(),
+    );
+    const roots = await collectAsync(repo.read());
+    expect(roots.map((row) => row.Name)).toEqual(["food"]);
+    expect(flatten(roots[0]!)).toEqual(["food", "fruit", "apple"]);
+    const fruit = await repo.readSingle(new Where(new Operator.Equals("Id", 2)));
+    expect(fruit?.Name).toBe("fruit");
+    expect(fruit?.Children[0]?.Name).toBe("apple");
+  });
+
+  it("returns the composite root", async () => {
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const connection = await ds.createConnection();
+    await connection.open();
+    const command = connection.createCommand();
+    await command.executeNative(
+      new Native(`CREATE TABLE region_categories (
+                region_id INTEGER NOT NULL,
+                category_id INTEGER NOT NULL,
+                parent_region_id INTEGER,
+                parent_category_id INTEGER,
+                name TEXT NOT NULL,
+                PRIMARY KEY (region_id, category_id)
+            )`),
+    );
+    await command.executeNative(
+      new Native("INSERT INTO region_categories (region_id, category_id, name) VALUES (1, 10, 'food')"),
+    );
+    await command.executeNative(
+      new Native(
+        "INSERT INTO region_categories (region_id, category_id, parent_region_id, parent_category_id, name) VALUES (1, 11, 1, 10, 'fruit')",
+      ),
+    );
+    const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
+    const via = new ReadonlyRepository(connection, {
+      type: RegionCategory,
+      entity: "region_categories",
+      propertyMappings: snake,
+    });
+    const repo = new ReadonlyRepository(connection, {
+      type: RegionCategory,
+      entity: "region_categories",
+      propertyMappings: snake,
+    });
+    repo.addEnriched(
+      {
+        destinationProperty: "Children",
+        sourceProperty: "RegionId",
+        relatedKey: "ParentRegionId",
+        type: "list",
+        keys: [
+          { sourceProperty: "RegionId", relatedKey: "ParentRegionId" },
+          { sourceProperty: "CategoryId", relatedKey: "ParentCategoryId" },
+        ],
+      },
+      via,
+      new TreeReadonlyEnrichmentStrategy(),
+    );
+    const roots = await collectAsync(repo.read());
+    expect(roots.map((row) => row.Name)).toEqual(["food"]);
+    expect(roots[0]?.Children[0]?.Name).toBe("fruit");
   });
 
   it("create then read matches", async () => {

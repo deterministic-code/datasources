@@ -550,6 +550,115 @@ types:
     expect(graphRowRs).toContain("GraphReadonlyEnrichmentStrategy::new(Arc::clone(&node_edge))");
   });
 
+  it("keeps the flat category repository next to the tree view", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const types = `version: 1.0.0
+types:
+  - category:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_category_id:
+            references: category.id
+            is_nullable: true
+        - name:
+            type: string
+  - category_tree:
+      tags: [view_type, tree]
+      inherits: category
+      fields:
+        - children:
+            type: category_tree[]
+            references: category.parent_category_id
+  - game:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+        - categories:
+            type: category[]
+            references: game_category.game_id
+  - game_category:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - game_id:
+            references: game.id
+        - category_id:
+            references: category.id
+`;
+    const store = mem({
+      [join(input, "types.yaml")]: types,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    });
+    expect(
+      await exec(
+        ["generate", "all", "--dialect", "csharp", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        deps(store.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": types,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    const models = planRepositories(spec, "csharp", {});
+    expect(models.map((model) => model.specName).sort()).toEqual([
+      "category",
+      "category_tree",
+      "game",
+      "game_category",
+    ]);
+    expect(models.find((model) => model.specName === "category_tree")?.enrichments[0]).toMatchObject({
+      kind: "tree",
+      via: "category_tree",
+    });
+    expect(models.find((model) => model.specName === "game")?.enrichments[0]).toMatchObject({
+      via: "category",
+      viaType: "Category",
+    });
+    const categoriesCs = Object.values(store.files).find((item) => item.includes("class CategoriesRepository")) ?? "";
+    const treesCs = Object.values(store.files).find((item) => item.includes("class CategoryTreesRepository")) ?? "";
+    const gamesCs = Object.values(store.files).find((item) => item.includes("class GamesRepository")) ?? "";
+    expect(categoriesCs).toContain("class CategoriesRepository : CRUDRepository<Backend.Types.Datasource.Category>");
+    expect(treesCs).toContain("class CategoryTreesRepository : CRUDRepository<Backend.Types.View.CategoryTree>");
+    expect(gamesCs).not.toContain("CategoryTree");
+  });
+
+  it("emits both a readonly_lookup view and the inherited table", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - seat:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - seat_view:
+      tags: [view_type, readonly_lookup]
+      inherits: seat
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    expect(planRepositories(spec, "csharp", {}).map((model) => model.specName).sort()).toEqual([
+      "seat",
+      "seat_view",
+    ]);
+  });
+
   it("rejects a tree composite whose parent key has no references", async () => {
     const spec = await DeterministicParser(
       memoryReader({

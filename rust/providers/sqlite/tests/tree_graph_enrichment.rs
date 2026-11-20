@@ -7,7 +7,16 @@ use datasources::{
     ReadonlyRepository, ReadonlyRepositoryMappingOptions, Row, TreeCreateEnrichmentStrategy,
     TreeReadonlyEnrichmentStrategy, Where, encode_rows,
 };
+use futures_util::TryStreamExt;
 use std::sync::Arc;
+
+fn flatten(node: &Row) -> Vec<String> {
+    let mut names = vec![node.get("Name").unwrap().wire_text().to_string()];
+    for child in node.payload("Children") {
+        names.extend(flatten(&child));
+    }
+    names
+}
 
 #[tokio::test]
 async fn tree_read_stops_on_a_cycle() {
@@ -60,6 +69,130 @@ async fn tree_read_stops_on_a_cycle() {
     let apples = children[0].payload("Children");
     assert_eq!(apples[0].get("Name").unwrap().wire_text(), "apple");
     assert!(apples[0].payload("Children").is_empty());
+}
+
+#[tokio::test]
+async fn tree_read_returns_each_row_once_under_the_roots() {
+    let connection = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+    connection.open().await.unwrap();
+    let command = SqliteCommand::new(Arc::clone(&connection));
+    command
+        .execute_native(
+            &Native::new(
+                "CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, parent_category_id INTEGER, name TEXT NOT NULL)",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    for sql in [
+        "INSERT INTO categories (id, parent_category_id, name) VALUES (1, NULL, 'food')",
+        "INSERT INTO categories (id, parent_category_id, name) VALUES (2, 1, 'fruit')",
+        "INSERT INTO categories (id, parent_category_id, name) VALUES (3, 2, 'apple')",
+    ] {
+        command.execute_native(&Native::new(sql), None).await.unwrap();
+    }
+    let mappings = Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let options = || {
+        let mut options = ReadonlyRepositoryMappingOptions::default();
+        options.entity = "categories".into();
+        options.property_mappings = Some(Arc::clone(&mappings) as _);
+        options
+    };
+    let via = Arc::new(ReadonlyRepository::<Row>::new(Arc::clone(&connection) as Arc<dyn Connection>, options()).unwrap());
+    let mut repo = ReadonlyRepository::<Row>::new(connection, options()).unwrap();
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentCategoryId",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        via,
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let roots: Vec<_> = repo.read(None, None).try_collect().await.unwrap();
+    assert_eq!(
+        roots.iter().map(|row| row.get("Name").unwrap().wire_text()).collect::<Vec<_>>(),
+        ["food"]
+    );
+    assert_eq!(flatten(&roots[0]), ["food", "fruit", "apple"]);
+    let fruit = repo
+        .read_single_where(&Where::new(Operator::equals("Id", 2i64)), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(fruit.get("Name").unwrap().wire_text(), "fruit");
+    let apples = fruit.payload("Children");
+    assert_eq!(apples[0].get("Name").unwrap().wire_text(), "apple");
+}
+
+#[tokio::test]
+async fn tree_read_returns_the_composite_root() {
+    let connection = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+    connection.open().await.unwrap();
+    let command = SqliteCommand::new(Arc::clone(&connection));
+    command
+        .execute_native(
+            &Native::new(
+                "CREATE TABLE region_categories (
+                region_id INTEGER NOT NULL,
+                category_id INTEGER NOT NULL,
+                parent_region_id INTEGER,
+                parent_category_id INTEGER,
+                name TEXT NOT NULL,
+                PRIMARY KEY (region_id, category_id)
+            )",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute_native(
+            &Native::new("INSERT INTO region_categories (region_id, category_id, name) VALUES (1, 10, 'food')"),
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute_native(
+            &Native::new(
+                "INSERT INTO region_categories (region_id, category_id, parent_region_id, parent_category_id, name) VALUES (1, 11, 1, 10, 'fruit')",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let mappings = Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let options = || {
+        let mut options = ReadonlyRepositoryMappingOptions::default();
+        options.entity = "region_categories".into();
+        options.property_mappings = Some(Arc::clone(&mappings) as _);
+        options
+    };
+    let via = Arc::new(ReadonlyRepository::<Row>::new(Arc::clone(&connection) as Arc<dyn Connection>, options()).unwrap());
+    let mut repo = ReadonlyRepository::<Row>::new(connection, options()).unwrap();
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "RegionId",
+            "ParentRegionId",
+            None,
+            EnrichmentPropertyType::List,
+        )
+        .with_keys(&[("RegionId", "ParentRegionId"), ("CategoryId", "ParentCategoryId")]),
+        via,
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let roots: Vec<_> = repo.read(None, None).try_collect().await.unwrap();
+    assert_eq!(
+        roots.iter().map(|row| row.get("Name").unwrap().wire_text()).collect::<Vec<_>>(),
+        ["food"]
+    );
+    let children = roots[0].payload("Children");
+    assert_eq!(children[0].get("Name").unwrap().wire_text(), "fruit");
 }
 
 #[tokio::test]

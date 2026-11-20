@@ -45,8 +45,16 @@ export class TreeReadonlyEnrichmentStrategy<T extends object>
       list.push(item);
       index.set(parentKey, list);
     }
-    for (const [offset, parent] of parents.entries())
+    const ids = new Set<string>();
+    for (const [offset, parent] of parents.entries()) {
       this.attach(parent, enrichment, index, new Set(), sources, offset);
+      const id = this.keys.matchKey(parent, enrichment, sources, offset);
+      if (id !== undefined) ids.add(id);
+    }
+    for (let i = parents.length - 1; i >= 0; i--) {
+      const parentKey = this.keys.rowMatchKey(parents[i]!, enrichment);
+      if (parentKey !== undefined && ids.has(parentKey)) parents.splice(i, 1);
+    }
   }
 
   private attach<TRelated extends object>(

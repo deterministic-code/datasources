@@ -95,7 +95,13 @@ export const planRepositories = (
   }
   const viewByTable = new Map<string, Type>();
   for (const type of spec.types) {
-    if (type.tags.includes("view_type") && type.inherits !== undefined && type.inherits !== "dictionary") {
+    if (
+      type.tags.includes("view_type") &&
+      type.inherits !== undefined &&
+      type.inherits !== "dictionary" &&
+      !type.tags.includes("tree") &&
+      !type.tags.includes("graph")
+    ) {
       viewByTable.set(type.inherits, type);
     }
   }
@@ -128,13 +134,22 @@ export const planRepositories = (
     const overlay = viewByTable.get(table.name) ?? types.get(table.name);
     if (skip(table, overlay)) return [];
     const sourceType = types.get(table.name);
-    const authoredTypes =
+    const overlayTypes =
       sourceType !== undefined &&
       sourceType !== overlay &&
       overlay!.tags.includes("readonly_lookup") &&
       sourceType.tags.includes("datasource_type")
         ? [overlay!, sourceType]
         : [overlay!];
+    const treeGraphViews = spec.types.filter(
+      (type) =>
+        (type.tags.includes("tree") === true || type.tags.includes("graph") === true) &&
+        type.inherits === table.name,
+    );
+    const authoredTypes = [
+      ...overlayTypes.filter((type) => !treeGraphViews.includes(type)),
+      ...treeGraphViews,
+    ];
     return authoredTypes.map((authored): RepositoryModel => {
     const shape = expanded.get(authored.name);
     if (shape === undefined) throw new Error(`${authored.name}: no expanded type`);
@@ -359,7 +374,7 @@ const relations = (
       (otherRef.type === hostTable || otherRef.type === authored.name);
     const treeSelf = authored.tags.includes("tree") === true && field.base === authored.name;
     if (graphSelf && other !== undefined && otherRef !== undefined) {
-      const via = named(otherRef.type);
+      const via = named(authored.name);
       const link = named(ref.type);
       planned.push({
         destination: property(field.name),
@@ -392,7 +407,7 @@ const relations = (
         relatedFk: property(other.name),
       });
     } else if (treeSelf) {
-      const via = named(ref.type);
+      const via = named(authored.name);
       const treePairs = pairs.length > 1 ? treeKeys(authored, field, pairs, expanded, property) : undefined;
       const first = treePairs?.[0];
       planned.push({

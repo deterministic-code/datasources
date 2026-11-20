@@ -35,8 +35,19 @@ public sealed class TreeReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrat
                 index[parentKey] = list = [];
             list.Add(item);
         }
+        var ids = new HashSet<string>();
         for (var i = 0; i < parents.Count; i++)
+        {
             Attach(parents[i], enrichment, index, [], DefaultReadonlyEnrichmentStrategy<T>.At(sources, i));
+            var id = DefaultReadonlyEnrichmentStrategy<T>.MatchKey(parents[i], enrichment, DefaultReadonlyEnrichmentStrategy<T>.At(sources, i));
+            if (id is not null) ids.Add(id);
+        }
+        for (var i = parents.Count - 1; i >= 0; i--)
+        {
+            var parentKey = DefaultReadonlyEnrichmentStrategy<T>.RowMatchKey(parents[i], enrichment);
+            if (parentKey is not null && ids.Contains(parentKey))
+                parents.RemoveAt(i);
+        }
     }
 
     static void Attach<TRelated>(

@@ -38,6 +38,14 @@ fn text(row: &Row, key: &str) -> String {
     }
 }
 
+fn flatten(node: &Row) -> Vec<String> {
+    let mut names = vec![text(node, "Name")];
+    for child in node.payload("Children") {
+        names.extend(flatten(&child));
+    }
+    names
+}
+
 #[tokio::test]
 async fn tree_fills_three_levels_and_stops_on_a_cycle() {
     let mut rows = [
@@ -158,6 +166,113 @@ async fn tree_matches_a_composite_parent() {
     let children = food.payload("Children");
     assert_eq!(text(&children[0], "Name"), "fruit");
     assert!(children[0].payload("Children").is_empty());
+}
+
+#[tokio::test]
+async fn tree_read_returns_each_row_once_under_the_roots() {
+    let mut rows = [
+        record(&[("name", Value::from("food"))]),
+        record(&[("name", Value::from("fruit"))]),
+        record(&[("name", Value::from("apple"))]),
+    ];
+    let connection = setup(&mut rows).await;
+    let food_id = rows[0].get("id").unwrap().clone();
+    let fruit_id = rows[1].get("id").unwrap().clone();
+    let apple_id = rows[2].get("id").unwrap().clone();
+    let command = connection.create_command();
+    command
+        .execute(
+            "update",
+            Some(&[
+                Parameter::new("id", fruit_id.clone()),
+                Parameter::new("parent_category_id", food_id),
+            ]),
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "update",
+            Some(&[
+                Parameter::new("id", apple_id),
+                Parameter::new("parent_category_id", fruit_id.clone()),
+            ]),
+        )
+        .await
+        .unwrap();
+    let via = Arc::new(mapped(Arc::clone(&connection)));
+    let mut repo = mapped(connection);
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentCategoryId",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        via,
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let roots: Vec<_> = repo.read(None, None).try_collect().await.unwrap();
+    assert_eq!(roots.iter().map(|row| text(row, "Name")).collect::<Vec<_>>(), ["food"]);
+    assert_eq!(flatten(&roots[0]), ["food", "fruit", "apple"]);
+    let fruit = repo
+        .read_single_where(&Where::new(Operator::equals("Id", fruit_id)), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(text(&fruit, "Name"), "fruit");
+    let apples = fruit.payload("Children");
+    assert_eq!(text(&apples[0], "Name"), "apple");
+}
+
+#[tokio::test]
+async fn tree_read_returns_the_composite_root() {
+    let connection = MemoryDriver.connection(None);
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute(
+            "insert",
+            Some(&[
+                Parameter::new("region_id", Value::from(1i64)),
+                Parameter::new("category_id", Value::from(10i64)),
+                Parameter::new("name", Value::from("food")),
+            ]),
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "insert",
+            Some(&[
+                Parameter::new("region_id", Value::from(1i64)),
+                Parameter::new("category_id", Value::from(11i64)),
+                Parameter::new("parent_region_id", Value::from(1i64)),
+                Parameter::new("parent_category_id", Value::from(10i64)),
+                Parameter::new("name", Value::from("fruit")),
+            ]),
+        )
+        .await
+        .unwrap();
+    let via = Arc::new(mapped(Arc::clone(&connection)));
+    let mut repo = mapped(connection);
+    repo.add_enriched(
+        Enrichment::new(
+            "Children",
+            "RegionId",
+            "ParentRegionId",
+            None,
+            EnrichmentPropertyType::List,
+        )
+        .with_keys(&[("RegionId", "ParentRegionId"), ("CategoryId", "ParentCategoryId")]),
+        via,
+        Some(Arc::new(TreeReadonlyEnrichmentStrategy)),
+    );
+    let roots: Vec<_> = repo.read(None, None).try_collect().await.unwrap();
+    assert_eq!(roots.iter().map(|row| text(row, "Name")).collect::<Vec<_>>(), ["food"]);
+    let children = roots[0].payload("Children");
+    assert_eq!(text(&children[0], "Name"), "fruit");
 }
 
 #[tokio::test]
