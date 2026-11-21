@@ -36,7 +36,8 @@ public static partial class Program
                 new NodeGraph { Value = "potion" },
             ],
         });
-        return Format.Transcript(await List(trees), await List(regionTrees), await List(graphs));
+        var maps = await Mapping.Run(connection);
+        return Format.Transcript(await List(trees), await List(regionTrees), await List(graphs), maps);
     }
 
     static async Task<List<T>> List<T>(IReadonlyRepository<T> repo)
