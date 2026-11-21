@@ -1,5 +1,105 @@
 graph blade core
 graph core blade,potion
 graph potion
+map create binary_to_binary 01020304
+map create binary_to_guid 550e8400-e29b-41d4-a716-446655440000
+map create bool_to_boolean true
+map create datetime_to_datetime 2020-01-02T03:04:05.000Z
+map create decimal_to_decimal 10.50
+map create decimal_to_float 1.2345678901234567
+map create decimal_to_integer 10
+map create float_to_decimal 10.5
+map create float_to_float 10.9
+map create float_to_integer 10
+map create guid_to_guid 550e8400-e29b-41d4-a716-446655440000
+map create guid_to_string 550e8400-e29b-41d4-a716-446655440000
+map create id 1
+map create int_to_boolean true
+map create int_to_decimal 7
+map create int_to_float 9007199254740992
+map create int_to_integer 10
+map create text_to_binary 01020304
+map create text_to_datetime 2020-01-02T03:04:05.000Z
+map create text_to_decimal 10.50
+map create text_to_guid 550e8400-e29b-41d4-a716-446655440000
+map create text_to_integer 10
+map create text_to_string ada
+map create_again binary_to_binary 01020304
+map create_again binary_to_guid 550e8400-e29b-41d4-a716-446655440000
+map create_again bool_to_boolean true
+map create_again datetime_to_datetime 2020-01-02T03:04:05.000Z
+map create_again decimal_to_decimal 10.50
+map create_again decimal_to_float 1.2345678901234567
+map create_again decimal_to_integer 10
+map create_again float_to_decimal 10.5
+map create_again float_to_float 10.9
+map create_again float_to_integer 10
+map create_again guid_to_guid 550e8400-e29b-41d4-a716-446655440000
+map create_again guid_to_string 550e8400-e29b-41d4-a716-446655440000
+map create_again id 3
+map create_again int_to_boolean true
+map create_again int_to_decimal 7
+map create_again int_to_float 9007199254740992
+map create_again int_to_integer 10
+map create_again text_to_binary 01020304
+map create_again text_to_datetime 2020-01-02T03:04:05.000Z
+map create_again text_to_decimal 10.50
+map create_again text_to_guid 550e8400-e29b-41d4-a716-446655440000
+map create_again text_to_integer 10
+map create_again text_to_string ada
+map delete binary_to_binary 01020304
+map delete binary_to_guid 550e8400-e29b-41d4-a716-446655440000
+map delete bool_to_boolean true
+map delete datetime_to_datetime 2020-01-02T03:04:05.000Z
+map delete decimal_to_decimal 10.50
+map delete decimal_to_float 1.2345678901234567
+map delete decimal_to_integer 10
+map delete float_to_decimal 10.5
+map delete float_to_float 10.9
+map delete float_to_integer 10
+map delete guid_to_guid 550e8400-e29b-41d4-a716-446655440000
+map delete guid_to_string 550e8400-e29b-41d4-a716-446655440000
+map delete id 2
+map delete int_to_boolean true
+map delete int_to_decimal 7
+map delete int_to_float 9007199254740992
+map delete int_to_integer 10
+map delete text_to_binary 01020304
+map delete text_to_datetime 2020-01-02T03:04:05.000Z
+map delete text_to_decimal 10.50
+map delete text_to_guid 550e8400-e29b-41d4-a716-446655440000
+map delete text_to_integer 10
+map delete text_to_string second
+map delete_where binary_to_binary 01020304
+map delete_where binary_to_guid 550e8400-e29b-41d4-a716-446655440000
+map delete_where bool_to_boolean true
+map delete_where datetime_to_datetime 2020-01-02T03:04:05.000Z
+map delete_where decimal_to_decimal 10.50
+map delete_where decimal_to_float 1.2345678901234567
+map delete_where decimal_to_integer 10
+map delete_where float_to_decimal 10.5
+map delete_where float_to_float 10.9
+map delete_where float_to_integer 10
+map delete_where guid_to_guid 550e8400-e29b-41d4-a716-446655440000
+map delete_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
+map delete_where id 1
+map delete_where int_to_boolean true
+map delete_where int_to_decimal 7
+map delete_where int_to_float 9007199254740992
+map delete_where int_to_integer 10
+map delete_where text_to_binary 01020304
+map delete_where text_to_datetime 2020-01-02T03:04:05.000Z
+map delete_where text_to_decimal 10.50
+map delete_where text_to_guid 550e8400-e29b-41d4-a716-446655440000
+map delete_where text_to_integer 10
+map delete_where text_to_string lin
+map read error "10.0" is not a long
+map read_single error "10.0" is not a long
+map read_single_by_id error "10.0" is not a long
+map read_single_by_id_row error "10.0" is not a long
+map read_single_where error "10.0" is not a long
+map read_where error "10.0" is not a long
+map update error "10.0" is not a long
+map update_where error "10.0" is not a long
 region 1-1/west 1-2/coast
 tree food fruit apple

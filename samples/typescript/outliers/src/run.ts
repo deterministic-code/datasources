@@ -2,6 +2,7 @@ import "../generated/repositories/repositoryRegistry.ts";
 import { Datasource } from "@deterministic-code/datasources";
 import { categoryTree, nodeGraph, regionCategoryTree } from "../generated/repositories/repositoryRegistry.ts";
 import { transcript } from "./format.ts";
+import { runMapping } from "./mapping.ts";
 
 const collect = async <T>(rows: AsyncIterable<T>): Promise<T[]> => {
   const out: T[] = [];
@@ -34,9 +35,13 @@ export const run = async (): Promise<string[]> => {
       ],
     }),
   );
+  const connection = await ds.createConnection();
+  if (!connection.isOpen) await connection.open();
+  const maps = await runMapping(connection);
   return transcript(
     await collect(ds.categoryTrees.read()),
     await collect(ds.regionCategoryTrees.read()),
     await collect(ds.nodeGraphs.read()),
+    maps,
   );
 };

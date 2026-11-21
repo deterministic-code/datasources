@@ -69,7 +69,12 @@ pub async fn run() -> Result<Vec<String>> {
         .into_iter()
         .map(graph_of)
         .collect::<Vec<_>>();
-    Ok(transcript(&trees, &regions, &graphs))
+    let connection = ds.create_connection().await?;
+    if !connection.is_open() {
+        connection.open().await?;
+    }
+    let maps = crate::mapping::run(connection).await;
+    Ok(transcript(&trees, &regions, &graphs, &maps))
 }
 
 fn tree_of(node: crate::generated::CategoryTree) -> TreeNode {

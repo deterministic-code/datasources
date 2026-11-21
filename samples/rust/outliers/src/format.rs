@@ -51,12 +51,35 @@ pub fn graph_line(node: &GraphNode) -> String {
     }
 }
 
-pub fn transcript(trees: &[TreeNode], regions: &[RegionNode], graphs: &[GraphNode]) -> Vec<String> {
+pub fn map_error(method: &str, message: &str) -> Vec<String> {
+    vec![format!("map {method} error {message}")]
+}
+
+pub fn map_lines(method: &str, cells: &[(&str, String)]) -> Vec<String> {
+    cells
+        .iter()
+        .map(|(column, value)| {
+            if value.is_empty() {
+                format!("map {method} {column}")
+            } else {
+                format!("map {method} {column} {value}")
+            }
+        })
+        .collect()
+}
+
+pub fn transcript(
+    trees: &[TreeNode],
+    regions: &[RegionNode],
+    graphs: &[GraphNode],
+    maps: &[String],
+) -> Vec<String> {
     let mut lines = trees
         .iter()
         .map(|row| format!("tree {}", tree_line(row)))
         .chain(regions.iter().map(|row| format!("region {}", region_line(row))))
         .chain(graphs.iter().map(|row| format!("graph {}", graph_line(row))))
+        .chain(maps.iter().cloned())
         .collect::<Vec<_>>();
     lines.sort();
     lines
@@ -99,13 +122,21 @@ mod tests {
                 &[GraphNode {
                     value: "core".into(),
                     edges: vec![GraphNode { value: "blade".into(), edges: vec![] }],
-                }]
+                }],
+                &["map create text_to_integer 10".into()]
             ),
             vec![
                 "graph core blade".to_string(),
+                "map create text_to_integer 10".to_string(),
                 "region 1-1/west 1-2/coast".to_string(),
                 "tree food fruit apple".to_string()
             ]
         );
+        assert_eq!(
+            map_lines("create", &[("text_to_guid", "550e8400-e29b-41d4-a716-446655440000".into())]),
+            vec!["map create text_to_guid 550e8400-e29b-41d4-a716-446655440000".to_string()]
+        );
+        assert_eq!(map_lines("create", &[("guid_to_guid", String::new())]), vec!["map create guid_to_guid".to_string()]);
+        assert_eq!(map_error("read", "\"10.9\" is not a long"), vec!["map read error \"10.9\" is not a long".to_string()]);
     }
 }
