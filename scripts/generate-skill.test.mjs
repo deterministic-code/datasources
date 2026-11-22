@@ -101,6 +101,18 @@ test("the skill offers the generated-directory hook", () => {
   assert.equal(files["hooks/block-generated.mjs"], readFileSync(join(root, "scripts/hooks/block-generated.mjs"), "utf8"));
 });
 
+test("tree and graph views are their own skill file", () => {
+  assert.match(files["SKILL.md"], /tree-graph\.md/);
+  assert.match(files["SKILL.md"], /Tree \/ graph view types/);
+  assert.match(files["SKILL.md"], /view_type/);
+  assert.match(files["SKILL.md"], /Do not hand-write TreeReadonlyEnrichmentStrategy/);
+  assert.match(files["tree-graph.md"], /view_type, tree/);
+  assert.match(files["tree-graph.md"], /node_edge/);
+  assert.match(files["tree-graph.md"], /tags: \[datasource_type, many_to_many\]/);
+  assert.doesNotMatch(files["generation.md"], /## Tree and graph views/);
+  assert.doesNotMatch(files["generation.md"], /### Tree and graph views/);
+});
+
 test("generated skill omits example queries", () => {
   assert.equal(files["skill-queries.md"], undefined);
   assert.doesNotMatch(files["SKILL.md"], /skill-queries/);

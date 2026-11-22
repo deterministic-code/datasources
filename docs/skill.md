@@ -122,6 +122,72 @@ User? loaded = await ds.Users.ReadSingle();
 Response deleted = await ds.Users.Delete(created);
 ```
 
+## Generate a category tree and node graph
+
+::: skill-prompt
+Author a category tree and a node graph in types.yaml and generate repositories for csharp.
+:::
+
+**Expected**
+
+```yaml
+version: 1.0.0
+types:
+  - category:
+      tags: [datasource_type]
+      fields:
+        - id: { type: integer, is_id: true }
+        - parent_category_id:
+            references: category.id
+            is_nullable: true
+        - name: { type: string, size: 128 }
+  - category_tree:
+      tags: [view_type, tree]
+      inherits: category
+      fields:
+        - children:
+            type: category_tree[]
+            references: category.parent_category_id
+  - node:
+      tags: [datasource_type]
+      fields:
+        - id: { type: integer, is_id: true }
+        - value: { type: string, size: 128 }
+  - node_edge:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - from_node_id: { references: node.id }
+        - to_node_id: { references: node.id }
+  - node_graph:
+      tags: [view_type, graph]
+      inherits: node
+      fields:
+        - edges:
+            type: node_graph[]
+            references: node_edge.from_node_id
+```
+
+```sh
+npx @deterministic-code/datasources-cli generate all --dialect csharp
+```
+
+```csharp
+await trees.Create(new CategoryTree
+{
+    Name = "food",
+    Children = [new CategoryTree { Name = "fruit", Children = [new CategoryTree { Name = "apple" }] }],
+});
+await graphs.Create(new NodeGraph
+{
+    Value = "core",
+    Edges =
+    [
+        new NodeGraph { Value = "blade", Edges = [new NodeGraph { Value = "core" }] },
+        new NodeGraph { Value = "potion" },
+    ],
+});
+```
+
 ## Run native SQL
 
 ::: skill-prompt

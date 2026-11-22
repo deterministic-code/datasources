@@ -35,6 +35,19 @@
       ]
     },
     {
+      "id": "generate-a-category-tree-and-node-graph",
+      "prompt": "Author a category tree and a node graph in types.yaml and generate repositories for csharp.",
+      "expected_output": "types.yaml with category, category_tree tagged view_type tree, node, node_edge many_to_many, and node_graph tagged view_type graph; generate all --dialect csharp; Create nested CategoryTree children and NodeGraph edges. No hand-written TreeReadonlyEnrichmentStrategy.",
+      "files": [],
+      "assertions": [
+        { "id": "generate-command", "text": "Runs npx @deterministic-code/datasources-cli generate all --dialect csharp" },
+        { "id": "types-yaml-tree", "text": "Writes category as datasource_type and category_tree as view_type tree with children referencing category.parent_category_id" },
+        { "id": "types-yaml-graph", "text": "Writes node, node_edge tagged many_to_many, and node_graph as view_type graph with edges referencing node_edge.from_node_id" },
+        { "id": "nested-create", "text": "Creates a nested CategoryTree and a NodeGraph with nested Edges" },
+        { "id": "no-handwritten-tree-strategy", "text": "Does not construct TreeReadonlyEnrichmentStrategy or GraphReadonlyEnrichmentStrategy by hand" }
+      ]
+    },
+    {
       "id": "run-native-sql",
       "prompt": "Insert an item and read it back with a command and SQL text. Do not use a repository.",
       "expected_output": "CreateCommand, Execute(Native.N INSERT INTO items) with Parameters, ExecuteReader(Native.N SELECT id, name FROM items WHERE id = $id), MetaDataRowTypeConverter Convert. Includes Item. No repository.",

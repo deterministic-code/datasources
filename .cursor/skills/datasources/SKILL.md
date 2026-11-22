@@ -8,7 +8,8 @@ description: >-
   Where and other statements from the documented examples. Use when the user
   mentions datasources, repository generation, types.yaml, datasource.yaml,
   datasource_seeds, mapper, type converter, command, reader, AddEnriched,
-  AddLinked, Where, SelectStatement, or a read method that joins tables.
+  AddLinked, Where, SelectStatement, a read method that joins tables, tree,
+  graph, view_type, or category_tree.
 ---
 
 <!-- Generated from docs/. Edit the markdown in docs/ and run npm run docs:skill. -->
@@ -28,6 +29,7 @@ Read one file below. Do not load the rest.
 - Types, repositories, SQL, and seed rows come from `types.yaml`, `datasource.yaml` when it exists, and `datasource_seeds.yaml` when it exists. After you change any of those files, run `npx @deterministic-code/datasources-cli version`, then `npx @deterministic-code/datasources-cli generate all --dialect csharp|typescript|rust`. `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop. Seed row keys, field names, and which `idN` values the next migration inserts are in generation.md.
 - Do not create, edit, or delete generator output (a directory named `generated`, Rust `src/generated.rs`, or the SQL migrations `generate all` just wrote). If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml`, `datasource.yaml`, or `datasource_seeds.yaml` and run `generate all` again. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.
 - A read that joins tables, or one endpoint in place of several calls, is one SelectStatement with joins. Fold the flat rows with NestedToObjectEnrichmentStrategy in TypeScript and C#. Do not group those rows by hand. The recipe is in select-statement.md.
+- A nested children list on a self-parent is a `tree` `view_type`. Nested edges through a self-junction is a `graph` `view_type`. Author those types in tree-graph.md. Do not hand-write TreeReadonlyEnrichmentStrategy or GraphReadonlyEnrichmentStrategy.
 
 ## Install and setup
 
@@ -54,6 +56,7 @@ npx @deterministic-code/datasources-cli setup --yes --languages ts|rust|csharp -
 | Install packages | [downloading.md](downloading.md) |
 | setup / add / remove / .env | [setup.md](setup.md) |
 | Generate from types.yaml and datasource.yaml | [generation.md](generation.md) |
+| Tree / graph view types | [tree-graph.md](tree-graph.md) |
 | Seed rows in datasource_seeds.yaml | [generation.md](generation.md) |
 | Mappers and the read pipeline | [mappings.md](mappings.md) |
 | Type converters | [type-converters.md](type-converters.md) |
