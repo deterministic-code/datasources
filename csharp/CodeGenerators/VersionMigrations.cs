@@ -55,9 +55,9 @@ public static class VersionMigrations
         foreach (var snapshot in snapshots)
         {
             var current = Compile(snapshot, settings);
-            var up = SchemaDiff.Of(dialect, previous.Tables, previous.Naming, current.Tables, current.Naming)
+            var up = SchemaDiff.Of(dialect, previous.Tables, previous.Naming, current.Tables, current.Naming, settings)
                 .Concat(ProcedureDiff(dialect, settings, previous.Tables, current.Tables, casing)).ToList();
-            var down = SchemaDiff.Of(dialect, current.Tables, current.Naming, previous.Tables, previous.Naming)
+            var down = SchemaDiff.Of(dialect, current.Tables, current.Naming, previous.Tables, previous.Naming, settings)
                 .Concat(ProcedureDiff(dialect, settings, current.Tables, previous.Tables, casing)).ToList();
             var added = SeedGenerator.Added(previous.Seeds, current.Seeds);
             var removed = SeedGenerator.Added(current.Seeds, previous.Seeds);

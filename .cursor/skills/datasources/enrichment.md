@@ -187,7 +187,7 @@ const items = await collectAsync(parentsRepo.read());
 
 ### Resolve a lookup name on create
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L452-L467)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L480-L495)
 
 ```csharp
 var texts = new List<string>();
@@ -225,7 +225,7 @@ let created = parents
 assert!(num(&created, "Id") > 0);
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L506-L520)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L533-L547)
 
 ```typescript
 const texts: string[] = [];

@@ -87,8 +87,8 @@ pub fn files(
     let mut number = 0;
     for snapshot in &snapshots {
         let current = compile(snapshot, settings)?;
-        let up = schema_diff::of(dialect, &previous.0, &previous.1, &current.0, &current.1)?;
-        let down = schema_diff::of(dialect, &current.0, &current.1, &previous.0, &previous.1)?;
+        let up = schema_diff::of(dialect, &previous.0, &previous.1, &current.0, &current.1, settings)?;
+        let down = schema_diff::of(dialect, &current.0, &current.1, &previous.0, &previous.1, settings)?;
         let up_procs = procedure_sql(dialect, settings, &previous.0, &current.0, casing)?;
         let down_procs = procedure_sql(dialect, settings, &current.0, &previous.0, casing)?;
         let added = seed_generator::added(&previous.2, &current.2);

@@ -456,6 +456,18 @@ fn compare_tree() {
 }
 
 #[test]
+#[should_panic(expected = "RebuildTableStatement is rendered by the SQL driver.")]
+fn leaves_rebuild_table_statements_to_the_driver() {
+    stmt_text(&RebuildTableStatement::new(
+        "users",
+        CreateTableStatement::new("users", &[], &[]),
+        vec![],
+        vec![],
+        vec![],
+    ));
+}
+
+#[test]
 fn attaches_where_to_a_query() {
     let where_clause = Where::new(Operator::and(
         Operator::equals("id", 1_i64),

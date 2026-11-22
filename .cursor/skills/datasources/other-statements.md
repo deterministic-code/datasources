@@ -986,7 +986,7 @@ CREATE TABLE users (
 )
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L178-L189)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L180-L191)
 
 ```typescript
 const createTable = new CreateTableStatement("users", [
@@ -1084,7 +1084,7 @@ CREATE TABLE orders (
 )
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L191-L219)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L193-L221)
 
 ```typescript
 const namedTable = new CreateTableStatement(
@@ -1405,7 +1405,7 @@ let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["use
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L221-L226)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L223-L228)
 
 ```typescript
 const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
@@ -1443,7 +1443,7 @@ let create_index = CreateIndexStatement::new("uq_orders_code", "orders", &["code
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L228-L233)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L230-L235)
 
 ```typescript
 const createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);
@@ -1737,7 +1737,7 @@ let call = ExecuteStoredProcedureStatement::new("save", &fields);
 CALL save($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L299-L306)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L301-L308)
 
 ```typescript
 const fields = [
@@ -2035,7 +2035,7 @@ let ret = ReturnStatement::new("add", &fields);
 SELECT add($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L308-L315)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L310-L317)
 
 ```typescript
 const fields = [

@@ -3,6 +3,8 @@ import {
   AlterTableStatement,
   type Column,
   type IStatement,
+  RebuildColumn,
+  RebuildTableStatement,
 } from "@deterministic-code/datasources";
 import type { DatasourceIndex, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import {
@@ -29,6 +31,7 @@ import {
   hasAuditColumns,
   isGeneratedIdentity,
   overlayOf,
+  rebuildTable,
   tableIdentity,
   tableStem,
   type LiveTable,
@@ -130,6 +133,65 @@ const dropTable = (
   dropTableStatementOf(table.tableName),
 ];
 
+const needsRebuild = (
+  dialect: SqlDialect,
+  before: LiveTable,
+  after: LiveTable,
+  beforeNaming: StatementNaming,
+  afterNaming: StatementNaming,
+): boolean => {
+  const beforeFields = fieldByName(before);
+  const afterFields = fieldByName(after);
+  for (const field of after.fields.filter((item) => beforeFields.has(item.name))) {
+    const previous = columnOf(beforeNaming, before, beforeFields.get(field.name)!);
+    const next = columnOf(afterNaming, after, field);
+    if (!isDeepStrictEqual(compiledColumn(dialect, previous, next.name), compiledColumn(dialect, next, next.name))) {
+      return true;
+    }
+  }
+  return [...before.fields, ...after.fields].some((field) => {
+    if (referencePairs(field.references).length !== 1) return false;
+    const prior = beforeFields.get(field.name);
+    const next = afterFields.get(field.name);
+    return prior === undefined || next === undefined || refsOf(next) !== refsOf(prior);
+  });
+};
+
+const rebuild = (
+  dialect: SqlDialect,
+  before: LiveTable,
+  after: LiveTable,
+  beforeNaming: StatementNaming,
+  afterNaming: StatementNaming,
+  afterTables: readonly LiveTable[],
+): RebuildTableStatement => {
+  const beforeFields = fieldByName(before);
+  const columns = after.fields.map((field) => {
+    const next = columnOf(afterNaming, after, field);
+    const prior = beforeFields.get(field.name);
+    if (prior === undefined) {
+      if (next.notNull !== undefined && next.default === undefined) {
+        throw new Error(`${after.name}.${field.name}: new NOT NULL column with no default`);
+      }
+      return new RebuildColumn(next.name, undefined, undefined, next.default?.value);
+    }
+    const previous = columnOf(beforeNaming, before, prior);
+    const prevType = compiledColumn(dialect, previous, next.name).type;
+    const nextType = compiledColumn(dialect, next, next.name).type;
+    return new RebuildColumn(next.name, previous.name, prevType === nextType ? undefined : nextType);
+  });
+  const recreate: IStatement[] = [
+    ...after.indexes.map((index) => createIndexStatementOf(afterNaming, after, index)),
+    ...(hasAuditColumns(after) ? [trigger(dialect, after, afterNaming)] : []),
+  ];
+  return new RebuildTableStatement(
+    before.tableName,
+    createTableStatementOf(after, afterNaming, afterTables),
+    columns,
+    recreate,
+  );
+};
+
 const diffTable = (
   dialect: SqlDialect,
   before: LiveTable,
@@ -138,9 +200,13 @@ const diffTable = (
   afterNaming: StatementNaming,
   beforeTables: readonly LiveTable[],
   afterTables: readonly LiveTable[],
+  settings?: Record<string, string>,
 ): IStatement[] => {
   if (!isDeepStrictEqual(identityOf(before), identityOf(after))) {
     throw new Error(`${after.name}: primary key or identity change is not supported`);
+  }
+  if (rebuildTable(dialect, settings) && needsRebuild(dialect, before, after, beforeNaming, afterNaming)) {
+    return [rebuild(dialect, before, after, beforeNaming, afterNaming, afterTables)];
   }
   const beforeFields = fieldByName(before);
   const afterFields = fieldByName(after);
@@ -243,6 +309,7 @@ export const schemaDiff = (
   dialect: SqlDialect,
   before: SchemaSnapshot,
   after: SchemaSnapshot,
+  settings?: Record<string, string>,
 ): IStatement[] => {
   const previousByName = byName(before.tables);
   const nextByName = byName(after.tables);
@@ -257,7 +324,7 @@ export const schemaDiff = (
   return [
     ...[...removed].reverse().flatMap((table) => dropTable(dialect, table, before.naming)),
     ...kept.flatMap(([prior, table]) =>
-      diffTable(dialect, prior, table, before.naming, after.naming, before.tables, after.tables),
+      diffTable(dialect, prior, table, before.naming, after.naming, before.tables, after.tables, settings),
     ),
     ...added.flatMap((table) => createTable(dialect, table, after.naming, after.tables)),
   ];

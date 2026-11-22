@@ -6,7 +6,7 @@ use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
     DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, split_statements,
     statement_parameters, Statement,
-    StatementKind, StatementTextRenderer, Value,
+    RebuildTableStatement, StatementKind, StatementTextRenderer, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
 use std::collections::HashMap;
@@ -210,8 +210,146 @@ impl Command for SqliteCommand {
             return self.first_cell(statement, parameters).await;
         }
         let text = self.statements.render(statement);
+        if statement.as_any().is::<RebuildTableStatement>() {
+            return self.execute_rebuild(&text, parameters).await;
+        }
         self.execute_native(&Native::new(text), parameters).await
     }
+}
+
+impl SqliteCommand {
+    async fn execute_rebuild(
+        &self,
+        sql: &str,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let connection = self.connection.clone();
+        let sql = sql.to_string();
+        self.host
+            .run(&sql, parameters, move |query, params| {
+                let connection = connection.clone();
+                async move {
+                    if query.trim().is_empty() {
+                        return Ok((
+                            Response::new(Value::Null, 0, params.map(|list| list.to_vec())),
+                            vec![],
+                        ));
+                    }
+                    connection.ensure_open()?;
+                    let map = parameters_to_map(params.as_deref());
+                    let executed = SqliteCommand::execute_rebuild_sql(&connection, &query, &map)?;
+                    Ok((
+                        Response::new(
+                            executed.result,
+                            executed.rows_affected,
+                            params.map(|list| list.to_vec()),
+                        ),
+                        vec![],
+                    ))
+                }
+            })
+            .await
+    }
+
+    fn execute_rebuild_sql(
+        connection: &SqliteConnection,
+        sql: &str,
+        map: &HashMap<String, Value>,
+    ) -> Result<SqliteExecuteResult> {
+        let db = connection.db.lock().unwrap();
+        let conn = db
+            .as_ref()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        let previous = pragma_value(conn, "PRAGMA foreign_keys")?;
+        conn.execute_batch("PRAGMA foreign_keys = OFF")
+            .map_err(map_err)?;
+        conn.execute_batch("BEGIN").map_err(map_err)?;
+        let result = (|| {
+            let executed = execute_sql_on(conn, sql, map)?;
+            if !foreign_keys_ok(conn)? || !integrity_ok(conn)? {
+                return Err(DatasourceError::message(
+                    "RebuildTableStatement failed integrity checks",
+                ));
+            }
+            conn.execute_batch("COMMIT").map_err(map_err)?;
+            Ok(executed)
+        })();
+        if result.is_err() {
+            let _ = conn.execute_batch("ROLLBACK");
+        }
+        let restore = if previous == "0" {
+            "PRAGMA foreign_keys = OFF"
+        } else {
+            "PRAGMA foreign_keys = ON"
+        };
+        conn.execute_batch(restore).map_err(map_err)?;
+        result
+    }
+}
+
+fn pragma_value(conn: &rusqlite::Connection, sql: &str) -> Result<String> {
+    conn.query_row(sql, [], |row| row.get::<_, i64>(0))
+        .map(|value| value.to_string())
+        .or_else(|_| {
+            conn.query_row(sql, [], |row| row.get::<_, String>(0))
+                .map_err(map_err)
+        })
+}
+
+fn foreign_keys_ok(conn: &rusqlite::Connection) -> Result<bool> {
+    let mut statement = conn.prepare("PRAGMA foreign_key_check").map_err(map_err)?;
+    let mut rows = statement.query([]).map_err(map_err)?;
+    Ok(rows.next().map_err(map_err)?.is_none())
+}
+
+fn integrity_ok(conn: &rusqlite::Connection) -> Result<bool> {
+    let value: String = conn
+        .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+        .map_err(map_err)?;
+    Ok(value.eq_ignore_ascii_case("ok"))
+}
+
+fn execute_sql_on(
+    conn: &rusqlite::Connection,
+    sql: &str,
+    map: &HashMap<String, Value>,
+) -> Result<SqliteExecuteResult> {
+    let mut rows_affected = 0;
+    let mut result = Value::Null;
+    for part in split_statements(sql) {
+        let names = statement_parameters(&part);
+        let used: HashMap<String, Value> = map
+            .iter()
+            .filter(|(name, _)| {
+                names
+                    .iter()
+                    .any(|found| found == name.trim_start_matches(['$', '@', ':']))
+            })
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect();
+        let (sql, values) = to_sqlite(&part, &used);
+        let mut statement = conn.prepare(&sql).map_err(map_err)?;
+        if statement.column_count() > 0 {
+            {
+                let mut rows = statement
+                    .query(rusqlite::params_from_iter(values.iter()))
+                    .map_err(map_err)?;
+                if let Some(row) = rows.next().map_err(map_err)? {
+                    result = from_sql(row.get_ref_unwrap(0));
+                }
+                while rows.next().map_err(map_err)?.is_some() {}
+            }
+            rows_affected += conn.changes() as i64;
+        } else {
+            rows_affected += statement
+                .execute(rusqlite::params_from_iter(values.iter()))
+                .map_err(map_err)? as i64;
+        }
+    }
+    Ok(SqliteExecuteResult {
+        rows_affected,
+        result,
+    })
 }
 
 fn to_sqlite(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<rusqlite::types::Value>) {

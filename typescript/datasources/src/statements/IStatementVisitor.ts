@@ -22,6 +22,7 @@ import type { ExecuteStoredProcedureStatement } from "./ExecuteStoredProcedureSt
 import type { IdentityInsertStatement } from "./IdentityInsertStatement.ts";
 import type { SqlSeedStatement } from "./SqlSeedStatement.ts";
 import type { ForeignKeyStatement } from "./ForeignKeyStatement.ts";
+import type { RebuildTableStatement } from "./RebuildTableStatement.ts";
 import type { InsertStatement } from "./InsertStatement.ts";
 import type { ReturnStatement } from "./ReturnStatement.ts";
 import type { SelectInsertedIdStatement } from "./SelectInsertedIdStatement.ts";
@@ -49,6 +50,7 @@ export interface IStatementVisitor {
   visit(statement: IdentityInsertStatement): string;
   visit(statement: SqlSeedStatement): string;
   visit(statement: ForeignKeyStatement): string;
+  visit(statement: RebuildTableStatement): string;
   visit(statement: DropRoutineStatement): string;
   visit(statement: CreateCreateStoredProcedureStatement): string;
   visit(statement: CreateReadStoredProcedureStatement): string;

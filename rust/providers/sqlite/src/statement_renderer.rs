@@ -5,13 +5,13 @@ use crate::select_inserted_id_statement_text_renderer::SqliteSelectInsertedIdSta
 use crate::quoted_renderers::{
     SqliteCreateIndexStatementRenderer, SqliteDropIndexStatementRenderer,
     SqliteDropTableStatementRenderer, SqliteDropTriggerStatementRenderer,
-    SqliteForeignKeyStatementRenderer,
+    SqliteForeignKeyStatementRenderer, SqliteRebuildTableStatementRenderer,
 };
 use crate::sql_seed_statement_renderer::SqliteSqlSeedStatementRenderer;
 use datasources::{
     AlterTableStatement, BulkInsertStatement, BulkInsertStatementTextRenderer, CreateIndexStatement,
     CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
-    DropTableStatement, DropTriggerStatement, ForeignKeyStatement, InsertStatement,
+    DropTableStatement, DropTriggerStatement, ForeignKeyStatement, InsertStatement, RebuildTableStatement,
     InsertStatementTextRenderer, ProcedureSource,
     SelectInsertedIdStatement, SqlSeedStatement, sql_procedure_statements_of, Statement,
     StatementTextRenderer, StatementVisitor,
@@ -98,6 +98,10 @@ impl StatementVisitor for SqliteStatementRenderer {
 
     fn visit_foreign_key(&self, statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
         SqliteForeignKeyStatementRenderer.render(statement)
+    }
+
+    fn visit_rebuild_table(&self, statement: &RebuildTableStatement, _text: &StatementTextRenderer) -> String {
+        SqliteRebuildTableStatementRenderer.render(statement)
     }
 }
 
@@ -217,5 +221,54 @@ mod tests {
         use datasources::{AlterAction, AlterTableStatement};
         let alter = AlterTableStatement::new("users", AlterAction::AlterColumn(Column::new("age", "INTEGER")));
         renderer().render(&alter);
+    }
+
+    #[test]
+    fn renders_a_sqlite_table_rebuild() {
+        use datasources::{CreateIndexStatement, CreateTriggerStatement, RebuildColumn, RebuildTableStatement};
+        let rebuilt = renderer().render(&RebuildTableStatement::new(
+            "users",
+            CreateTableStatement::new(
+                "users",
+                &[Column::new("id", "INTEGER"), Column::new("age", "INTEGER")],
+                &[],
+            ),
+            vec![
+                RebuildColumn::copied("id", "id"),
+                RebuildColumn::copied("age", "age").with_cast("INTEGER"),
+            ],
+            vec![CreateIndexStatement::new("ix_users_age", "users", &["age"], false)],
+            vec![],
+        ));
+        assert!(rebuilt.contains("CREATE TABLE \"users__new\""));
+        assert!(rebuilt.contains(
+            "INSERT INTO \"users__new\" (\"id\", \"age\") SELECT \"id\", CAST(\"age\" AS INTEGER) FROM \"users\""
+        ));
+        let create_at = rebuilt.find("CREATE TABLE \"users__new\"").unwrap();
+        let drop_at = rebuilt.find("DROP TABLE IF EXISTS \"users\"").unwrap();
+        let rename_at = rebuilt.find("ALTER TABLE \"users__new\" RENAME TO \"users\"").unwrap();
+        let index_at = rebuilt.find("CREATE INDEX \"ix_users_age\" ON \"users\" (\"age\")").unwrap();
+        assert!(create_at < drop_at && drop_at < rename_at && rename_at < index_at);
+        let copied = renderer().render(&RebuildTableStatement::new(
+            "users",
+            CreateTableStatement::new(
+                "users",
+                &[
+                    Column::new("id", "INTEGER"),
+                    Column::new("note", "TEXT"),
+                    Column::new("flag", "INTEGER"),
+                ],
+                &[],
+            ),
+            vec![
+                RebuildColumn::copied("id", "id"),
+                RebuildColumn::null("note"),
+                RebuildColumn::literal("flag", "0"),
+            ],
+            vec![CreateIndexStatement::new("ix_users_note", "users", &["note"], false)],
+            vec![CreateTriggerStatement::new("users", "trg_users", "note", "id")],
+        ));
+        assert!(copied.contains("SELECT \"id\", NULL, 0 FROM \"users\""));
+        assert!(copied.contains("trg_users"));
     }
 }

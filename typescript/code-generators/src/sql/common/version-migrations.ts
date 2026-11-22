@@ -183,11 +183,11 @@ export const versionMigrationFiles = async (
   for (const snapshot of snapshots) {
     const current = await compile(snapshot, ctx.settings);
     const up = [
-      ...schemaDiff(dialect, previous, current),
+      ...schemaDiff(dialect, previous, current, ctx.settings),
       ...procedureDiff(dialect, ctx.settings, previous, current),
     ];
     const down = [
-      ...schemaDiff(dialect, current, previous),
+      ...schemaDiff(dialect, current, previous, ctx.settings),
       ...procedureDiff(dialect, ctx.settings, current, previous),
     ];
     const added = addedSeeds(previous.seeds, current.seeds);

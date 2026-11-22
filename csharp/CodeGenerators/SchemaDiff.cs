@@ -10,7 +10,8 @@ public static class SchemaDiff
         IReadOnlyList<SqlTable> beforeTables,
         StatementNaming beforeNaming,
         IReadOnlyList<SqlTable> afterTables,
-        StatementNaming afterNaming)
+        StatementNaming afterNaming,
+        IReadOnlyDictionary<string, string>? settings = null)
     {
         var previousByName = beforeTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
         var nextByName = afterTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
@@ -24,7 +25,7 @@ public static class SchemaDiff
         return
         [
             .. removed.SelectMany(table => DropTable(dialect, table, beforeNaming, beforeTables)),
-            .. kept.SelectMany(pair => DiffTable(dialect, pair.Before!, pair.After, beforeNaming, afterNaming, beforeTables, afterTables)),
+            .. kept.SelectMany(pair => DiffTable(dialect, pair.Before!, pair.After, beforeNaming, afterNaming, beforeTables, afterTables, settings)),
             .. added.SelectMany(table => CreateTable(dialect, table, afterNaming, afterTables)),
         ];
     }
@@ -68,10 +69,16 @@ public static class SchemaDiff
         StatementNaming beforeNaming,
         StatementNaming afterNaming,
         IReadOnlyList<SqlTable> beforeTables,
-        IReadOnlyList<SqlTable> afterTables)
+        IReadOnlyList<SqlTable> afterTables,
+        IReadOnlyDictionary<string, string>? settings)
     {
         if (JsonSerializer.Serialize(IdentityOf(before)) != JsonSerializer.Serialize(IdentityOf(after)))
             throw new InvalidOperationException($"{after.Name}: primary key or identity change is not supported");
+        if (SqlSchema.RebuildTable(dialect, settings) && NeedsRebuild(dialect, before, after, beforeNaming, afterNaming))
+        {
+            yield return Rebuild(dialect, before, after, beforeNaming, afterNaming, afterTables);
+            yield break;
+        }
         var beforeFields = before.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
         var afterFields = after.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
         var beforeIndexes = before.Indexes.ToDictionary(index => index.Name, StringComparer.Ordinal);
@@ -135,6 +142,63 @@ public static class SchemaDiff
 
         if (!SqlSchema.HasAuditColumns(before) && SqlSchema.HasAuditColumns(after))
             yield return Trigger(dialect, after, afterNaming);
+    }
+
+    static bool NeedsRebuild(
+        string dialect,
+        SqlTable before,
+        SqlTable after,
+        StatementNaming beforeNaming,
+        StatementNaming afterNaming)
+    {
+        var beforeFields = before.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
+        var afterFields = after.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
+        foreach (var field in after.Fields.Where(field => beforeFields.ContainsKey(field.Name)))
+        {
+            var previous = TableStatements.Column(beforeNaming, before, beforeFields[field.Name]);
+            var next = TableStatements.Column(afterNaming, after, field);
+            if (Compiled(dialect, previous with { Name = next.Name }) != Compiled(dialect, next))
+                return true;
+        }
+        return before.Fields.Concat(after.Fields).Any(field =>
+        {
+            if (field.References is null && field.ReferencePair is null) return false;
+            var same = afterFields.TryGetValue(field.Name, out var next)
+                && beforeFields.TryGetValue(field.Name, out var prior)
+                && RefsOf(next) == RefsOf(prior);
+            return !same;
+        });
+    }
+
+    static RebuildTableStatement Rebuild(
+        string dialect,
+        SqlTable before,
+        SqlTable after,
+        StatementNaming beforeNaming,
+        StatementNaming afterNaming,
+        IReadOnlyList<SqlTable> afterTables)
+    {
+        var beforeFields = before.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
+        var columns = after.Fields.Select(field =>
+        {
+            var next = TableStatements.Column(afterNaming, after, field);
+            if (!beforeFields.TryGetValue(field.Name, out var prior))
+            {
+                if (next.NotNull is not null && next.Default is null)
+                    throw new InvalidOperationException($"{after.Name}.{field.Name}: new NOT NULL column with no default");
+                return new RebuildColumn(next.Name, Literal: next.Default?.Value);
+            }
+            var previous = TableStatements.Column(beforeNaming, before, prior);
+            var prevType = Compiled(dialect, previous with { Name = next.Name }).Type;
+            var nextType = Compiled(dialect, next).Type;
+            return new RebuildColumn(next.Name, previous.Name, prevType == nextType ? null : nextType);
+        }).ToList();
+        IStatement[] recreate =
+        [
+            .. after.Indexes.Select(index => TableStatements.CreateIndex(afterNaming, after, index)),
+            .. SqlSchema.HasAuditColumns(after) ? [Trigger(dialect, after, afterNaming)] : Array.Empty<IStatement>(),
+        ];
+        return new RebuildTableStatement(before.TableName, TableStatements.CreateTable(after, afterNaming, afterTables), columns, recreate);
     }
 
     static Column Compiled(string dialect, Column column)

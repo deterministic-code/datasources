@@ -116,4 +116,24 @@ public class MysqlStatementRendererTests
                 "id",
                 "INT")));
     }
+
+    [Fact]
+    public void RendersAMysqlTableRebuild()
+    {
+        var rebuilt = Renderer.Render(new RebuildTableStatement(
+            "users",
+            new CreateTableStatement("users", [new Column("id", "INT"), new Column("age", "INT")]),
+            [new RebuildColumn("id", "id"), new RebuildColumn("age", "age", "INT")],
+            [new CreateIndexStatement("ix_users_age", "users", ["age"])]));
+        Assert.StartsWith("SET FOREIGN_KEY_CHECKS = 0", rebuilt);
+        Assert.Contains("users__new", rebuilt);
+        Assert.Contains("CAST", rebuilt);
+        Assert.Contains("SIGNED", rebuilt);
+        Assert.Contains("ix_users_age", rebuilt);
+        var indexAt = rebuilt.IndexOf("ix_users_age", StringComparison.Ordinal);
+        var renameAt = rebuilt.IndexOf("RENAME TABLE", StringComparison.Ordinal);
+        var dropAt = rebuilt.IndexOf("users__old", StringComparison.Ordinal);
+        Assert.True(indexAt >= 0 && indexAt < renameAt && renameAt < dropAt);
+        Assert.EndsWith("SET FOREIGN_KEY_CHECKS = 1", rebuilt);
+    }
 }

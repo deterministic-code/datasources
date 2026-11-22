@@ -436,6 +436,13 @@ Find the closest title. Open that language's snippet. Topic files already includ
   - `docs/examples/compile-an-alter-table-add-column/statement_compile.compiles_an_alter_table_add_column.rust`
   - `docs/examples/compile-an-alter-table-add-column/StatementCompile.test.compiles-an-alter-table-add-column.typescript`
 
+## Rebuild Table Statement
+
+- Compile a SQLite table rebuild
+  - `docs/examples/compile-a-sqlite-table-rebuild/SqliteStatementRendererTests.RendersASqliteTableRebuild.csharp`
+  - `docs/examples/compile-a-sqlite-table-rebuild/statement_renderer.renders_a_sqlite_table_rebuild.rust`
+  - `docs/examples/compile-a-sqlite-table-rebuild/SqliteStatementRenderer.test.renders-a-sqlite-table-rebuild.typescript`
+
 ## Drop Index Statement
 
 - Compile a DROP INDEX

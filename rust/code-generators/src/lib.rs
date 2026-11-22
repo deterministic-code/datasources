@@ -39,7 +39,7 @@ pub fn schema_statements(
     let types = schema::from_spec(&spec);
     let naming = casing::PackCasing::of(settings)?.strategy;
     let live = schema::build_live(&types, &naming);
-    let statements = schema_diff::of(dialect, &[], &naming, &live, &naming)?;
+    let statements = schema_diff::of(dialect, &[], &naming, &live, &naming, settings)?;
     statements
         .iter()
         .map(|statement| sql_dialect::render_sql(dialect, statement.as_statement()))

@@ -1,14 +1,20 @@
 import {
+  CreateIndexStatement,
   CreateIndexStatementTextRenderer,
   CreateTableStatement,
+  CreateTriggerStatement,
   DropIndexStatementTextRenderer,
   DropTableStatement,
   DropTableStatementTextRenderer,
   DropTriggerStatementTextRenderer,
   type ForeignKeyStatement,
+  type IStatement,
+  RebuildColumn,
+  RebuildTableStatement,
 } from "@deterministic-code/datasources";
 import { SqliteDriver } from "./SqliteDriver.ts";
 import { SqliteCreateTableStatementRenderer } from "./SqliteCreateTableStatementRenderer.ts";
+import { SqliteCreateTriggerStatementRenderer } from "./SqliteCreateTriggerStatementRenderer.ts";
 
 export class SqliteDropTableStatementRenderer extends DropTableStatementTextRenderer {
   protected override quote(name: string): string {
@@ -38,16 +44,47 @@ export class SqliteForeignKeyStatementRenderer {
   render(statement: ForeignKeyStatement): string {
     if (statement.kind === "drop") return "";
     if (statement.create === undefined) throw new Error("SQLite cannot ADD CONSTRAINT");
-    const tmp = `${statement.table}__new`;
-    const rebuilt = new CreateTableStatement(tmp, statement.create.columns, statement.create.constraints);
-    const cols = statement.create.columns.map((column) => SqliteDriver.quote(column.name)).join(", ");
-    const from = SqliteDriver.quote(statement.table);
-    const to = SqliteDriver.quote(tmp);
-    return [
-      new SqliteCreateTableStatementRenderer().render(rebuilt),
-      `INSERT INTO ${to} (${cols}) SELECT ${cols} FROM ${from}`,
-      new SqliteDropTableStatementRenderer().render(new DropTableStatement(statement.table)),
-      `ALTER TABLE ${to} RENAME TO ${from}`,
-    ].join(";\n");
+    return new SqliteRebuildTableStatementRenderer().render(
+      new RebuildTableStatement(
+        statement.table,
+        statement.create,
+        statement.create.columns.map((column) => new RebuildColumn(column.name, column.name)),
+      ),
+    );
   }
 }
+
+export class SqliteRebuildTableStatementRenderer {
+  render(statement: RebuildTableStatement): string {
+    const dest = statement.create.table;
+    const tmp = `${dest}__new`;
+    const rebuilt = new CreateTableStatement(tmp, statement.create.columns, statement.create.constraints);
+    const names = statement.columns.map((column) => SqliteDriver.quote(column.name)).join(", ");
+    const values = statement.columns.map((column) => select(column)).join(", ");
+    const from = SqliteDriver.quote(statement.table);
+    const to = SqliteDriver.quote(dest);
+    const tmpName = SqliteDriver.quote(tmp);
+    return [
+      new SqliteCreateTableStatementRenderer().render(rebuilt),
+      `INSERT INTO ${tmpName} (${names}) SELECT ${values} FROM ${from}`,
+      new SqliteDropTableStatementRenderer().render(new DropTableStatement(statement.table)),
+      `ALTER TABLE ${tmpName} RENAME TO ${to}`,
+      ...statement.recreate.map((item) => recreate(item)),
+    ]
+      .filter((sql) => sql !== "")
+      .join(";\n");
+  }
+}
+
+const select = (column: RebuildColumn): string =>
+  column.source !== undefined
+    ? column.cast !== undefined
+      ? `CAST(${SqliteDriver.quote(column.source)} AS ${column.cast})`
+      : SqliteDriver.quote(column.source)
+    : (column.literal ?? "NULL");
+
+const recreate = (statement: IStatement): string => {
+  if (statement instanceof CreateIndexStatement) return new SqliteCreateIndexStatementRenderer().render(statement);
+  if (statement instanceof CreateTriggerStatement) return new SqliteCreateTriggerStatementRenderer().render(statement);
+  throw new Error(`${statement.constructor.name} cannot be recreated during a table rebuild`);
+};

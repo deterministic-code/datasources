@@ -4,6 +4,7 @@ use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::MysqlCreateTriggerStatementRenderer;
 use crate::drop_routine_statement_renderer::MysqlDropRoutineStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::MysqlSelectInsertedIdStatementTextRenderer;
+use crate::rebuild_table_statement_renderer::MysqlRebuildTableStatementRenderer;
 use crate::sql_seed_statement_renderer::MysqlSqlSeedStatementRenderer;
 use crate::MysqlDriver;
 use datasources::{
@@ -17,7 +18,7 @@ use datasources::{
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, CreateUpdateStoredProcedureStatement,
     CreateIndexStatement, DropIndexStatement, DropRoutineStatement, DropTableStatement,
-    ForeignKeyStatement, ProcedureSource, SelectInsertedIdStatement, SqlSeedStatement,
+    ForeignKeyStatement, ProcedureSource, RebuildTableStatement, SelectInsertedIdStatement, SqlSeedStatement,
     sql_procedure_statements_of, Statement, StatementTextRenderer, StatementVisitor,
 };
 
@@ -230,6 +231,10 @@ impl StatementVisitor for MysqlStatementRenderer {
         )
     }
 
+    fn visit_rebuild_table(&self, statement: &RebuildTableStatement, _text: &StatementTextRenderer) -> String {
+        MysqlRebuildTableStatementRenderer.render(statement)
+    }
+
     fn visit_foreign_key(&self, statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
         let table = crate::MysqlDriver::quote(statement.table());
         let name = crate::MysqlDriver::quote(statement.name());
@@ -367,5 +372,33 @@ mod tests {
             renderer().render(&update),
             "UPDATE parents JOIN (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label"
         );
+    }
+
+    #[test]
+    fn renders_a_mysql_table_rebuild() {
+        use datasources::{CreateIndexStatement, RebuildColumn, RebuildTableStatement};
+        let rebuilt = renderer().render(&RebuildTableStatement::new(
+            "users",
+            CreateTableStatement::new(
+                "users",
+                &[Column::new("id", "INT"), Column::new("age", "INT")],
+                &[],
+            ),
+            vec![
+                RebuildColumn::copied("id", "id"),
+                RebuildColumn::copied("age", "age").with_cast("INT"),
+            ],
+            vec![CreateIndexStatement::new("ix_users_age", "users", &["age"], false)],
+            vec![],
+        ));
+        assert!(rebuilt.starts_with("SET FOREIGN_KEY_CHECKS = 0"));
+        assert!(rebuilt.contains("users__new"));
+        assert!(rebuilt.contains("CAST"));
+        assert!(rebuilt.contains("SIGNED"));
+        let index_at = rebuilt.find("ix_users_age").unwrap();
+        let rename_at = rebuilt.find("RENAME TABLE").unwrap();
+        let drop_at = rebuilt.find("users__old").unwrap();
+        assert!(index_at < rename_at && rename_at < drop_at);
+        assert!(rebuilt.ends_with("SET FOREIGN_KEY_CHECKS = 1"));
     }
 }

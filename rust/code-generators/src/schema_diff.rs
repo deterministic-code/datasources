@@ -1,15 +1,17 @@
 use crate::schema::table_stem;
 use datasources::StatementNaming;
 use crate::schema::{
-    field_overlay, has_audit_columns, is_generated_identity, overlay_of, table_identity, SqlTable,
+    field_overlay, has_audit_columns, is_generated_identity, overlay_of, rebuild_table, table_identity, SqlTable,
 };
 use crate::spec::{pk_name, DatasourceIndex, SpecTypeField};
 use crate::table_statements;
 use datasources::{
     AlterAction, AlterTableStatement, Column, CreateIndexStatement, CreateTableStatement,
     CreateTriggerStatement, DatasourceError, DropIndexStatement, DropTableStatement,
-    DropTriggerStatement, ForeignKeyStatement, Result, Statement, TableConstraint,
+    DropTriggerStatement, ForeignKeyStatement, RebuildColumn, RebuildTableStatement, Result, Statement,
+    TableConstraint,
 };
+use std::collections::HashMap;
 
 pub enum DdlStatement {
     CreateTable(CreateTableStatement),
@@ -20,6 +22,7 @@ pub enum DdlStatement {
     DropTrigger(DropTriggerStatement),
     DropTable(DropTableStatement),
     ForeignKey(ForeignKeyStatement),
+    RebuildTable(RebuildTableStatement),
 }
 
 impl DdlStatement {
@@ -33,6 +36,7 @@ impl DdlStatement {
             Self::DropTrigger(statement) => statement,
             Self::DropTable(statement) => statement,
             Self::ForeignKey(statement) => statement,
+            Self::RebuildTable(statement) => statement,
         }
     }
 
@@ -47,6 +51,7 @@ pub fn of(
     before_map: &StatementNaming,
     after_tables: &[SqlTable],
     after_map: &StatementNaming,
+    settings: &HashMap<String, String>,
 ) -> Result<Vec<DdlStatement>> {
     let previous_by_name: std::collections::HashMap<_, _> =
         before_tables.iter().map(|table| (table.name.as_str(), table)).collect();
@@ -74,6 +79,7 @@ pub fn of(
                 after_map,
                 before_tables,
                 after_tables,
+                settings,
             )?);
         }
     }
@@ -132,12 +138,16 @@ fn diff_table(
     after_map: &StatementNaming,
     before_tables: &[SqlTable],
     after_tables: &[SqlTable],
+    settings: &HashMap<String, String>,
 ) -> Result<Vec<DdlStatement>> {
     if identity_of(before) != identity_of(after) {
         return Err(DatasourceError::message(format!(
             "{}: primary key or identity change is not supported",
             after.name
         )));
+    }
+    if rebuild_table(dialect, settings) && needs_rebuild(before, after, before_map, after_map)? {
+        return Ok(vec![rebuild(before, after, before_map, after_map, after_tables)?]);
     }
     let before_fields: std::collections::HashMap<_, _> =
         before.fields.iter().map(|field| (field.name.as_str(), field)).collect();
@@ -271,6 +281,96 @@ fn diff_table(
         out.push(DdlStatement::CreateTrigger(trigger(dialect, after, after_map)?));
     }
     Ok(out)
+}
+
+fn needs_rebuild(
+    before: &SqlTable,
+    after: &SqlTable,
+    before_map: &StatementNaming,
+    after_map: &StatementNaming,
+) -> Result<bool> {
+    let before_fields: std::collections::HashMap<_, _> =
+        before.fields.iter().map(|field| (field.name.as_str(), field)).collect();
+    let after_fields: std::collections::HashMap<_, _> =
+        after.fields.iter().map(|field| (field.name.as_str(), field)).collect();
+    for field in after.fields.iter().filter(|field| before_fields.contains_key(field.name.as_str())) {
+        let previous = table_statements::column(before_map, before, before_fields[field.name.as_str()])?;
+        let next = table_statements::column(after_map, after, field)?;
+        if (Column {
+            name: next.name.clone(),
+            ..previous
+        }) != next
+        {
+            return Ok(true);
+        }
+    }
+    Ok(before
+        .fields
+        .iter()
+        .chain(after.fields.iter())
+        .any(|field| {
+            if !has_refs(field) {
+                return false;
+            }
+            match (
+                before_fields.get(field.name.as_str()),
+                after_fields.get(field.name.as_str()),
+            ) {
+                (Some(prior), Some(next)) => refs_of(prior) != refs_of(next),
+                _ => true,
+            }
+        }))
+}
+
+fn rebuild(
+    before: &SqlTable,
+    after: &SqlTable,
+    before_map: &StatementNaming,
+    after_map: &StatementNaming,
+    after_tables: &[SqlTable],
+) -> Result<DdlStatement> {
+    let before_fields: std::collections::HashMap<_, _> =
+        before.fields.iter().map(|field| (field.name.as_str(), field)).collect();
+    let mut columns = Vec::new();
+    for field in &after.fields {
+        let next = table_statements::column(after_map, after, field)?;
+        if let Some(prior) = before_fields.get(field.name.as_str()) {
+            let previous = table_statements::column(before_map, before, prior)?;
+            let mut column = RebuildColumn::copied(&next.name, &previous.name);
+            if previous.type_name != next.type_name {
+                column = column.with_cast(&next.type_name);
+            }
+            columns.push(column);
+        } else {
+            if next.not_null.is_some() && next.default.is_none() {
+                return Err(DatasourceError::message(format!(
+                    "{}.{}: new NOT NULL column with no default",
+                    after.name, field.name
+                )));
+            }
+            columns.push(match &next.default {
+                Some(default) => RebuildColumn::literal(&next.name, &default.value),
+                None => RebuildColumn::null(&next.name),
+            });
+        }
+    }
+    let indexes = after
+        .indexes
+        .iter()
+        .map(|index| table_statements::create_index(after_map, after, index))
+        .collect();
+    let triggers = if has_audit_columns(after) {
+        vec![trigger("", after, after_map)?]
+    } else {
+        vec![]
+    };
+    Ok(DdlStatement::RebuildTable(RebuildTableStatement::new(
+        &before.table_name,
+        table_statements::create_table(after, after_map, after_tables)?,
+        columns,
+        indexes,
+        triggers,
+    )))
 }
 
 fn trigger(_dialect: &str, table: &SqlTable, naming: &StatementNaming) -> Result<CreateTriggerStatement> {

@@ -61,6 +61,7 @@ public class StatementTextRenderer
         IdentityInsertStatement s => s.Accept(Statements),
         SqlSeedStatement s => s.Accept(Statements),
         ForeignKeyStatement s => s.Accept(Statements),
+        RebuildTableStatement s => s.Accept(Statements),
         DropRoutineStatement s => s.Accept(Statements),
         CreateCreateStoredProcedureStatement s => s.Accept(Statements),
         CreateReadStoredProcedureStatement s => s.Accept(Statements),

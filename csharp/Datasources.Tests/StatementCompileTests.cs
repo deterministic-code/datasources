@@ -304,6 +304,13 @@ public class StatementCompileTests
     }
 
     [Fact]
+    public void LeavesRebuildTableStatementsToTheDriver()
+    {
+        Assert.Throws<InvalidOperationException>(() => DefaultStatementTextRenderer.Instance.Render(
+            new RebuildTableStatement("users", new CreateTableStatement("users", []), [])));
+    }
+
+    [Fact]
     public void AttachesWhereToAQuery()
     {
         var where = new Where(new Operator.And(

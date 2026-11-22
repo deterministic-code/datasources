@@ -29,6 +29,8 @@ import {
   DeleteStatement,
   ForeignKey,
   ForeignKeyStatement,
+  RebuildColumn,
+  RebuildTableStatement,
   InsertStatement,
   Join,
   NotNull,
@@ -477,6 +479,15 @@ describe("statement compile", () => {
         new ForeignKeyStatement("users", "fk", ["id"], "other", ["id"]),
       ),
     ).toThrow(/ForeignKeyStatement is rendered by the SQL driver/);
+    expect(() =>
+      DefaultStatementTextRenderer.instance.render(
+        new RebuildTableStatement("users", new CreateTableStatement("users", []), [
+          new RebuildColumn("id", "id"),
+          new RebuildColumn("age", "age", "INTEGER"),
+          new RebuildColumn("flag", undefined, undefined, "0"),
+        ]),
+      ),
+    ).toThrow(/RebuildTableStatement is rendered by the SQL driver/);
   });
 
   it("attaches where to a query", () => {

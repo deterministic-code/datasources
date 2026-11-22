@@ -159,6 +159,10 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Compile an ALTER TABLE ADD COLUMN](./sections/alter-table-statement.md#compile-an-alter-table-add-column)
 
+## Rebuild Table Statement
+
+- [Compile a SQLite table rebuild](./sections/rebuild-table-statement.md#compile-a-sqlite-table-rebuild)
+
 ## Drop Index Statement
 
 - [Compile a DROP INDEX](./sections/drop-index-statement.md#compile-a-drop-index)

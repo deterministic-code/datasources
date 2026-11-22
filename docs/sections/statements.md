@@ -411,6 +411,7 @@ Bound values live on [Where](./where-clause.md). [IStatement](#istatement) is no
 - [CreateTableStatement](./create-table-statement.md)
 - [CreateIndexStatement](./create-index-statement.md)
 - [AlterTableStatement](./alter-table-statement.md)
+- [RebuildTableStatement](./rebuild-table-statement.md)
 - [DropIndexStatement](./drop-index-statement.md)
 - [DropTriggerStatement](./drop-trigger-statement.md)
 - [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md)

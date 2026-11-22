@@ -93,6 +93,35 @@ public class SqliteStatementRendererTests
     }
 
     [Fact]
+    public void RendersASqliteTableRebuild()
+    {
+        var rebuilt = Renderer.Render(new RebuildTableStatement(
+            "users",
+            new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("age", "INTEGER")]),
+            [new RebuildColumn("id", "id"), new RebuildColumn("age", "age", "INTEGER")],
+            [new CreateIndexStatement("ix_users_age", "users", ["age"])]));
+        Assert.Contains("CREATE TABLE \"users__new\"", rebuilt);
+        Assert.Contains("INSERT INTO \"users__new\" (\"id\", \"age\") SELECT \"id\", CAST(\"age\" AS INTEGER) FROM \"users\"", rebuilt);
+        var createAt = rebuilt.IndexOf("CREATE TABLE \"users__new\"", StringComparison.Ordinal);
+        var dropAt = rebuilt.IndexOf("DROP TABLE IF EXISTS \"users\"", StringComparison.Ordinal);
+        var renameAt = rebuilt.IndexOf("ALTER TABLE \"users__new\" RENAME TO \"users\"", StringComparison.Ordinal);
+        var indexAt = rebuilt.IndexOf("CREATE INDEX \"ix_users_age\" ON \"users\" (\"age\")", StringComparison.Ordinal);
+        Assert.True(createAt >= 0 && createAt < dropAt && dropAt < renameAt && renameAt < indexAt);
+        var copied = Renderer.Render(new RebuildTableStatement(
+            "users",
+            new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("note", "TEXT"), new Column("flag", "INTEGER")]),
+            [new RebuildColumn("id", "id"), new RebuildColumn("note"), new RebuildColumn("flag", null, null, "0")],
+            [new CreateIndexStatement("ix_users_note", "users", ["note"]), new CreateTriggerStatement("users", "trg_users", "note", "id")]));
+        Assert.Contains("SELECT \"id\", NULL, 0 FROM \"users\"", copied);
+        Assert.Contains("trg_users", copied);
+        Assert.Throws<InvalidOperationException>(() => Renderer.Render(new RebuildTableStatement(
+            "users",
+            new CreateTableStatement("users", [new Column("id", "INTEGER")]),
+            [new RebuildColumn("id", "id")],
+            [new DropTableStatement("users")])));
+    }
+
+    [Fact]
     public void RendersStoredProcedureStatementsEmpty()
     {
         Assert.Equal(

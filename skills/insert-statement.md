@@ -295,7 +295,7 @@ let insert = InsertStatement::new("users", &fields);
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L141-L150)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L143-L152)
 
 ```typescript
 const fields = [

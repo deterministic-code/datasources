@@ -211,7 +211,7 @@ pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, AlterAction, AlterTableStatement, ArrayExpression, CheckConstraint, ColumnDefault, Condition,
     ConditionRenderer, ConditionVisitor, ICondition, ISelectStatement, IWhere, CreateIndexStatement,
-    CreateTableStatement, CreateTriggerStatement, ForeignKeyStatement, RoutineParameter,
+    CreateTableStatement, CreateTriggerStatement, ForeignKeyStatement, RebuildColumn, RebuildTableStatement, RoutineParameter,
     AlterTableStatementTextRenderer, CreateIndexStatementTextRenderer, CreateCreateStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateNestedReadStoredProcedureStatement, NestedWhereArgument, CreateUpdateStoredProcedureStatement, CreateDeleteStoredProcedureStatement, CreateBulkCreateStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement, CreateCreateStoredProcedureStatementTextRenderer, CreateReadStoredProcedureStatementTextRenderer, CreateNestedReadStoredProcedureStatementTextRenderer, CreateUpdateStoredProcedureStatementTextRenderer, CreateDeleteStoredProcedureStatementTextRenderer, CreateBulkCreateStoredProcedureStatementTextRenderer, CreateBulkUpdateStoredProcedureStatementTextRenderer, CreateBulkDeleteStoredProcedureStatementTextRenderer,
     CreateTableStatementTextRenderer, CreateTriggerStatementTextRenderer,
     NestedSelectBuilder, NestedSelectBuilderOptions, NestedSelectRelation, NestedSelectRelationKind, NestedSelectStatement, NestedSelectType,

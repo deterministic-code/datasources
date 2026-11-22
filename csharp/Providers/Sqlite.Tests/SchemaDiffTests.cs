@@ -101,6 +101,34 @@ public class SchemaDiffTests
         Assert.Empty(SchemaDiff.Of("sqlite", before.Tables, before.Naming, after.Tables, after.Naming));
     }
 
+    [Fact]
+    public void RebuildsASqliteTableWhenAColumnTypeChanges()
+    {
+        var before = Snap("""
+            types:
+              - user:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - age:
+                        type: integer
+            """);
+        var after = Snap("""
+            types:
+              - user:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - age:
+                        type: string
+            """);
+        var statements = SchemaDiff.Of("sqlite", before.Tables, before.Naming, after.Tables, after.Naming);
+        Assert.Contains(statements, statement => statement is RebuildTableStatement);
+        Assert.DoesNotContain(statements, statement => statement is AlterTableStatement);
+        var sql = statements.Select(statement => new StatementTextRenderer(t => new SqliteStatementRenderer(t)).Render(statement)).ToList();
+        Assert.Contains(sql, item => item.Contains("users__new") && item.Contains("CAST"));
+    }
+
     static (IReadOnlyList<SqlTable> Tables, StatementNaming Naming) Snap(string typesYaml, string datasourceYaml)
     {
         var spec = SpecParser.Parse(new Dictionary<string, string>
