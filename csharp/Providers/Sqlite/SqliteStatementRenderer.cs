@@ -50,6 +50,9 @@ internal sealed class SqliteStatementRenderer(StatementTextRenderer text) : Stat
     public override string Visit(ForeignKeyStatement key) =>
         new SqliteForeignKeyStatementRenderer().Render(key);
 
+    public override string Visit(RebuildTableStatement rebuild) =>
+        new SqliteRebuildTableStatementRenderer().Render(rebuild);
+
     public override IReadOnlyList<IStatement> Procedures(ProcedureSource source) =>
         SqlProcedureStatements.Of(source);
 }

@@ -7,8 +7,14 @@ import {
   Datasource,
   DatasourceFactory,
   DictionaryMapper,
+  ForeignKey,
   FlatToNestedMapper,
   InsertStatement,
+  CreateIndexStatement,
+  CreateTableStatement,
+  CreateTriggerStatement,
+  RebuildColumn,
+  RebuildTableStatement,
   Native,
   ReturnStatement,
   MetaDataRowTypeConverter,
@@ -304,6 +310,79 @@ describe("command", () => {
     expect(await reader.next()).toBe(true);
     expect(lines.some((line) => line.includes("[AfterCommand]-[{id: 1}]"))).toBe(true);
   });
+
+  it("rebuilds a table and keeps indexes and triggers", async () => {
+    const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
+    await connection.open();
+    const command = new SqliteCommand(connection);
+    await command.executeNative(
+      new Native(
+        "PRAGMA foreign_keys = ON;\nCREATE TABLE items (id INTEGER PRIMARY KEY, n TEXT);\nCREATE INDEX ix_items_n ON items(n);\nCREATE TRIGGER trg_items AFTER UPDATE ON items BEGIN SELECT 1; END;\nINSERT INTO items (id, n) VALUES (1, '2');",
+      ),
+    );
+    await command.executeStatement(
+      new RebuildTableStatement(
+        "items",
+        new CreateTableStatement("items", [
+          { name: "id", type: "INTEGER" },
+          { name: "n", type: "INTEGER" },
+        ]),
+        [new RebuildColumn("id", "id"), new RebuildColumn("n", "n", "INTEGER")],
+        [
+          new CreateIndexStatement("ix_items_n", "items", ["n"]),
+          new CreateTriggerStatement("items", "trg_items", "n", "id"),
+        ],
+      ),
+    );
+    await using values = await command.executeReaderNative(new Native("SELECT n FROM items"));
+    expect(await values.next()).toBe(true);
+    expect(values.current?.n).toBe(2);
+    await using indexes = await command.executeReaderNative(
+      new Native("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'items'"),
+    );
+    expect(await indexes.next()).toBe(true);
+    await using triggers = await command.executeReaderNative(
+      new Native("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'items'"),
+    );
+    expect(await triggers.next()).toBe(true);
+  });
+
+  it("rolls back a rebuild when foreign keys fail", async () => {
+    const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
+    await connection.open();
+    const command = new SqliteCommand(connection);
+    await command.executeNative(
+      new Native(
+        "CREATE TABLE parents (id INTEGER PRIMARY KEY);\nCREATE TABLE children (id INTEGER PRIMARY KEY, parent_id INTEGER);\nINSERT INTO children (id, parent_id) VALUES (1, 99);",
+      ),
+    );
+    await expect(
+      command.executeStatement(
+        new RebuildTableStatement(
+          "children",
+          new CreateTableStatement(
+            "children",
+            [
+              { name: "id", type: "INTEGER" },
+              { name: "parent_id", type: "INTEGER" },
+            ],
+            [new ForeignKey("fk_children_parent", ["parent_id"], "parents", ["id"])],
+          ),
+          [new RebuildColumn("id", "id"), new RebuildColumn("parent_id", "parent_id")],
+        ),
+      ),
+    ).rejects.toThrow("RebuildTableStatement failed integrity checks");
+    await using reader = await command.executeReaderNative(new Native("SELECT parent_id FROM children"));
+    expect(await reader.next()).toBe(true);
+    expect(reader.current?.parent_id).toBe(99);
+    await using leftover = await command.executeReaderNative(
+      new Native("SELECT name FROM sqlite_master WHERE name LIKE 'children%'"),
+    );
+    const names: string[] = [];
+    while (await leftover.next()) names.push(String(leftover.current?.name ?? ""));
+    expect(names).toContain("children");
+    expect(names).not.toContain("children__new");
+  });
 });
 
 describe("return statement", () => {
@@ -330,7 +409,7 @@ describe("return statement", () => {
   });
 
   it("create then child insert uses the parent id", async () => {
-    class Contact {
+    class ParentContact {
       id!: number;
       name = "";
     }
@@ -348,7 +427,7 @@ describe("return statement", () => {
       ),
     );
     const contacts = new CRUDRepository(connection, {
-      ...createCRUDRepositoryOptions(Contact),
+      ...createCRUDRepositoryOptions(ParentContact),
       ids: ["id"],
       entity: "contacts",
       createProperties: ["name"],
@@ -360,7 +439,7 @@ describe("return statement", () => {
       createProperties: ["contactId", "line1"],
       propertyMappings: new DictionaryMapper([["contactId", "contact_id"]]),
     });
-    const created = await contacts.create(Object.assign(new Contact(), { name: "ada" }));
+    const created = await contacts.create(Object.assign(new ParentContact(), { name: "ada" }));
     await addresses.create(Object.assign(new Address(), { contactId: created.id, line1: "12 Engine" }));
     await using reader = await command.executeReaderNative(
       new Native("SELECT contact_id FROM addresses"),

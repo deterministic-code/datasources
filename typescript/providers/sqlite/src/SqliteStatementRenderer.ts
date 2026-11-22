@@ -7,6 +7,7 @@ import {
   DropTableStatement,
   DropTriggerStatement,
   ForeignKeyStatement,
+  RebuildTableStatement,
   BulkInsertStatement,
   InsertStatement,
   type ProcedureSource,
@@ -26,6 +27,7 @@ import {
   SqliteDropTableStatementRenderer,
   SqliteDropTriggerStatementRenderer,
   SqliteForeignKeyStatementRenderer,
+  SqliteRebuildTableStatementRenderer,
 } from "./SqliteQuotedRenderers.ts";
 import { SqliteSqlSeedStatementRenderer } from "./SqliteSqlSeedStatementRenderer.ts";
 
@@ -92,5 +94,9 @@ export class SqliteStatementRenderer extends StatementRenderer {
 
   protected override visitForeignKey(key: ForeignKeyStatement): string {
     return new SqliteForeignKeyStatementRenderer().render(key);
+  }
+
+  protected override visitRebuildTable(rebuild: RebuildTableStatement): string {
+    return new SqliteRebuildTableStatementRenderer().render(rebuild);
   }
 }

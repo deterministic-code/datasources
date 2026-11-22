@@ -587,6 +587,7 @@ Bound values live on [Where](where.md). [IStatement](#istatement) is not an [IEx
 - [CreateTableStatement](other-statements.md)
 - [CreateIndexStatement](other-statements.md)
 - [AlterTableStatement](docs/sections/alter-table-statement.md)
+- [RebuildTableStatement](docs/sections/rebuild-table-statement.md)
 - [DropIndexStatement](docs/sections/drop-index-statement.md)
 - [DropTriggerStatement](docs/sections/drop-trigger-statement.md)
 - [ExecuteStoredProcedureStatement](other-statements.md)

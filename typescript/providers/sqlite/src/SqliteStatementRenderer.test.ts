@@ -11,6 +11,8 @@ import {
   DropTriggerStatement,
   ForeignKey,
   ForeignKeyStatement,
+  RebuildColumn,
+  RebuildTableStatement,
   NotNull,
   PrimaryKey,
   ReferentialAction,
@@ -219,5 +221,62 @@ END`,
         }),
       ),
     ).toBe('ALTER TABLE "users" ADD COLUMN "age" INTEGER CONSTRAINT "df_age" DEFAULT 0');
+  });
+
+  it("renders a sqlite table rebuild", () => {
+    const rebuilt = renderer.render(
+      new RebuildTableStatement(
+        "users",
+        new CreateTableStatement("users", [
+          { name: "id", type: "INTEGER" },
+          { name: "age", type: "INTEGER" },
+        ]),
+        [new RebuildColumn("id", "id"), new RebuildColumn("age", "age", "INTEGER")],
+        [new CreateIndexStatement("ix_users_age", "users", ["age"])],
+      ),
+    );
+    expect(rebuilt).toContain('CREATE TABLE "users__new"');
+    expect(rebuilt).toContain(
+      'INSERT INTO "users__new" ("id", "age") SELECT "id", CAST("age" AS INTEGER) FROM "users"',
+    );
+    const createAt = rebuilt.indexOf('CREATE TABLE "users__new"');
+    const dropAt = rebuilt.indexOf('DROP TABLE IF EXISTS "users"');
+    const renameAt = rebuilt.indexOf('ALTER TABLE "users__new" RENAME TO "users"');
+    const indexAt = rebuilt.indexOf('CREATE INDEX "ix_users_age" ON "users" ("age")');
+    expect(createAt).toBeGreaterThanOrEqual(0);
+    expect(createAt).toBeLessThan(dropAt);
+    expect(dropAt).toBeLessThan(renameAt);
+    expect(renameAt).toBeLessThan(indexAt);
+    const copied = renderer.render(
+      new RebuildTableStatement(
+        "users",
+        new CreateTableStatement("users", [
+          { name: "id", type: "INTEGER" },
+          { name: "note", type: "TEXT" },
+          { name: "flag", type: "INTEGER" },
+        ]),
+        [
+          new RebuildColumn("id", "id"),
+          new RebuildColumn("note"),
+          new RebuildColumn("flag", undefined, undefined, "0"),
+        ],
+        [
+          new CreateIndexStatement("ix_users_note", "users", ["note"]),
+          new CreateTriggerStatement("users", "trg_users", "note", "id"),
+        ],
+      ),
+    );
+    expect(copied).toContain('SELECT "id", NULL, 0 FROM "users"');
+    expect(copied).toContain("trg_users");
+    expect(() =>
+      renderer.render(
+        new RebuildTableStatement(
+          "users",
+          new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }]),
+          [new RebuildColumn("id", "id")],
+          [new DropTableStatement("users")],
+        ),
+      ),
+    ).toThrow("DropTableStatement cannot be recreated during a table rebuild");
   });
 });

@@ -23,6 +23,8 @@ import {
   eq,
   ForeignKey,
   ForeignKeyStatement,
+  RebuildColumn,
+  RebuildTableStatement,
   NestedSelectBuilder,
   NotNull,
   PrimaryKey,
@@ -372,5 +374,31 @@ describe("MysqlStatementRenderer", () => {
         ),
       ),
     ).toThrow('missing key column "id"');
+  });
+
+  it("renders a mysql table rebuild", () => {
+    const rebuilt = renderer.render(
+      new RebuildTableStatement(
+        "users",
+        new CreateTableStatement("users", [
+          { name: "id", type: "INT" },
+          { name: "age", type: "INT" },
+        ]),
+        [new RebuildColumn("id", "id"), new RebuildColumn("age", "age", "INT")],
+        [new CreateIndexStatement("ix_users_age", "users", ["age"])],
+      ),
+    );
+    expect(rebuilt.startsWith("SET FOREIGN_KEY_CHECKS = 0")).toBe(true);
+    expect(rebuilt).toContain("users__new");
+    expect(rebuilt).toContain("CAST");
+    expect(rebuilt).toContain("SIGNED");
+    expect(rebuilt).toContain("ix_users_age");
+    const indexAt = rebuilt.indexOf("ix_users_age");
+    const renameAt = rebuilt.indexOf("RENAME TABLE");
+    const dropAt = rebuilt.indexOf("users__old");
+    expect(indexAt).toBeGreaterThanOrEqual(0);
+    expect(indexAt).toBeLessThan(renameAt);
+    expect(renameAt).toBeLessThan(dropAt);
+    expect(rebuilt.endsWith("SET FOREIGN_KEY_CHECKS = 1")).toBe(true);
   });
 });

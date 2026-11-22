@@ -22,6 +22,7 @@ import {
   DropRoutineStatement,
   DropTableStatement,
   ForeignKeyStatement,
+  RebuildTableStatement,
   type ProcedureSource,
   SelectInsertedIdStatement,
   sqlProcedureStatementsOf,
@@ -51,6 +52,7 @@ import {
   MysqlCreateIndexStatementRenderer,
   MysqlDropTableStatementRenderer,
   MysqlForeignKeyStatementRenderer,
+  MysqlRebuildTableStatementRenderer,
 } from "./MysqlQuotedRenderers.ts";
 
 class MysqlSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
@@ -172,5 +174,9 @@ export class MysqlStatementRenderer extends StatementRenderer {
 
   protected override visitForeignKey(key: ForeignKeyStatement): string {
     return new MysqlForeignKeyStatementRenderer().render(key);
+  }
+
+  protected override visitRebuildTable(rebuild: RebuildTableStatement): string {
+    return new MysqlRebuildTableStatementRenderer().render(rebuild);
   }
 }

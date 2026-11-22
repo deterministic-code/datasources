@@ -1,0 +1,5 @@
+var rebuilt = Renderer.Render(new RebuildTableStatement(
+    "users",
+    new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("age", "INTEGER")]),
+    [new RebuildColumn("id", "id"), new RebuildColumn("age", "age", "INTEGER")],
+    [new CreateIndexStatement("ix_users_age", "users", ["age"])]));

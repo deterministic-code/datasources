@@ -32,6 +32,7 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         statement switch
         {
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
+            RebuildTableStatement rebuild => ExecuteRebuild(rebuild, parameters),
             _ => Execute(new Native(statements.Render(statement)), parameters)
         };
 
@@ -45,35 +46,107 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
             return (new Response(executed.Result, executed.RowsAffected, executed.Parameters), (IReadOnlyList<Row>)[]);
         });
 
+    Task<Response> ExecuteRebuild(RebuildTableStatement statement, IReadOnlyList<Parameter>? parameters) =>
+        Run(statements.Render(statement), parameters, async (query, paramsList) =>
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return (new Response(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);
+            Typed.EnsureOpen();
+            await Typed.Gate.WaitAsync();
+            try
+            {
+                var previous = await Scalar("PRAGMA foreign_keys");
+                await Exec("PRAGMA foreign_keys = OFF");
+                await Exec("BEGIN");
+                try
+                {
+                    var executed = await ExecuteParts(query, paramsList);
+                    if (!await ForeignKeysOk() || !await IntegrityOk())
+                        throw new InvalidOperationException("RebuildTableStatement failed integrity checks");
+                    await Exec("COMMIT");
+                    return (new Response(executed.Result, executed.RowsAffected, executed.Parameters), (IReadOnlyList<Row>)[]);
+                }
+                catch
+                {
+                    try { await Exec("ROLLBACK"); } catch { /* keep the original failure */ }
+                    throw;
+                }
+                finally
+                {
+                    await Exec(previous is "0" ? "PRAGMA foreign_keys = OFF" : "PRAGMA foreign_keys = ON");
+                }
+            }
+            finally
+            {
+                Typed.Gate.Release();
+            }
+        });
+
     async Task<SqliteExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
         await Typed.Gate.WaitAsync();
         try
         {
-            var rows = 0;
-            Value result = Value.Null.Instance;
-            foreach (var part in SplitStatements.Split(sql))
-            {
-                var names = SplitStatements.Parameters(part).ToHashSet();
-                var used = new Row();
-                foreach (var (name, value) in Helpers.ParametersToRecord(parameters))
-                    if (names.Contains(name.TrimStart('$', '@', ':')))
-                        used[name] = value;
-                using var command = BindPositional(part, used);
-                await using var reader = await command.ExecuteReaderAsync();
-                do
-                {
-                    if (reader.FieldCount > 0 && await reader.ReadAsync())
-                        result = Value.From(reader.IsDBNull(0) ? null : reader.GetValue(0));
-                } while (await reader.NextResultAsync());
-                rows += Math.Max(reader.RecordsAffected, 0);
-            }
-            return new SqliteExecuteResult(rows, result, parameters);
+            return await ExecuteParts(sql, parameters);
         }
         finally
         {
             Typed.Gate.Release();
         }
+    }
+
+    async Task<SqliteExecuteResult> ExecuteParts(string sql, IReadOnlyList<Parameter>? parameters)
+    {
+        var rows = 0;
+        Value result = Value.Null.Instance;
+        foreach (var part in SplitStatements.Split(sql))
+        {
+            var names = SplitStatements.Parameters(part).ToHashSet();
+            var used = new Row();
+            foreach (var (name, value) in Helpers.ParametersToRecord(parameters))
+                if (names.Contains(name.TrimStart('$', '@', ':')))
+                    used[name] = value;
+            using var command = BindPositional(part, used);
+            await using var reader = await command.ExecuteReaderAsync();
+            do
+            {
+                if (reader.FieldCount > 0 && await reader.ReadAsync())
+                    result = Value.From(reader.IsDBNull(0) ? null : reader.GetValue(0));
+            } while (await reader.NextResultAsync());
+            rows += Math.Max(reader.RecordsAffected, 0);
+        }
+        return new SqliteExecuteResult(rows, result, parameters);
+    }
+
+    async Task Exec(string sql)
+    {
+        using var command = Typed.Require().CreateCommand();
+        command.CommandText = sql;
+        await command.ExecuteNonQueryAsync();
+    }
+
+    async Task<string> Scalar(string sql)
+    {
+        using var command = Typed.Require().CreateCommand();
+        command.CommandText = sql;
+        var value = await command.ExecuteScalarAsync();
+        return value?.ToString() ?? "0";
+    }
+
+    async Task<bool> ForeignKeysOk()
+    {
+        using var command = Typed.Require().CreateCommand();
+        command.CommandText = "PRAGMA foreign_key_check";
+        await using var reader = await command.ExecuteReaderAsync();
+        return !await reader.ReadAsync();
+    }
+
+    async Task<bool> IntegrityOk()
+    {
+        using var command = Typed.Require().CreateCommand();
+        command.CommandText = "PRAGMA integrity_check";
+        var value = await command.ExecuteScalarAsync();
+        return string.Equals(value?.ToString(), "ok", StringComparison.OrdinalIgnoreCase);
     }
 
     async Task<IReader<Row>> Open(string sql, Row parameters, Schema? schema = null)

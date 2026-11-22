@@ -38,4 +38,12 @@ describe("datasourceSettings use_stored_procedures", () => {
       false,
     );
   });
+
+  it("lists dialects in datasource.rebuild_table", () => {
+    assert.deepEqual(datasourceSettings({}).rebuildTable, []);
+    assert.deepEqual(
+      datasourceSettings({ "datasource.rebuild_table": "mysql" }).rebuildTable,
+      ["mysql"],
+    );
+  });
 });

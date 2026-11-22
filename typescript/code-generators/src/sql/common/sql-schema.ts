@@ -14,6 +14,7 @@ import {
   tableByName,
 } from "@deterministic-code/generators-common/spec-types";
 import { CreateTableStatement, type StatementNaming } from "@deterministic-code/datasources";
+import type { SqlDialect } from "./sql-dialect.ts";
 import { referencePairs, referenceTarget } from "./reference-target.ts";
 
 export { referencePairs, referenceTarget };
@@ -22,7 +23,15 @@ export { referencePairs, referenceTarget };
 export const datasourceSettings = (settings: Record<string, string>) => ({
   useStoredProcedures:
     String(settings["datasource.use_stored_procedures"]) === "true",
+  rebuildTable: String(settings["datasource.rebuild_table"] ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0),
 });
+
+export const rebuildTable = (dialect: SqlDialect, settings?: Record<string, string>): boolean =>
+  dialect === "sqlite"
+  || (dialect === "mysql" && (settings === undefined ? false : datasourceSettings(settings).rebuildTable.includes("mysql")));
 
 export type SqlTable = Omit<Type, "mapping"> & {
   tableName?: string;

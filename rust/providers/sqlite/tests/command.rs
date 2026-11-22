@@ -1,8 +1,8 @@
 use datasources::{
-    default, Casing, ChangeCasingMapper, FlatToNestedMapper, InsertStatement,
-    MappedRow, MappedValue,
-    Mapper, Native, Parameter, Row, RowTypeConverter, Schema, SchemaColumn, TransformMapper, TypeMap, TypeMapField,
-    TypeMapGroup, Value,
+    default, Casing, ChangeCasingMapper, Column, CreateIndexStatement, CreateTableStatement,
+    CreateTriggerStatement, FlatToNestedMapper, ForeignKey, InsertStatement, MappedRow, MappedValue,
+    Mapper, Native, Parameter, RebuildColumn, RebuildTableStatement, Row, RowTypeConverter, Schema,
+    SchemaColumn, TransformMapper, TypeMap, TypeMapField, TypeMapGroup, Value,
 };
 use std::collections::HashMap;
 use datasources_tests::apply_schema;
@@ -304,6 +304,97 @@ async fn execute_insert_statement_returning_sets_result() {
         .unwrap();
     assert_ne!(inserted.result, Value::Null);
     assert_eq!(inserted.result, Value::Int(2));
+}
+
+#[tokio::test]
+async fn rebuilds_a_table_and_keeps_indexes_triggers_and_views() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute_native(
+            &Native::new(
+                "PRAGMA foreign_keys = ON;\nCREATE TABLE items (id INTEGER PRIMARY KEY, n TEXT);\nCREATE INDEX ix_items_n ON items(n);\nCREATE TRIGGER trg_items AFTER UPDATE ON items BEGIN SELECT 1; END;\nINSERT INTO items (id, n) VALUES (1, '2');",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let rebuild = RebuildTableStatement::new(
+        "items",
+        CreateTableStatement::new(
+            "items",
+            &[Column::new("id", "INTEGER"), Column::new("n", "INTEGER")],
+            &[],
+        ),
+        vec![
+            RebuildColumn::copied("id", "id"),
+            RebuildColumn::copied("n", "n").with_cast("INTEGER"),
+        ],
+        vec![CreateIndexStatement::new("ix_items_n", "items", &["n"], false)],
+        vec![CreateTriggerStatement::new("items", "trg_items", "n", "id")],
+    );
+    command.execute_statement(&rebuild, None).await.unwrap();
+    let reader = command
+        .execute_reader_native(&Native::new("SELECT n FROM items"), None)
+        .await
+        .unwrap();
+    assert!(reader.next().await.unwrap());
+    assert_eq!(reader.current().unwrap().get("n"), Some(&Value::Int(2)));
+}
+
+#[tokio::test]
+async fn rolls_back_a_rebuild_when_foreign_keys_fail() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = ds.create_connection().await.unwrap();
+    connection.open().await.unwrap();
+    let command = connection.create_command();
+    command
+        .execute_native(
+            &Native::new(
+                "CREATE TABLE parents (id INTEGER PRIMARY KEY);\nCREATE TABLE children (id INTEGER PRIMARY KEY, parent_id INTEGER);\nINSERT INTO children (id, parent_id) VALUES (1, 99);",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    let rebuild = RebuildTableStatement::new(
+        "children",
+        CreateTableStatement::new(
+            "children",
+            &[
+                Column::new("id", "INTEGER"),
+                Column::new("parent_id", "INTEGER"),
+            ],
+            &[ForeignKey::new(
+                "fk_children_parent",
+                &["parent_id"],
+                "parents",
+                &["id"],
+                None,
+                None,
+            )],
+        ),
+        vec![
+            RebuildColumn::copied("id", "id"),
+            RebuildColumn::copied("parent_id", "parent_id"),
+        ],
+        vec![],
+        vec![],
+    );
+    assert!(command.execute_statement(&rebuild, None).await.is_err());
+    let reader = command
+        .execute_reader_native(&Native::new("SELECT parent_id FROM children"), None)
+        .await
+        .unwrap();
+    assert!(reader.next().await.unwrap());
+    assert_eq!(
+        reader.current().unwrap().get("parent_id"),
+        Some(&Value::Int(99))
+    );
 }
 
 #[tokio::test]

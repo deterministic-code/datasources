@@ -1,0 +1,19 @@
+const rebuilt = renderer.render(
+  new RebuildTableStatement(
+    "users",
+    new CreateTableStatement("users", [
+      { name: "id", type: "INTEGER" },
+      { name: "age", type: "INTEGER" },
+    ]),
+    [new RebuildColumn("id", "id"), new RebuildColumn("age", "age", "INTEGER")],
+    [new CreateIndexStatement("ix_users_age", "users", ["age"])],
+  ),
+);
+expect(rebuilt).toContain('CREATE TABLE "users__new"');
+expect(rebuilt).toContain(
+  'INSERT INTO "users__new" ("id", "age") SELECT "id", CAST("age" AS INTEGER) FROM "users"',
+);
+const createAt = rebuilt.indexOf('CREATE TABLE "users__new"');
+const dropAt = rebuilt.indexOf('DROP TABLE IF EXISTS "users"');
+const renameAt = rebuilt.indexOf('ALTER TABLE "users__new" RENAME TO "users"');
+const indexAt = rebuilt.indexOf('CREATE INDEX "ix_users_age" ON "users" ("age")');

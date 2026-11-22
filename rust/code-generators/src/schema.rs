@@ -43,6 +43,20 @@ pub fn use_stored_procedures(settings: &HashMap<String, String>) -> bool {
     settings.get("datasource.use_stored_procedures").map(String::as_str) == Some("true")
 }
 
+pub fn rebuild_table(dialect: &str, settings: &HashMap<String, String>) -> bool {
+    dialect == "sqlite"
+        || (dialect == "mysql"
+            && settings
+                .get("datasource.rebuild_table")
+                .map(|value| {
+                    value
+                        .split(',')
+                        .map(str::trim)
+                        .any(|item| item.eq_ignore_ascii_case("mysql"))
+                })
+                .unwrap_or(false))
+}
+
 pub fn overlay_of(table: &SqlTable) -> DatasourceTable {
     DatasourceTable {
         name: table.name.clone(),
@@ -215,4 +229,22 @@ fn topo(tables: Vec<SqlTable>) -> Vec<SqlTable> {
 
 pub fn pack_of(settings: &HashMap<String, String>) -> datasources::Result<PackCasing> {
     PackCasing::of(settings)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rebuild_table_is_sqlite_or_opt_in_mysql() {
+        let empty = HashMap::new();
+        let mysql = HashMap::from([(
+            "datasource.rebuild_table".to_string(),
+            "mysql".to_string(),
+        )]);
+        assert!(rebuild_table("sqlite", &empty));
+        assert!(!rebuild_table("mysql", &empty));
+        assert!(rebuild_table("mysql", &mysql));
+        assert!(!rebuild_table("postgres", &mysql));
+    }
 }

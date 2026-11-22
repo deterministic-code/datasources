@@ -359,6 +359,65 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
+    public async Task RebuildsATableAndKeepsIndexesTriggersAndViews()
+    {
+        var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
+        await conn.Open();
+        var command = new SqliteCommand(conn);
+        await command.Execute(Native.N("""
+            PRAGMA foreign_keys = ON;
+            CREATE TABLE items (id INTEGER PRIMARY KEY, n TEXT);
+            CREATE INDEX ix_items_n ON items(n);
+            CREATE TRIGGER trg_items AFTER UPDATE ON items BEGIN SELECT 1; END;
+            INSERT INTO items (id, n) VALUES (1, '2');
+            """));
+        await command.Execute(new RebuildTableStatement(
+            "items",
+            new CreateTableStatement("items", [new Column("id", "INTEGER"), new Column("n", "INTEGER")]),
+            [new RebuildColumn("id", "id"), new RebuildColumn("n", "n", "INTEGER")],
+            [
+                new CreateIndexStatement("ix_items_n", "items", ["n"]),
+                new CreateTriggerStatement("items", "trg_items", "n", "id"),
+            ]));
+        await using var values = await command.ExecuteReader(Native.N("SELECT n FROM items"));
+        Assert.True(await values.Next());
+        Assert.Equal(new Value.Int(2), values.Current!["n"]);
+        await using var indexes = await command.ExecuteReader(Native.N("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'items'"));
+        Assert.True(await indexes.Next());
+        await using var triggers = await command.ExecuteReader(Native.N("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'items'"));
+        Assert.True(await triggers.Next());
+    }
+
+    [Fact]
+    public async Task RollsBackARebuildWhenForeignKeysFail()
+    {
+        var conn = new SqliteConnection(new SqliteConnectionOptions { Filename = ":memory:" });
+        await conn.Open();
+        var command = new SqliteCommand(conn);
+        await command.Execute(Native.N("""
+            CREATE TABLE parents (id INTEGER PRIMARY KEY);
+            CREATE TABLE children (id INTEGER PRIMARY KEY, parent_id INTEGER);
+            INSERT INTO children (id, parent_id) VALUES (1, 99);
+            """));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => command.Execute(new RebuildTableStatement(
+            "children",
+            new CreateTableStatement(
+                "children",
+                [new Column("id", "INTEGER"), new Column("parent_id", "INTEGER")],
+                [new ForeignKey("fk_children_parent", ["parent_id"], "parents", ["id"])]),
+            [new RebuildColumn("id", "id"), new RebuildColumn("parent_id", "parent_id")])));
+        await using var reader = await command.ExecuteReader(Native.N("SELECT parent_id FROM children"));
+        Assert.True(await reader.Next());
+        Assert.Equal(new Value.Int(99), reader.Current!["parent_id"]);
+        await using var leftover = await command.ExecuteReader(Native.N("SELECT name FROM sqlite_master WHERE name LIKE 'children%'"));
+        var names = new List<string>();
+        while (await leftover.Next())
+            names.Add(leftover.Current!["name"] is Value.Text text ? text.Item : "");
+        Assert.Contains("children", names);
+        Assert.DoesNotContain("children__new", names);
+    }
+
+    [Fact]
     public async Task LogsAfterCommandRowsForASelect()
     {
         var ds = Datasource.Default;

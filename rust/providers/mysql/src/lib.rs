@@ -14,6 +14,7 @@ mod isolation_sql;
 mod reader;
 mod select_inserted_id_statement_text_renderer;
 mod sql_seed_statement_renderer;
+mod rebuild_table_statement_renderer;
 mod statement_renderer;
 mod stored_procedure_statement_renderer;
 mod transaction;

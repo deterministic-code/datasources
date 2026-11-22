@@ -123,6 +123,10 @@ pages:
     title: Alter Table Statement
     group: Code Reference
     parent: Statements
+  - path: sections/rebuild-table-statement.md
+    title: Rebuild Table Statement
+    group: Code Reference
+    parent: Statements
   - path: sections/drop-index-statement.md
     title: Drop Index Statement
     group: Code Reference

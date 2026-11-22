@@ -5,6 +5,14 @@ public static class SqlSchema
     public static bool UseStoredProcedures(IReadOnlyDictionary<string, string> settings) =>
         settings.TryGetValue("datasource.use_stored_procedures", out var value) && value == "true";
 
+    public static bool RebuildTable(string dialect, IReadOnlyDictionary<string, string>? settings) =>
+        dialect == "sqlite"
+        || dialect == "mysql"
+            && settings is not null
+            && settings.TryGetValue("datasource.rebuild_table", out var value)
+            && value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Contains("mysql", StringComparer.OrdinalIgnoreCase);
+
     public static DatasourceTable OverlayOf(SqlTable table) => new()
     {
         Name = table.Name,

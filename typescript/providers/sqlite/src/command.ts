@@ -3,6 +3,7 @@ import {
   CommandMiddlewareHost,
   FirstResultReader,
   Native,
+  RebuildTableStatement,
   StatementTextRenderer,
   parametersToRecord,
   Response,
@@ -89,9 +90,56 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    if (statement instanceof RebuildTableStatement) return this.executeRebuild(statement, parameters);
     return this.readsCell(statement)
       ? this.firstCell(statement, parameters)
       : this.executeNative(new Native(this.statements.render(statement)), parameters);
+  }
+
+  private async executeRebuild(statement: RebuildTableStatement, parameters?: Parameter[]): Promise<Response> {
+    const sql = this.statements.render(statement);
+    return this.run(sql, parameters, async (query, params) => {
+      if (!query.trim()) return { value: new Response(null, 0, params), rows: [] };
+      this.connection.ensureOpen();
+      const db = this.connection.require();
+      const previous = this.scalar("PRAGMA foreign_keys");
+      db.exec("PRAGMA foreign_keys = OFF");
+      db.exec("BEGIN");
+      const restore = String(previous) === "0" ? "PRAGMA foreign_keys = OFF" : "PRAGMA foreign_keys = ON";
+      try {
+        const { changes, result } = this.apply(query, params);
+        if (!this.foreignKeysOk() || !this.integrityOk()) {
+          throw new Error("RebuildTableStatement failed integrity checks");
+        }
+        db.exec("COMMIT");
+        db.exec(restore);
+        return { value: new Response(result, changes, params), rows: [] };
+      } catch (error) {
+        try {
+          db.exec("ROLLBACK");
+        } catch {
+          /* keep the original failure */
+        }
+        db.exec(restore);
+        throw error;
+      }
+    });
+  }
+
+  private scalar(sql: string): Scalar {
+    const row = (this.connection.require().prepare(sql) as ColumnStatement).get?.();
+    if (row === undefined) return null;
+    return (Object.values(row)[0] as Scalar) ?? null;
+  }
+
+  private foreignKeysOk(): boolean {
+    const rows = this.connection.require().prepare("PRAGMA foreign_key_check").all();
+    return rows.length === 0;
+  }
+
+  private integrityOk(): boolean {
+    const value = this.scalar("PRAGMA integrity_check");
+    return String(value).toLowerCase() === "ok";
   }
 
   async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {

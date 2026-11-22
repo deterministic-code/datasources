@@ -45,6 +45,7 @@ import { IdentityInsertStatement } from "./IdentityInsertStatement.ts";
 import { IdentityInsertStatementTextRenderer } from "./IdentityInsertStatementTextRenderer.ts";
 import { SqlSeedStatement } from "./SqlSeedStatement.ts";
 import { ForeignKeyStatement } from "./ForeignKeyStatement.ts";
+import { RebuildTableStatement } from "./RebuildTableStatement.ts";
 import { InsertStatement } from "./InsertStatement.ts";
 import { InsertStatementTextRenderer } from "./InsertStatementTextRenderer.ts";
 import { ReturnStatement } from "./ReturnStatement.ts";
@@ -78,6 +79,7 @@ type AnyStatement =
   | IdentityInsertStatement
   | SqlSeedStatement
   | ForeignKeyStatement
+  | RebuildTableStatement
   | DropRoutineStatement
   | CreateCreateStoredProcedureStatement
   | CreateReadStoredProcedureStatement
@@ -115,6 +117,7 @@ export class StatementRenderer implements IStatementVisitor {
   visit(statement: IdentityInsertStatement): string;
   visit(statement: SqlSeedStatement): string;
   visit(statement: ForeignKeyStatement): string;
+  visit(statement: RebuildTableStatement): string;
   visit(statement: DropRoutineStatement): string;
   visit(statement: CreateCreateStoredProcedureStatement): string;
   visit(statement: CreateReadStoredProcedureStatement): string;
@@ -146,6 +149,7 @@ export class StatementRenderer implements IStatementVisitor {
       IdentityInsertStatement: () => this.visitIdentityInsert(statement as IdentityInsertStatement),
       SqlSeedStatement: () => this.visitSqlSeed(statement as SqlSeedStatement),
       ForeignKeyStatement: () => this.visitForeignKey(statement as ForeignKeyStatement),
+      RebuildTableStatement: () => this.visitRebuildTable(statement as RebuildTableStatement),
       DropRoutineStatement: () => this.visitDropRoutine(statement as DropRoutineStatement),
       CreateCreateStoredProcedureStatement: () => this.visitCreateCreateStoredProcedureStatement(statement as CreateCreateStoredProcedureStatement),
       CreateReadStoredProcedureStatement: () => this.visitCreateReadStoredProcedureStatement(statement as CreateReadStoredProcedureStatement),
@@ -238,6 +242,10 @@ export class StatementRenderer implements IStatementVisitor {
 
   protected visitForeignKey(_statement: ForeignKeyStatement): string {
     throw new Error("ForeignKeyStatement is rendered by the SQL driver.");
+  }
+
+  protected visitRebuildTable(_statement: RebuildTableStatement): string {
+    throw new Error("RebuildTableStatement is rendered by the SQL driver.");
   }
 
   protected visitDropRoutine(statement: DropRoutineStatement): string {

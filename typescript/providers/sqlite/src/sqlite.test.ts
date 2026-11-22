@@ -14,6 +14,9 @@ import {
   type IDriver,
   RowTypeConverter,
   CreateTableStatement,
+  RebuildColumn,
+  RebuildTableStatement,
+  StatementTextRenderer,
   InsertStatement,
   Native,
   ReturnStatement,
@@ -22,6 +25,7 @@ import {
 } from "@deterministic-code/datasources";
 import { SqliteCommand } from "./command.ts";
 import { SqliteConnection } from "./connection.ts";
+import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 import type { SqliteDatabase, SqliteStatement } from "./i-sqlite-driver.ts";
 import {
@@ -41,6 +45,7 @@ class FakeDatabase implements SqliteDatabase {
   runs: Array<{ sql: string; params?: Record<string, Scalar> }> = [];
   alls: Array<{ sql: string; params?: Record<string, Scalar> }> = [];
   execs: string[] = [];
+  failRollback = false;
   closed = false;
   rows: Cells[] = [{ id: 1 }];
   bySql?: Record<string, Cells[]>;
@@ -86,6 +91,7 @@ class FakeDatabase implements SqliteDatabase {
 
   exec(sql: string): void {
     this.execs.push(sql);
+    if (this.failRollback && sql === "ROLLBACK") throw new Error("rollback failed");
   }
 
   close(): void {
@@ -330,6 +336,83 @@ describe("SqliteCommand", () => {
     await plain.dispose();
     await connection.close();
     await expect(command.execute("DELETE FROM items")).rejects.toThrow("not open");
+  });
+
+  it("wraps a table rebuild in foreign_keys off, a transaction, and integrity checks", async () => {
+    class EmptyRebuildRenderer extends SqliteStatementRenderer {
+      protected override visitRebuildTable(): string {
+        return "   ";
+      }
+    }
+    const rebuild = new RebuildTableStatement(
+      "items",
+      new CreateTableStatement("items", [{ name: "id", type: "INTEGER" }, { name: "n", type: "INTEGER" }]),
+      [new RebuildColumn("id", "id"), new RebuildColumn("n", "n", "INTEGER")],
+    );
+    const connection = await opened();
+    const empty = new SqliteCommand(
+      connection,
+      new StatementTextRenderer((text) => new EmptyRebuildRenderer(text)),
+    );
+    expect(await empty.executeStatement(rebuild)).toEqual({ result: null, rowsAffected: 0 });
+    const db = FakeDatabase.latest!;
+    db.bySql = {
+      "PRAGMA foreign_keys": [{ foreign_keys: 1 }],
+      "PRAGMA foreign_key_check": [],
+      "PRAGMA integrity_check": [{ integrity_check: "ok" }],
+    };
+    const command = new SqliteCommand(connection);
+    expect(await command.executeStatement(rebuild)).toMatchObject({ result: null });
+    expect(db.execs).toContain("PRAGMA foreign_keys = OFF");
+    expect(db.execs).toContain("BEGIN");
+    expect(db.execs).toContain("COMMIT");
+    expect(db.execs.at(-1)).toBe("PRAGMA foreign_keys = ON");
+    db.execs = [];
+    db.bySql = {
+      "PRAGMA foreign_keys": [{ foreign_keys: 0 }],
+      "PRAGMA foreign_key_check": [],
+      "PRAGMA integrity_check": [{ integrity_check: "ok" }],
+    };
+    await command.executeStatement(rebuild);
+    expect(db.execs.at(-1)).toBe("PRAGMA foreign_keys = OFF");
+    db.execs = [];
+    db.bySql = {
+      "PRAGMA foreign_keys": [{ foreign_keys: "0" }],
+      "PRAGMA foreign_key_check": [],
+      "PRAGMA integrity_check": [{ integrity_check: "ok" }],
+    };
+    await command.executeStatement(rebuild);
+    expect(db.execs.at(-1)).toBe("PRAGMA foreign_keys = OFF");
+    db.execs = [];
+    db.bySql = {
+      "PRAGMA foreign_keys": [],
+      "PRAGMA foreign_key_check": [],
+      "PRAGMA integrity_check": [{ integrity_check: "ok" }],
+    };
+    await command.executeStatement(rebuild);
+    expect(db.execs.at(-1)).toBe("PRAGMA foreign_keys = ON");
+    db.execs = [];
+    db.bySql = {
+      "PRAGMA foreign_keys": [{}],
+      "PRAGMA foreign_key_check": [],
+      "PRAGMA integrity_check": [{ integrity_check: "ok" }],
+    };
+    await command.executeStatement(rebuild);
+    expect(db.execs.at(-1)).toBe("PRAGMA foreign_keys = ON");
+    db.bySql = {
+      "PRAGMA foreign_keys": [{ foreign_keys: 1 }],
+      "PRAGMA foreign_key_check": [{ table: "items" }],
+      "PRAGMA integrity_check": [{ integrity_check: "ok" }],
+    };
+    await expect(command.executeStatement(rebuild)).rejects.toThrow("RebuildTableStatement failed integrity checks");
+    db.failRollback = true;
+    db.bySql = {
+      "PRAGMA foreign_keys": [{ foreign_keys: 1 }],
+      "PRAGMA foreign_key_check": [],
+      "PRAGMA integrity_check": [{ integrity_check: "not ok" }],
+    };
+    await expect(command.executeStatement(rebuild)).rejects.toThrow("RebuildTableStatement failed integrity checks");
+    await connection.close();
   });
 });
 

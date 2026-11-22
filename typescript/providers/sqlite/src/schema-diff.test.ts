@@ -98,6 +98,16 @@ describe("schemaDiff", () => {
     assert.deepEqual(sql([before], [after]), []);
   });
 
+  it("rebuilds a sqlite table when a column type changes", () => {
+    const before = table("user", [field("id", { isId: true }), field("age", { type: "integer" })]);
+    const after = table("user", [field("id", { isId: true }), field("age", { type: "string" })]);
+    const statements = schemaDiff("sqlite", snap([before]), snap([after]));
+    assert.equal(statements.some((item) => item.constructor.name === "RebuildTableStatement"), true);
+    assert.equal(statements.some((item) => item.constructor.name === "AlterTableStatement"), false);
+    const sql = statements.map((statement) => renderSql("sqlite", statement));
+    assert.equal(sql.some((item) => item.includes("users__new") && item.includes("CAST")), true);
+  });
+
   it("throws when the primary key changes", () => {
     const before = table("user", [field("id", { isId: true }), field("email")]);
     const after = table("user", [field("email", { isId: true }), field("id")]);

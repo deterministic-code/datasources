@@ -40,6 +40,7 @@ use super::identity_insert_statement::IdentityInsertStatement;
 use super::identity_insert_statement_text_renderer::IdentityInsertStatementTextRenderer;
 use super::sql_seed_statement::SqlSeedStatement;
 use super::foreign_key_statement::ForeignKeyStatement;
+use super::rebuild_table_statement::RebuildTableStatement;
 use super::delete_statement::DeleteStatement;
 use super::delete_statement_text_renderer::DeleteStatementTextRenderer;
 use super::execute_stored_procedure_statement::ExecuteStoredProcedureStatement;
@@ -186,6 +187,10 @@ pub trait StatementVisitor: Send + Sync {
 
     fn visit_foreign_key(&self, _statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
         panic!("ForeignKeyStatement is rendered by the SQL driver.")
+    }
+
+    fn visit_rebuild_table(&self, _statement: &RebuildTableStatement, _text: &StatementTextRenderer) -> String {
+        panic!("RebuildTableStatement is rendered by the SQL driver.")
     }
 
     fn visit_drop_routine(
