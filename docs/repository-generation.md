@@ -125,6 +125,16 @@ A composite parent matches every key pair.
 A graph uses a `many_to_many` junction whose foreign keys both point at the node.
 
 ```yaml
+- node:
+    tags: [datasource_type]
+    fields:
+      - id: { type: integer, is_id: true }
+      - value: { type: string, size: 128 }
+- node_edge:
+    tags: [datasource_type, many_to_many]
+    fields:
+      - from_node_id: { references: node.id }
+      - to_node_id: { references: node.id }
 - node_graph:
     tags: [view_type, graph]
     inherits: node
