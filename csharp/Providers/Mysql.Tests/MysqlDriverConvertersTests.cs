@@ -79,9 +79,14 @@ public class MysqlDriverConvertersTests
         new("decimal", 0L, "0"),
         new("decimal", "0.00", "0"),
         new("binary", "AQIDBA==", new byte[] { 1, 2, 3, 4 }),
+        new("binary", System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 }), new byte[] { 1, 2, 3, 4 }),
         new("integer", "10", 10L),
         new("integer", "0", 0L),
-        new("integer", "1.0", typeof(FormatException)),
+        new("integer", 10.0d, 10L),
+        new("integer", "1.0", 1L),
+        new("integer", "10.0", 10L),
+        new("integer", "10.00000000000000", 10L),
+        new("integer", "10.50000000000000", typeof(FormatException)),
         new("integer", "", typeof(FormatException)),
     ];
 

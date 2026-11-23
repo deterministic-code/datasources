@@ -78,8 +78,12 @@ public class SqliteDriverConvertersTests
         new("decimal", "0.00", "0"),
         new("integer", "10", 10L),
         new("integer", "0", 0L),
+        new("integer", 10.0d, 10L),
         new("integer", "", typeof(FormatException)),
-        new("integer", "1.0", typeof(FormatException)),
+        new("integer", "1.0", 1L),
+        new("integer", "10.0", 10L),
+        new("integer", "10.00000000000000", 10L),
+        new("integer", "10.50000000000000", typeof(FormatException)),
     ];
 
     public static readonly Conversion[] ReverseRowTypeConverters =

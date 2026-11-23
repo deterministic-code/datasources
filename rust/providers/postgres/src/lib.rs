@@ -41,6 +41,9 @@ mod generate_sql;
 #[path = "../tests/driver_converters.rs"]
 mod driver_converters;
 #[cfg(test)]
+#[path = "../tests/mapping_cell.rs"]
+mod mapping_cell;
+#[cfg(test)]
 #[path = "../tests/generate_sql_casing.rs"]
 mod generate_sql_casing;
 #[cfg(test)]

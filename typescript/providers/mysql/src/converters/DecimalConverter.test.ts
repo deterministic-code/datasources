@@ -16,6 +16,9 @@ describe("DecimalConverter", () => {
     expect(converter.convert(1e21)).toBe("1e+21");
     expect(converter.convert(-10.5)).toBe("-10.5");
     expect(converter.convert(10n)).toBe("10");
+    expect(converter.convert(1.2345678901234567)).toBe("1.2345678901234567");
+    expect(converter.convert("1.2345678901234567")).toBe("1.2345678901234567");
+    expect(converter.convert("1.2345678901234600")).toBe("1.23456789012346");
     expect(converter.reverseConvert(10.5)).toBe("10.5");
     expect(converter.reverseConvert("10.5")).toBe("10.5");
   });

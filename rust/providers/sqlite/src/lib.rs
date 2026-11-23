@@ -92,6 +92,9 @@ mod bulk_write_enrichment;
 #[cfg(test)]
 #[path = "../tests/tree_graph_enrichment.rs"]
 mod tree_graph_enrichment;
+#[cfg(test)]
+#[path = "../tests/mapping_cell.rs"]
+mod mapping_cell;
 
 #[cfg(test)]
 mod tests {
