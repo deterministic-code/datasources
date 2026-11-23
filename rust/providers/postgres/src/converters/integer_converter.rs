@@ -1,6 +1,15 @@
 use datasources::{DatasourceError, Result, TypeConverter, Value};
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 
 pub struct IntegerConverter;
+
+fn integral_decimal(number: Decimal) -> Result<Value> {
+    match number.to_i64() {
+        Some(value) if number.fract().is_zero() => Ok(Value::Int(value)),
+        _ => Err(DatasourceError::message(format!("\"{number}\" is not a long"))),
+    }
+}
 
 fn parse(text: &str) -> Result<Value> {
     if let Ok(number) = text.parse::<i64>() {
@@ -26,6 +35,7 @@ impl TypeConverter<Value, Value> for IntegerConverter {
             {
                 Ok(Value::Int(*n as i64))
             }
+            Value::Decimal(number) => integral_decimal(*number),
             other => Ok(other.clone()),
         }
     }

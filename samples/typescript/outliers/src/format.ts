@@ -55,7 +55,7 @@ const cells = (row: MappingCell): [string, string][] => [
   ["float_to_float", textNumber(row.floatToFloat)],
   ["float_to_decimal", String(row.floatToDecimal)],
   ["decimal_to_integer", textNumber(row.decimalToInteger)],
-  ["decimal_to_float", textNumber(row.decimalToFloat)],
+  ["decimal_to_float", textDecimalPlaces(row.decimalToFloat)],
   ["decimal_to_decimal", String(row.decimalToDecimal)],
   ["bool_to_boolean", row.boolToBoolean ? "true" : "false"],
   ["datetime_to_datetime", textDate(row.datetimeToDatetime)],
@@ -66,6 +66,11 @@ const cells = (row: MappingCell): [string, string][] => [
 ];
 
 const textNumber = (value: number): string => String(value);
+
+const textDecimalPlaces = (value: number | string): string => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(8) : String(value);
+};
 
 const textDate = (value: Date): string => (value.getTime() === 0 ? "" : value.toISOString());
 

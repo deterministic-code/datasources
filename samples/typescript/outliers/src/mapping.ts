@@ -208,7 +208,7 @@ const seed = (id: number): MappingCell =>
     textToBinary: blob,
     textToGuid: token,
     intToInteger: 10,
-    intToFloat: 9007199254740993,
+    intToFloat: 10,
     intToDecimal: "7",
     intToBoolean: true,
     floatToInteger: 10,

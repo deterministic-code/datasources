@@ -8,5 +8,9 @@ internal sealed class BoolConverter : TypeConverter<Value, Value>
         _ => from
     };
 
-    public override Value ReverseConvert(Value to) => to;
+    public override Value ReverseConvert(Value to) => to switch
+    {
+        Value.Bool(var flag) => flag ? 1L : 0L,
+        _ => to
+    };
 }

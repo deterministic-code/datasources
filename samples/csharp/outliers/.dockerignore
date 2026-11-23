@@ -3,3 +3,7 @@ obj
 generated
 .git
 .env
+app.sqlite
+app.sqlite-wal
+app.sqlite-shm
+app.sqlite-journal

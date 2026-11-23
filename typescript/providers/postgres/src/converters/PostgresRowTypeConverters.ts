@@ -3,6 +3,7 @@ import { BinaryConverter } from "./BinaryConverter.ts";
 import { BoolConverter } from "./BoolConverter.ts";
 import { DateTimeConverter } from "./DateTimeConverter.ts";
 import { DecimalConverter } from "./DecimalConverter.ts";
+import { FloatConverter } from "./FloatConverter.ts";
 import { IntegerConverter } from "./IntegerConverter.ts";
 import { UuidConverter } from "./UuidConverter.ts";
 
@@ -13,6 +14,7 @@ export const PostgresRowTypeConverters: Record<string, TypeConverter<Value, Valu
   datetime: new DateTimeConverter(),
   uuid: new UuidConverter(),
   decimal: new DecimalConverter(),
+  float: new FloatConverter(),
   binary: new BinaryConverter(),
   integer,
   unsignedinteger: integer,

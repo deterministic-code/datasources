@@ -272,7 +272,7 @@ fn seed(id: i64) -> MappingCell {
         text_to_binary: vec![1, 2, 3, 4],
         text_to_guid: token,
         int_to_integer: 10,
-        int_to_float: 9007199254740993.0,
+        int_to_float: 10.0,
         int_to_decimal: Decimal::from(7),
         int_to_boolean: true,
         float_to_integer: 10,

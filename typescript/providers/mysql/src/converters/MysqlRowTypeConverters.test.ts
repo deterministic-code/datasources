@@ -28,6 +28,8 @@ describe("MysqlRowTypeConverters", () => {
       decimalToFloat: "float",
       decimalToDecimal: "decimal",
       datetimeToDatetime: "datetime",
+      binaryToGuid: "uuid",
+      boolToBoolean: "boolean",
     });
     expect(
       converter.convert({
@@ -61,7 +63,17 @@ describe("MysqlRowTypeConverters", () => {
       intToBoolean: true,
     });
     expect(converter.convert({ decimalToFloat: "1.23456789012346" })).toEqual({
-      decimalToFloat: "1.23456789012346",
+      decimalToFloat: 1.23456789012346,
+    });
+    expect(converter.convert({ decimalToFloat: "1.2345678901234567" })).toEqual({
+      decimalToFloat: Number("1.2345678901234567"),
+    });
+    expect(converter.convert({ decimalToInteger: "10.00000000000000" })).toEqual({ decimalToInteger: 10 });
+    const token = "550e8400-e29b-41d4-a716-446655440000";
+    expect(converter.convert({ binaryToGuid: Buffer.from(token, "utf8") })).toEqual({ binaryToGuid: token });
+    expect(converter.reverseConvert({ intToBoolean: true, boolToBoolean: false })).toEqual({
+      intToBoolean: 1,
+      boolToBoolean: 0,
     });
     expect(converter.convert({ textToInteger: "10.0" })).toEqual({ textToInteger: 10 });
     expect(converter.convert({ floatToInteger: "10.0" })).toEqual({ floatToInteger: 10 });

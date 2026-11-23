@@ -67,6 +67,7 @@ fn row_type_converters() {
         "datetime",
         "uuid",
         "decimal",
+        "float",
         "binary",
         "integer",
         "unsignedinteger",

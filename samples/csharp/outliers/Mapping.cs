@@ -165,7 +165,7 @@ public static class Mapping
         TextToBinary = Blob,
         TextToGuid = Token,
         IntToInteger = 10,
-        IntToFloat = 9007199254740993,
+        IntToFloat = 10,
         IntToDecimal = 7,
         IntToBoolean = true,
         FloatToInteger = 10,
