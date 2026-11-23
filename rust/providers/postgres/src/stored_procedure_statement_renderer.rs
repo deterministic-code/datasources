@@ -39,7 +39,7 @@ impl PostgresStoredProcedureStatementRenderer {
             params(statement.parameters()),
             statement.key_type(),
             statement.key_type(),
-            statement.table(),
+            crate::PostgresDriver::quote(statement.table()),
             statement.parameters().iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "),
             statement.parameters().iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "),
             statement.key(),
@@ -68,8 +68,8 @@ impl PostgresStoredProcedureStatementRenderer {
             return format!(
                 "CREATE OR REPLACE FUNCTION {}() RETURNS SETOF {}\nLANGUAGE sql AS $$ SELECT {aliased} FROM {} t ORDER BY t.{}; $$",
                 statement.name(),
-                statement.table(),
-                statement.table(),
+                crate::PostgresDriver::quote(statement.table()),
+                crate::PostgresDriver::quote(statement.table()),
                 statement.key(),
             );
         }
@@ -88,8 +88,8 @@ impl PostgresStoredProcedureStatementRenderer {
         format!(
             "CREATE OR REPLACE FUNCTION {}({signature}) RETURNS SETOF {}\nLANGUAGE sql AS $$ SELECT {aliased} FROM {} t WHERE {pred}; $$",
             statement.name(),
-            statement.table(),
-            statement.table(),
+            crate::PostgresDriver::quote(statement.table()),
+            crate::PostgresDriver::quote(statement.table()),
         )
     }
 
@@ -118,7 +118,7 @@ impl PostgresStoredProcedureStatementRenderer {
             "CREATE OR REPLACE FUNCTION {}(\n{}\n) RETURNS INT LANGUAGE plpgsql AS $$\nDECLARE\n  affected INT;\nBEGIN\n  UPDATE {} t\n  SET\n{}\n  WHERE {pred};\n  GET DIAGNOSTICS affected = ROW_COUNT;\n  RETURN affected;\nEND;\n$$",
             statement.name(),
             params(statement.parameters()),
-            statement.table(),
+            crate::PostgresDriver::quote(statement.table()),
             sets.join(",\n"),
         )
     }
@@ -142,7 +142,7 @@ impl PostgresStoredProcedureStatementRenderer {
         format!(
             "CREATE OR REPLACE FUNCTION {}({signature}) RETURNS INT LANGUAGE plpgsql AS $$\nDECLARE\n  affected INT;\nBEGIN\n  DELETE FROM {} t WHERE {pred};\n  GET DIAGNOSTICS affected = ROW_COUNT;\n  RETURN affected;\nEND;\n$$",
             statement.name(),
-            statement.table(),
+            crate::PostgresDriver::quote(statement.table()),
         )
     }
 
@@ -152,7 +152,7 @@ impl PostgresStoredProcedureStatementRenderer {
             "CREATE OR REPLACE PROCEDURE {}({} jsonb, INOUT ids jsonb DEFAULT NULL)\nLANGUAGE plpgsql AS $$\nBEGIN\n  WITH inserted AS (\n    INSERT INTO {} ({cols})\n    SELECT {cols}\n    FROM jsonb_to_recordset({}) AS x({})\n    RETURNING {}\n  )\n  SELECT COALESCE(jsonb_agg({}), '[]'::jsonb) INTO ids FROM inserted;\nEND;\n$$",
             statement.name(),
             statement.payload().name,
-            statement.table(),
+            crate::PostgresDriver::quote(statement.table()),
             statement.payload().name,
             recordset(statement.columns()),
             statement.key(),
@@ -172,7 +172,7 @@ impl PostgresStoredProcedureStatementRenderer {
             "CREATE OR REPLACE PROCEDURE {}({} jsonb)\nLANGUAGE plpgsql AS $$\nBEGIN\n  UPDATE {} t SET\n    {sets}\n  FROM jsonb_to_recordset({}) AS x({})\n  WHERE t.{} = x.{};\nEND;\n$$",
             statement.name(),
             statement.payload().name,
-            statement.table(),
+            crate::PostgresDriver::quote(statement.table()),
             statement.payload().name,
             recordset(statement.columns()),
             statement.key(),
@@ -185,7 +185,7 @@ impl PostgresStoredProcedureStatementRenderer {
             "CREATE OR REPLACE PROCEDURE {}({} jsonb)\nLANGUAGE plpgsql AS $$\nBEGIN\n  DELETE FROM {} WHERE {} IN (SELECT {} FROM jsonb_to_recordset({}) AS x({} {}));\nEND;\n$$",
             statement.name(),
             statement.payload().name,
-            statement.table(),
+            crate::PostgresDriver::quote(statement.table()),
             statement.key(),
             statement.key(),
             statement.payload().name,

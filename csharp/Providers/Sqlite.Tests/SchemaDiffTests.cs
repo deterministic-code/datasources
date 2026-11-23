@@ -72,6 +72,53 @@ public class SchemaDiffTests
     }
 
     [Fact]
+    public void RebuildsASqliteAuditTableTriggerWhenAForeignKeyTargetChanges()
+    {
+        var before = Snap("""
+            types:
+              - user:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields: []
+              - order:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - created:
+                        type: datetime
+                    - updated:
+                        type: datetime
+                    - user_id:
+                        type: integer
+                        references: user.id
+            """);
+        var after = Snap("""
+            types:
+              - account:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields: []
+              - order:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - created:
+                        type: datetime
+                    - updated:
+                        type: datetime
+                    - user_id:
+                        type: integer
+                        references: account.id
+            """);
+        var renderer = new StatementTextRenderer(t => new SqliteStatementRenderer(t));
+        var sql = SchemaDiff.Of("sqlite", before.Tables, before.Naming, after.Tables, after.Naming)
+            .Select(statement => renderer.Render(statement))
+            .ToList();
+        Assert.Contains(sql, item => item.Contains("INSERT INTO") && item.Contains("orders__new"));
+        Assert.Contains(sql, item => item.Contains("CREATE TRIGGER"));
+    }
+
+    [Fact]
     public void KeepsAPhysicalTableWhenTheTypeIsRenamedViaMapping()
     {
         var before = Snap("""

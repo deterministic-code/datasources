@@ -84,7 +84,19 @@ const select = (column: RebuildColumn): string =>
     : (column.literal ?? "NULL");
 
 const recreate = (statement: IStatement): string => {
-  if (statement instanceof CreateIndexStatement) return new SqliteCreateIndexStatementRenderer().render(statement);
-  if (statement instanceof CreateTriggerStatement) return new SqliteCreateTriggerStatementRenderer().render(statement);
-  throw new Error(`${statement.constructor.name} cannot be recreated during a table rebuild`);
+  const index = statement as CreateIndexStatement;
+  const trigger = statement as CreateTriggerStatement;
+  const handler = {
+    CreateIndexStatement: () =>
+      new SqliteCreateIndexStatementRenderer().render(
+        new CreateIndexStatement(index.name, index.table, index.columns, index.unique),
+      ),
+    CreateTriggerStatement: () =>
+      new SqliteCreateTriggerStatementRenderer().render(
+        new CreateTriggerStatement(trigger.table, trigger.name, trigger.updatedColumn, trigger.keyColumn),
+      ),
+  }[statement.constructor.name];
+  if (handler === undefined)
+    throw new Error(`${statement.constructor.name} cannot be recreated during a table rebuild`);
+  return handler();
 };

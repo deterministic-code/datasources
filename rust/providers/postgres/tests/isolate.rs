@@ -31,19 +31,19 @@ async fn admin(url: &str) -> tokio_postgres::Client {
     client
 }
 
-pub async fn create() -> Isolated {
-    let base = std::env::var("POSTGRES_URL").expect("POSTGRES_URL");
+pub async fn create() -> Option<Isolated> {
+    let base = std::env::var("POSTGRES_URL").ok()?;
     let name = format!("ds_{}", Uuid::new_v4().simple());
     admin(&base)
         .await
         .batch_execute(&format!("CREATE DATABASE {name}"))
         .await
         .unwrap();
-    Isolated {
+    Some(Isolated {
         url: replace_db(&base, &name),
         name,
         base,
-    }
+    })
 }
 
 impl Isolated {

@@ -75,17 +75,21 @@ const castTarget = (type: string): string => {
 };
 
 const recreate = (statement: IStatement, table: string): string => {
-  if (statement instanceof CreateIndexStatement) {
-    return new MysqlCreateIndexStatementRenderer().render(
-      new CreateIndexStatement(statement.name, table, statement.columns, statement.unique),
-    );
-  }
-  if (statement instanceof CreateTriggerStatement) {
-    return new MysqlCreateTriggerStatementRenderer().render(
-      new CreateTriggerStatement(table, statement.name, statement.updatedColumn, statement.keyColumn),
-    );
-  }
-  throw new Error(`${statement.constructor.name} cannot be recreated during a table rebuild`);
+  const index = statement as CreateIndexStatement;
+  const trigger = statement as CreateTriggerStatement;
+  const handler = {
+    CreateIndexStatement: () =>
+      new MysqlCreateIndexStatementRenderer().render(
+        new CreateIndexStatement(index.name, table, index.columns, index.unique),
+      ),
+    CreateTriggerStatement: () =>
+      new MysqlCreateTriggerStatementRenderer().render(
+        new CreateTriggerStatement(table, trigger.name, trigger.updatedColumn, trigger.keyColumn),
+      ),
+  }[statement.constructor.name];
+  if (handler === undefined)
+    throw new Error(`${statement.constructor.name} cannot be recreated during a table rebuild`);
+  return handler();
 };
 
 export class MysqlForeignKeyStatementRenderer {

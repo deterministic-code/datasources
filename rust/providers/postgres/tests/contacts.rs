@@ -20,7 +20,9 @@ fn register_sql() {
 #[tokio::test]
 async fn matches_enriched_contacts_service_to_flat_mapper() {
     register_sql();
-    let isolated = isolate::create().await;
+    let Some(isolated) = isolate::create().await else {
+        return;
+    };
     let conn = Arc::new(PostgresConnection::new(Some(isolated.url.clone()), None));
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn.clone());

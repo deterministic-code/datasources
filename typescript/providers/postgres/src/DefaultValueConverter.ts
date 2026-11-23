@@ -147,8 +147,8 @@ export class DefaultValueConverter {
     const numericEntries = (type: (typeof NUMERIC_TYPES)[number]): Record<string, DefaultEntry> => {
       const numeric = spec[type]!.Numeric!;
       return {
-        Numeric: token(numeric, (arg) => arg, numeric.spec),
-        String: token(numeric, (arg) => arg, numeric.spec),
+        Numeric: token(numeric, identity, numeric.spec),
+        String: token(numeric, identity, numeric.spec),
       };
     };
     const quote = opts.quote ?? quoted;

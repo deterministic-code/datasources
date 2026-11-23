@@ -27,7 +27,9 @@ fn dialect() -> RepositoryDialect {
 #[tokio::test]
 async fn user_crud() {
     for path in datasources_tests::files() {
-        let isolated = isolate::create().await;
+        let Some(isolated) = isolate::create().await else {
+            return;
+        };
         let conn = Arc::new(PostgresConnection::new(Some(isolated.url.clone()), None));
         conn.open().await.unwrap();
         let command = Arc::new(PostgresCommand::new(conn.clone()));

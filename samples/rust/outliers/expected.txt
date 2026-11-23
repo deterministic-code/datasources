@@ -108,7 +108,7 @@ map read guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read id 1
 map read int_to_boolean true
 map read int_to_decimal 7
-map read int_to_float 0
+map read int_to_float 10
 map read int_to_integer 10
 map read text_to_binary 01020304
 map read text_to_datetime 2020-01-02T03:04:05.000Z
@@ -131,7 +131,7 @@ map read_single guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single id 1
 map read_single int_to_boolean true
 map read_single int_to_decimal 7
-map read_single int_to_float 0
+map read_single int_to_float 10
 map read_single int_to_integer 10
 map read_single text_to_binary 01020304
 map read_single text_to_datetime 2020-01-02T03:04:05.000Z
@@ -154,7 +154,7 @@ map read_single_by_id guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id id 1
 map read_single_by_id int_to_boolean true
 map read_single_by_id int_to_decimal 7
-map read_single_by_id int_to_float 0
+map read_single_by_id int_to_float 10
 map read_single_by_id int_to_integer 10
 map read_single_by_id text_to_binary 01020304
 map read_single_by_id text_to_datetime 2020-01-02T03:04:05.000Z
@@ -177,7 +177,7 @@ map read_single_by_id_row guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id_row id 1
 map read_single_by_id_row int_to_boolean true
 map read_single_by_id_row int_to_decimal 7
-map read_single_by_id_row int_to_float 0
+map read_single_by_id_row int_to_float 10
 map read_single_by_id_row int_to_integer 10
 map read_single_by_id_row text_to_binary 01020304
 map read_single_by_id_row text_to_datetime 2020-01-02T03:04:05.000Z
@@ -200,7 +200,7 @@ map read_single_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single_where id 1
 map read_single_where int_to_boolean true
 map read_single_where int_to_decimal 7
-map read_single_where int_to_float 0
+map read_single_where int_to_float 10
 map read_single_where int_to_integer 10
 map read_single_where text_to_binary 01020304
 map read_single_where text_to_datetime 2020-01-02T03:04:05.000Z
@@ -223,7 +223,7 @@ map read_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_where id 1
 map read_where int_to_boolean true
 map read_where int_to_decimal 7
-map read_where int_to_float 0
+map read_where int_to_float 10
 map read_where int_to_integer 10
 map read_where text_to_binary 01020304
 map read_where text_to_datetime 2020-01-02T03:04:05.000Z
@@ -246,7 +246,7 @@ map update guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map update id 1
 map update int_to_boolean true
 map update int_to_decimal 7
-map update int_to_float 0
+map update int_to_float 10
 map update int_to_integer 10
 map update text_to_binary 01020304
 map update text_to_datetime 2020-01-02T03:04:05.000Z
@@ -269,7 +269,7 @@ map update_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map update_where id 1
 map update_where int_to_boolean true
 map update_where int_to_decimal 7
-map update_where int_to_float 0
+map update_where int_to_float 10
 map update_where int_to_integer 10
 map update_where text_to_binary 01020304
 map update_where text_to_datetime 2020-01-02T03:04:05.000Z

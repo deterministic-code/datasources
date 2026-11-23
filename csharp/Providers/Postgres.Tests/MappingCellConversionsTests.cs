@@ -12,6 +12,7 @@ public class MappingCellConversionsTests
         ["TextToInteger"] = "integer",
         ["TextToDecimal"] = "decimal",
         ["TextToDatetime"] = "datetime",
+        ["TextToBinary"] = "binary",
         ["FloatToInteger"] = "integer",
         ["DecimalToInteger"] = "integer",
         ["DecimalToDecimal"] = "decimal",
@@ -30,6 +31,7 @@ public class MappingCellConversionsTests
             ["TextToInteger"] = "10",
             ["TextToDecimal"] = "10.50",
             ["TextToDatetime"] = "2020-01-02T03:04:05.000Z",
+            ["TextToBinary"] = System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 }),
             ["FloatToInteger"] = 10.0,
             ["DecimalToDecimal"] = "10.50000000000000",
             ["DatetimeToDatetime"] = Opened,
@@ -38,6 +40,10 @@ public class MappingCellConversionsTests
         Assert.Equal(new Value.Int(10), row["TextToInteger"]);
         Assert.Equal(new Value.Text("10.5"), row["TextToDecimal"]);
         Assert.Equal(new Value.DateTime(Opened), row["TextToDatetime"]);
+        Assert.Equal(new byte[] { 1, 2, 3, 4 }, row["TextToBinary"].ToObject());
+        Assert.Equal(
+            new byte[] { 1, 2, 3, 4 },
+            Converter().Convert(new Row { ["TextToBinary"] = "\\x01020304" })["TextToBinary"].ToObject());
         Assert.Equal(new Value.Int(10), row["FloatToInteger"]);
         Assert.Equal(new Value.Text("10.5"), row["DecimalToDecimal"]);
         Assert.Equal(new Value.DateTime(Opened), row["DatetimeToDatetime"]);
@@ -105,6 +111,7 @@ public class MappingCellConversionsTests
             ["TextToInteger"] = "10",
             ["TextToDecimal"] = "10.50",
             ["TextToDatetime"] = "2020-01-02T03:04:05.000Z",
+            ["TextToBinary"] = System.Text.Encoding.Latin1.GetString(blob),
             ["TextToGuid"] = token.ToString("D"),
             ["IntToInteger"] = 10L,
             ["IntToFloat"] = 10L,
@@ -127,6 +134,7 @@ public class MappingCellConversionsTests
         Assert.Equal(new Value.Int(10), row["TextToInteger"]);
         Assert.Equal(new Value.Text("10.5"), row["TextToDecimal"]);
         Assert.Equal(new Value.DateTime(Opened), row["TextToDatetime"]);
+        Assert.Equal(blob, row["TextToBinary"].ToObject());
         Assert.Equal(new Value.Text(token.ToString("D")), row["TextToGuid"]);
         Assert.Equal(new Value.Int(10), row["IntToInteger"]);
         Assert.Equal(new Value.Float(10), row["IntToFloat"]);
