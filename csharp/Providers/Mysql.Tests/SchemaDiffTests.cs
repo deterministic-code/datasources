@@ -56,4 +56,56 @@ public class SchemaDiffTests
         Assert.Contains("RENAME TABLE", sql);
         Assert.Contains("users__new", sql);
     }
+
+    [Fact]
+    public void RebuildsAMysqlAuditTableTriggerWhenAForeignKeyTargetChanges()
+    {
+        RegisterSqlGenerate.Register();
+        var before = Snap("""
+            types:
+              - user:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields: []
+              - order:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - created:
+                        type: datetime
+                    - updated:
+                        type: datetime
+                    - user_id:
+                        type: integer
+                        references: user.id
+            """);
+        var after = Snap("""
+            types:
+              - account:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields: []
+              - order:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - created:
+                        type: datetime
+                    - updated:
+                        type: datetime
+                    - user_id:
+                        type: integer
+                        references: account.id
+            """);
+        var rebuilt = SchemaDiff.Of(
+            "mysql",
+            before.Tables,
+            before.Naming,
+            after.Tables,
+            after.Naming,
+            new Dictionary<string, string> { ["datasource.rebuild_table"] = "mysql" });
+        var sql = rebuilt.Select(statement => new StatementTextRenderer(t => new MysqlStatementRenderer(t)).Render(statement)).ToList();
+        Assert.Contains(sql, item => item.Contains("RENAME TABLE") && item.Contains("orders__new"));
+        Assert.Contains(sql, item => item.Contains("CREATE TRIGGER"));
+    }
 }

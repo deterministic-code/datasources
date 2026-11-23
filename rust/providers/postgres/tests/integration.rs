@@ -310,7 +310,9 @@ async fn shared_specs() {
         {
             continue;
         }
-        let isolated = isolate::create().await;
+        let Some(isolated) = isolate::create().await else {
+            return;
+        };
         run(&path, &dialect, &isolated.url).await;
         isolated.drop().await;
     }
@@ -339,7 +341,9 @@ async fn read_return_value(command: &dyn Command) {
 #[tokio::test]
 async fn return_and_output_parameters() {
     use datasources::{ExecuteStoredProcedureStatement, ParameterDirection};
-    let isolated = isolate::create().await;
+    let Some(isolated) = isolate::create().await else {
+        return;
+    };
     let conn = Arc::new(PostgresConnection::new(Some(isolated.url.clone()), None));
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn.clone());

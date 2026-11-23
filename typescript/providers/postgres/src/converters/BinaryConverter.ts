@@ -11,8 +11,17 @@ export const isBase64 = (value: string): boolean => {
   );
 };
 
-const bytes = (value: Value): Value =>
-  typeof value === "string" ? Uint8Array.from(Buffer.from(value, "base64")) : value;
+const hex = (text: string): Uint8Array | undefined => {
+  const digits = text.trim();
+  if (!/^\\x[0-9a-fA-F]*$/i.test(digits) || (digits.length & 1) !== 0) return undefined;
+  return Uint8Array.from(Buffer.from(digits.slice(2), "hex"));
+};
+
+const bytes = (value: Value): Value => {
+  if (typeof value !== "string") return value;
+  if (isBase64(value)) return Uint8Array.from(Buffer.from(value, "base64"));
+  return hex(value) ?? Uint8Array.from(Buffer.from(value, "latin1"));
+};
 
 export class BinaryConverter extends TypeConverter<Value, Value> {
   convert = (from: Value): Value => bytes(from);

@@ -122,4 +122,5 @@ public class MysqlTests
         Assert.Equal(new Value.Text("ada"), stored["Login"]);
         Assert.Equal(new Value.Text("2020-01-02 03:04:05.000"), stored["Created"]);
     }
+
 }

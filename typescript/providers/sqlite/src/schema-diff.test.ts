@@ -73,6 +73,24 @@ describe("schemaDiff", () => {
     assert.deepEqual(sql([before], [after]), []);
   });
 
+  it("rebuilds a sqlite audit table trigger when a foreign key target changes", () => {
+    const users = table("user", [field("id", { isId: true })]);
+    const accounts = table("account", [field("id", { isId: true })]);
+    const audit = [
+      field("id", { isId: true }),
+      field("created", { type: "datetime" }),
+      field("updated", { type: "datetime" }),
+    ];
+    const before = table("order", [...audit, field("user_id", { type: "integer", references: "user.id" })]);
+    const after = table("order", [...audit, field("user_id", { type: "integer", references: "account.id" })]);
+    const statements = sql([users, before], [accounts, after]);
+    assert.equal(
+      statements.some((item) => item.includes("INSERT INTO") && item.includes("orders__new")),
+      true,
+    );
+    assert.equal(statements.some((item) => item.includes("CREATE TRIGGER")), true);
+  });
+
   it("rebuilds a sqlite table when a foreign key target changes", () => {
     const users = table("user", [field("id", { isId: true })]);
     const accounts = table("account", [field("id", { isId: true })]);

@@ -138,11 +138,13 @@ describe("PostgresConnection", () => {
       "SET search_path TO iso",
       "INSERT INTO items (id) VALUES ($1)",
       "INSERT INTO items (id) VALUES (1)",
+      "INSERT INTO items (name) VALUES ('ada') RETURNING id",
+      "INSERT INTO items (name) VALUES ($1) RETURNING id",
       "UPDATE items SET n = 1",
       "SELECT * FROM items",
       "SELECT * FROM items",
-      `CREATE TABLE users (
-    id INTEGER
+      `CREATE TABLE "users" (
+    "id" INTEGER
 )`,
       "SELECT 1",
       "BEGIN ISOLATION LEVEL READ COMMITTED",
@@ -274,7 +276,7 @@ describe("PostgresCommand", () => {
     });
     client.result = { rowCount: 1, rows: [{ result: 5 }] };
     expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [inout]), [inout])).toMatchObject({
-      result: null,
+      result: 5,
       parameters: [{ name: "result", value: 5, direction: ParameterDirection.InputOutput }],
     });
     client.result = { rowCount: 1, rows: [{ id: 1 }] };
@@ -369,7 +371,7 @@ describe("Postgres datasource", () => {
     });
     expect(converter.reverseConvert(row)).toEqual({
       Key: "11111111-1111-1111-1111-111111111111",
-      Active: true,
+      Active: 1,
       Login: "ada",
       Created: created,
     });

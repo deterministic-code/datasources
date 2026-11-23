@@ -22,6 +22,9 @@ const params = (list: readonly RoutineParameter[]): string =>
 const recordset = (columns: readonly RoutineParameter[]): string =>
   columns.map((c) => `${c.name} ${typeOf(c)}`).join(", ");
 
+const pred = (proc: string, columns: readonly string[]): string =>
+  columns.map((column) => `t.${column} = ${proc}.${column}`).join(" AND ");
+
 export class PostgresStoredProcedureStatementRenderer {
   renderCreate(statement: CreateCreateStoredProcedureStatement): string {
     return `CREATE OR REPLACE FUNCTION ${statement.name}(
@@ -30,7 +33,7 @@ ${params(statement.parameters)}
 DECLARE
   new_id ${PostgresDriver.nativeSpec(statement.keyType)};
 BEGIN
-  INSERT INTO ${statement.table} (${statement.parameters.map((p) => p.name).join(", ")})
+  INSERT INTO ${PostgresDriver.quote(statement.table)} (${statement.parameters.map((p) => p.name).join(", ")})
   VALUES (${statement.parameters.map((p) => p.name).join(", ")})
   RETURNING ${statement.key} INTO new_id;
   RETURN new_id;
@@ -50,17 +53,17 @@ LANGUAGE sql AS $$ ${select}; $$`;
   renderRead(statement: CreateReadStoredProcedureStatement): string {
     const aliased = statement.columns.map((c) => `t.${c}`).join(", ");
     if (statement.byProperties.length === 0) {
-      return `CREATE OR REPLACE FUNCTION ${statement.name}() RETURNS SETOF ${statement.table}
-LANGUAGE sql AS $$ SELECT ${aliased} FROM ${statement.table} t ORDER BY t.${statement.key}; $$`;
+      return `CREATE OR REPLACE FUNCTION ${statement.name}() RETURNS SETOF ${PostgresDriver.quote(statement.table)}
+LANGUAGE sql AS $$ SELECT ${aliased} FROM ${PostgresDriver.quote(statement.table)} t ORDER BY t.${statement.key}; $$`;
     }
-    const signature = statement.byProperties
-      .map((c) => `${c} ${typeOf(param(statement.parameters, c, statement.name))}`)
-      .join(", ");
-    const pred = statement.byProperties
-      .map((c) => `t.${c} = ${statement.name}.${c}`)
-      .join(" AND ");
-    return `CREATE OR REPLACE FUNCTION ${statement.name}(${signature}) RETURNS SETOF ${statement.table}
-LANGUAGE sql AS $$ SELECT ${aliased} FROM ${statement.table} t WHERE ${pred}; $$`;
+    let signature = "";
+    for (const column of statement.byProperties) {
+      if (signature !== "") signature += ", ";
+      signature += `${column} ${typeOf(param(statement.parameters, column, statement.name))}`;
+    }
+    const table = PostgresDriver.quote(statement.table);
+    return `CREATE OR REPLACE FUNCTION ${statement.name}(${signature}) RETURNS SETOF ${table}
+LANGUAGE sql AS $$ SELECT ${aliased} FROM ${table} t WHERE ${pred(statement.name, statement.byProperties)}; $$`;
   }
 
   renderUpdate(statement: CreateUpdateStoredProcedureStatement): string {
@@ -70,17 +73,16 @@ LANGUAGE sql AS $$ SELECT ${aliased} FROM ${statement.table} t WHERE ${pred}; $$
       if (auditParam) sets.push(`    ${statement.auditUpdated} = ${statement.name}.${auditParam.name}`);
     }
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
-    const pred = by.map((c) => `t.${c} = ${statement.name}.${c}`).join(" AND ");
     return `CREATE OR REPLACE FUNCTION ${statement.name}(
 ${params(statement.parameters)}
 ) RETURNS INT LANGUAGE plpgsql AS $$
 DECLARE
   affected INT;
 BEGIN
-  UPDATE ${statement.table} t
+  UPDATE ${PostgresDriver.quote(statement.table)} t
   SET
 ${sets.join(",\n")}
-  WHERE ${pred};
+  WHERE ${pred(statement.name, by)};
   GET DIAGNOSTICS affected = ROW_COUNT;
   RETURN affected;
 END;
@@ -92,12 +94,11 @@ $$`;
     const signature = by
       .map((c) => `${c} ${typeOf(param(statement.parameters, c, statement.name))}`)
       .join(", ");
-    const pred = by.map((c) => `t.${c} = ${statement.name}.${c}`).join(" AND ");
     return `CREATE OR REPLACE FUNCTION ${statement.name}(${signature}) RETURNS INT LANGUAGE plpgsql AS $$
 DECLARE
   affected INT;
 BEGIN
-  DELETE FROM ${statement.table} t WHERE ${pred};
+  DELETE FROM ${PostgresDriver.quote(statement.table)} t WHERE ${pred(statement.name, by)};
   GET DIAGNOSTICS affected = ROW_COUNT;
   RETURN affected;
 END;
@@ -110,7 +111,7 @@ $$`;
 LANGUAGE plpgsql AS $$
 BEGIN
   WITH inserted AS (
-    INSERT INTO ${statement.table} (${cols})
+    INSERT INTO ${PostgresDriver.quote(statement.table)} (${cols})
     SELECT ${cols}
     FROM jsonb_to_recordset(${statement.payload.name}) AS x(${recordset(statement.columns)})
     RETURNING ${statement.key}
@@ -128,7 +129,7 @@ $$`;
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${statement.payload.name} jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
-  UPDATE ${statement.table} t SET
+  UPDATE ${PostgresDriver.quote(statement.table)} t SET
     ${sets}
   FROM jsonb_to_recordset(${statement.payload.name}) AS x(${recordset(statement.columns)})
   WHERE t.${statement.key} = x.${statement.key};
@@ -140,7 +141,7 @@ $$`;
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${statement.payload.name} jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
-  DELETE FROM ${statement.table} WHERE ${statement.key} IN (SELECT ${statement.key} FROM jsonb_to_recordset(${statement.payload.name}) AS x(${statement.key} ${PostgresDriver.nativeSpec(statement.keyType)}));
+  DELETE FROM ${PostgresDriver.quote(statement.table)} WHERE ${statement.key} IN (SELECT ${statement.key} FROM jsonb_to_recordset(${statement.payload.name}) AS x(${statement.key} ${PostgresDriver.nativeSpec(statement.keyType)}));
 END;
 $$`;
   }

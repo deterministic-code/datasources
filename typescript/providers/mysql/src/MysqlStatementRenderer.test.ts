@@ -384,7 +384,17 @@ describe("MysqlStatementRenderer", () => {
           { name: "id", type: "INT" },
           { name: "age", type: "INT" },
         ]),
-        [new RebuildColumn("id", "id"), new RebuildColumn("age", "age", "INT")],
+        [
+          new RebuildColumn("id", "id"),
+          new RebuildColumn("age", "age", "INT"),
+          new RebuildColumn("name", "name", "VARCHAR"),
+          new RebuildColumn("at", "at", "DATETIME"),
+          new RebuildColumn("blob", "blob", "BLOB"),
+          new RebuildColumn("amt", "amt", "DECIMAL"),
+          new RebuildColumn("other", "other", "JSON"),
+          new RebuildColumn("flag", undefined, undefined, "1"),
+          new RebuildColumn("empty"),
+        ],
         [new CreateIndexStatement("ix_users_age", "users", ["age"])],
       ),
     );
@@ -392,6 +402,11 @@ describe("MysqlStatementRenderer", () => {
     expect(rebuilt).toContain("users__new");
     expect(rebuilt).toContain("CAST");
     expect(rebuilt).toContain("SIGNED");
+    expect(rebuilt).toContain("CHAR");
+    expect(rebuilt).toContain("DATETIME");
+    expect(rebuilt).toContain("BINARY");
+    expect(rebuilt).toContain("DECIMAL");
+    expect(rebuilt).toContain("SELECT id, CAST(age AS SIGNED), CAST(name AS CHAR), CAST(at AS DATETIME), CAST(`blob` AS BINARY), CAST(amt AS DECIMAL), CAST(other AS CHAR), 1, NULL FROM users");
     expect(rebuilt).toContain("ix_users_age");
     const indexAt = rebuilt.indexOf("ix_users_age");
     const renameAt = rebuilt.indexOf("RENAME TABLE");
@@ -400,5 +415,18 @@ describe("MysqlStatementRenderer", () => {
     expect(indexAt).toBeLessThan(renameAt);
     expect(renameAt).toBeLessThan(dropAt);
     expect(rebuilt.endsWith("SET FOREIGN_KEY_CHECKS = 1")).toBe(true);
+  });
+
+  it("rejects a rebuild recreate that is not an index or trigger", () => {
+    expect(() =>
+      renderer.render(
+        new RebuildTableStatement(
+          "users",
+          new CreateTableStatement("users", [{ name: "id", type: "INT" }]),
+          [new RebuildColumn("id", "id")],
+          [new DropTableStatement("users")],
+        ),
+      ),
+    ).toThrow("DropTableStatement cannot be recreated during a table rebuild");
   });
 });

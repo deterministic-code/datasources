@@ -48,4 +48,22 @@ describe("schemaDiff mysql rebuild option", () => {
     const sql = rebuilt.map((statement) => renderSql("mysql", statement));
     assert.equal(sql.some((item) => item.includes("RENAME TABLE") && item.includes("users__new")), true);
   });
+
+  it("rebuilds a mysql audit table trigger when a foreign key target changes", () => {
+    const users = table("user", [field("id", { isId: true })]);
+    const accounts = table("account", [field("id", { isId: true })]);
+    const audit = [
+      field("id", { isId: true }),
+      field("created", { type: "datetime" }),
+      field("updated", { type: "datetime" }),
+    ];
+    const before = table("order", [...audit, field("user_id", { type: "integer", references: "user.id" })]);
+    const after = table("order", [...audit, field("user_id", { type: "integer", references: "account.id" })]);
+    const rebuilt = schemaDiff("mysql", snap([users, before]), snap([accounts, after]), {
+      "datasource.rebuild_table": "mysql",
+    });
+    const sql = rebuilt.map((statement) => renderSql("mysql", statement));
+    assert.equal(sql.some((item) => item.includes("RENAME TABLE") && item.includes("orders__new")), true);
+    assert.equal(sql.some((item) => item.includes("CREATE TRIGGER")), true);
+  });
 });

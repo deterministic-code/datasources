@@ -25,7 +25,8 @@ import { DefaultValueConverter } from "./DefaultValueConverter.ts";
 
 export { columnTypes };
 
-const statements = new StatementTextRenderer(t => new PostgresStatementRenderer(t), undefined, undefined, undefined, applyKeywords);
+const statements = (): StatementTextRenderer =>
+  new StatementTextRenderer(t => new PostgresStatementRenderer(t), undefined, undefined, undefined, applyKeywords);
 const types = new TypeMap({
   string: "TEXT",
   character: "CHAR(1)",
@@ -65,7 +66,7 @@ export class PostgresDriver implements IDriver {
       : column.field === undefined
         ? column.default.value
         : defaults.convert(column.field.type, column.default.value) ?? column.default.value;
-  static utcNow = (): string => defaults.convert("datetime", "UtcNow") ?? "";
+  static utcNow = (): string => defaults.convert("datetime", "UtcNow")!;
   static nativeParam = (parameter: RoutineParameter): string =>
     parameter.type === "payload"
       ? PostgresDriver.procedurePayloadType
@@ -75,7 +76,7 @@ export class PostgresDriver implements IDriver {
   static nativeSpec = (spec: string): string =>
     spec === "payload" ? PostgresDriver.procedurePayloadType : types.dictionary[spec] ?? spec;
 
-  readonly statementRenderer = statements;
+  readonly statementRenderer = statements();
   readonly information: Information = {
     descriptions: [
       "PostgreSQL server driver.",
@@ -109,7 +110,7 @@ export class PostgresDriver implements IDriver {
   connection = (options?: DatasourceOptions): IConnection =>
     PostgresConnection.from(options);
   command = (connection: IConnection): ICommand =>
-    new PostgresCommand(connection as PostgresConnection, statements);
+    new PostgresCommand(connection as PostgresConnection, this.statementRenderer);
   transaction = (
     connection: IConnection,
     isolation: IsolationLevel = "readCommitted",

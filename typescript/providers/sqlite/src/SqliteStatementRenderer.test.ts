@@ -6,6 +6,7 @@ import {
   CreateTableStatement,
   CreateTriggerStatement,
   DefaultStatementTextRenderer,
+  type IStatement,
   DropIndexStatement,
   DropTableStatement,
   DropTriggerStatement,
@@ -278,5 +279,27 @@ END`,
         ),
       ),
     ).toThrow("DropTableStatement cannot be recreated during a table rebuild");
+  });
+
+  it("recreates a create trigger from another constructor", () => {
+    const trigger = {
+      table: "users",
+      name: "trg_foreign",
+      updatedColumn: "updated",
+      keyColumn: "id",
+      accept: (): string => "",
+    };
+    Object.defineProperty(trigger, "constructor", { value: { name: "CreateTriggerStatement" } });
+    expect(trigger).not.toBeInstanceOf(CreateTriggerStatement);
+    expect(
+      renderer.render(
+        new RebuildTableStatement(
+          "users",
+          new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }]),
+          [new RebuildColumn("id", "id")],
+          [trigger as IStatement],
+        ),
+      ),
+    ).toContain("trg_foreign");
   });
 });
