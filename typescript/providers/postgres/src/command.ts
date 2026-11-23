@@ -93,7 +93,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     const cells = row ? Object.values(row) : [];
     return {
       rowsAffected: queried.rowCount ?? queried.rows.length,
-      result: cells.length === 0 ? null : (cells[0] as Scalar),
+      result: cells.length === 0 ? null : cellValue(cells[0] as Scalar | object),
       parameters: parameters?.map((parameter) => {
         if (!parameter.direction || parameter.direction === ParameterDirection.Input || !row)
           return parameter;
@@ -105,11 +105,17 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     };
   }
 
-  private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
+  private async *query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
     const { text, values } = toPostgres(sql, params);
-    return this.connection.require().rows(text, values);
+    for await (const row of this.connection.require().rows(text, values)) {
+      yield Object.fromEntries(
+        Object.entries(row).map(([name, value]) => [name, cellValue(value as Scalar | object)]),
+      );
+    }
   }
 }
 
-const cellValue = (cell: Scalar | object): Scalar =>
-  cell !== null && typeof cell === "object" ? JSON.stringify(cell) : cell;
+const cellValue = (cell: Scalar | object): Scalar => {
+  if (cell instanceof Date || cell instanceof Uint8Array) return cell as Scalar;
+  return cell !== null && typeof cell === "object" ? JSON.stringify(cell) : cell;
+};

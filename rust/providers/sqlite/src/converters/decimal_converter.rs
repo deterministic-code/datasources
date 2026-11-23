@@ -53,6 +53,10 @@ mod tests {
             converter.convert(&Value::from("10.50")).unwrap(),
             Value::from("10.5")
         );
+        assert_eq!(
+            converter.convert(&Value::from("10.50000000000000")).unwrap(),
+            Value::from("10.5")
+        );
         assert_eq!(converter.convert(&Value::Int(0)).unwrap(), Value::from("0"));
         assert_eq!(
             converter.convert(&Value::from("0.00")).unwrap(),

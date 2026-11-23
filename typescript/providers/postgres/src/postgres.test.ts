@@ -168,12 +168,17 @@ describe("PostgresConnection", () => {
       async *rows() {}
       async end(): Promise<void> {}
     };
+    const parsers: Array<{ oid: number; value: string }> = [];
     const named = new PostgresConnection({
       url: "postgres://db/app",
-      Client: pgClient({ Client } as PgModule),
+      Client: pgClient({
+        Client,
+        types: { setTypeParser: (oid, parser) => parsers.push({ oid, value: String(parser("10.50")) }) },
+      } as PgModule),
     });
     await named.open();
     await named.close();
+    expect(parsers).toEqual([{ oid: 1700, value: "10.5" }]);
     const viaDefault = new PostgresConnection({
       url: "postgres://db/app",
       Client: pgClient({ Client, default: { Client } } as PgModule),
@@ -229,6 +234,15 @@ describe("PostgresCommand", () => {
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 5 });
+    client.result = { rowCount: 1, rows: [{ amount: "10.50000000000000" }] };
+    const decimals = await command.executeReader("SELECT amount FROM items");
+    expect(await decimals.next()).toBe(true);
+    expect(decimals.current).toEqual({ amount: "10.50000000000000" });
+    const at = new Date("2020-01-02T03:04:05.000Z");
+    client.result = { rowCount: 1, rows: [{ at, blob: new Uint8Array([1, 2]) }] };
+    const dates = await command.executeReader("SELECT at, blob FROM items");
+    expect(await dates.next()).toBe(true);
+    expect(dates.current).toEqual({ at, blob: new Uint8Array([1, 2]) });
     const empty = await command.executeReaderNative(new Native(""));
     expect(await empty.next()).toBe(false);
     expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);

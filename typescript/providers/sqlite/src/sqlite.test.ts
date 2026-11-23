@@ -51,7 +51,7 @@ class FakeDatabase implements SqliteDatabase {
   bySql?: Record<string, Cells[]>;
   omitRowid = false;
   zeroRows = false;
-  columns?: Array<{ name: string; column: string | null; table: string | null }>;
+  columns?: Array<{ name: string; column: string | null; table: string | null; type?: string | null }>;
   rawRows?: Array<Array<Value | null>>;
 
   timeout?: number;
@@ -280,6 +280,40 @@ describe("SqliteCommand", () => {
       result: null,
       rowsAffected: 1,
     });
+    db.columns = [{ name: "n", column: "n", table: "items", type: "REAL" }];
+    db.rows = [{ n: "10.0" }];
+    const real = await command.executeReaderNative(new Native("SELECT n FROM items"));
+    expect(await real.next()).toBe(true);
+    expect(real.current).toEqual({ n: "10.0" });
+    await real.dispose();
+    db.rows = [{ n: null }];
+    const realNull = await command.executeReaderNative(new Native("SELECT n FROM items"));
+    expect(await realNull.next()).toBe(true);
+    expect(realNull.current).toEqual({ n: null });
+    await realNull.dispose();
+    db.rows = [{ n: 10.5 }];
+    const realNumber = await command.executeReaderNative(new Native("SELECT n FROM items"));
+    expect(await realNumber.next()).toBe(true);
+    expect(realNumber.current).toEqual({ n: 10.5 });
+    await realNumber.dispose();
+    db.rows = [{ n: "ada" }];
+    const realText = await command.executeReaderNative(new Native("SELECT n FROM items"));
+    expect(await realText.next()).toBe(true);
+    expect(realText.current).toEqual({ n: "ada" });
+    await realText.dispose();
+    db.columns = [{ name: "n", column: "n", table: "items" }];
+    db.rows = [{ n: "10.0" }];
+    const untyped = await command.executeReaderNative(new Native("SELECT n FROM items"));
+    expect(await untyped.next()).toBe(true);
+    expect(untyped.current).toEqual({ n: "10.0" });
+    await untyped.dispose();
+    db.columns = [{ name: "n", column: "n", table: "items", type: null }];
+    db.rows = [{ n: "10.0" }];
+    const nullType = await command.executeReaderNative(new Native("SELECT n FROM items"));
+    expect(await nullType.next()).toBe(true);
+    expect(nullType.current).toEqual({ n: "10.0" });
+    await nullType.dispose();
+    db.columns = undefined;
     db.rows = [{ id: 1, name: "a" }, { id: 2, name: "b" }];
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);

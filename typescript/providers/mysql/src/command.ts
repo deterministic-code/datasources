@@ -52,8 +52,8 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
         const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), bound);
         if (!Array.isArray(result)) continue;
         if (result.length > 0 && Array.isArray(result[0]))
-          sets.push(...(result as Cells[][]));
-        else sets.push(result as Cells[]);
+          sets.push(...(result as Cells[][]).map((rows) => rows.map(coerceRow)));
+        else sets.push((result as Cells[]).map(coerceRow));
       }
       return FirstResultReader.capture(resultSetsReader(sets));
     });
@@ -122,7 +122,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       const [rows] = await client.query(
         `SELECT ${outs.map((parameter) => `@${parameter.name} AS \`${parameter.name}\``).join(", ")}`,
       );
-      const row = Array.isArray(rows) ? (rows[0] as Cells | undefined) : undefined;
+      const row = Array.isArray(rows) && rows[0] ? coerceRow(rows[0] as Cells) : undefined;
       return {
         value: new Response(
           null,
@@ -145,7 +145,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   ): Promise<MysqlExecuteResult> {
     const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), params);
     if (Array.isArray(result)) {
-      const row = result[0] as Cells | undefined;
+      const row = result[0] ? coerceRow(result[0] as Cells) : undefined;
       const values = row ? Object.values(row) : [];
       return {
         rowsAffected: result.length,
@@ -161,11 +161,14 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
   }
 }
 
+const coerceRow = (row: Cells): Cells =>
+  Object.fromEntries(Object.entries(row).map(([name, value]) => [name, cellValue(value)]));
+
 const cellValue = (cell: Scalar | object | undefined): Scalar => {
   if (cell === null || cell === undefined) return null;
   if (typeof cell === "string" || typeof cell === "number" || typeof cell === "boolean" || typeof cell === "bigint")
     return cell;
-  if (cell instanceof Uint8Array) return new TextDecoder().decode(cell);
+  if (cell instanceof Date || cell instanceof Uint8Array) return cell as Scalar;
   return JSON.stringify(cell);
 };
 

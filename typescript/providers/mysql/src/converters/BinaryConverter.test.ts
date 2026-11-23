@@ -6,6 +6,8 @@ describe("BinaryConverter", () => {
     const converter = new BinaryConverter();
     const raw = new Uint8Array([1, 2, 3, 4]);
     expect(converter.convert(raw)).toBe(raw);
+    expect(converter.convert("AQIDBA==")).toEqual(raw);
+    expect(converter.convert(Buffer.from(raw).toString("latin1"))).toEqual(raw);
     expect(converter.reverseConvert(raw)).toBe(raw);
     expect(converter.reverseConvert("AQIDBA==")).toEqual(raw);
   });

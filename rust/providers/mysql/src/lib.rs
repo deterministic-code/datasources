@@ -42,6 +42,9 @@ mod generate_sql_tests;
 #[cfg(test)]
 #[path = "../tests/driver_converters.rs"]
 mod driver_converters;
+#[cfg(test)]
+#[path = "../tests/mapping_cell.rs"]
+mod mapping_cell;
 
 #[cfg(test)]
 mod tests {

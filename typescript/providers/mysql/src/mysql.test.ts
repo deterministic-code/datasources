@@ -215,6 +215,27 @@ describe("MysqlCommand", () => {
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
+    client.rows = [{ amount: "10.50000000000000" }];
+    const decimals = await command.executeReader("SELECT amount FROM items");
+    expect(await decimals.next()).toBe(true);
+    expect(decimals.current).toEqual({ amount: "10.50000000000000" });
+    await decimals.dispose();
+    client.rows = [{ n: 10n }];
+    const bigints = await command.executeReader("SELECT n FROM items");
+    expect(await bigints.next()).toBe(true);
+    expect(bigints.current).toEqual({ n: 10n });
+    await bigints.dispose();
+    const at = new Date("2020-01-02T03:04:05.000Z");
+    client.rows = [{ at }];
+    const dates = await command.executeReader("SELECT at FROM items");
+    expect(await dates.next()).toBe(true);
+    expect(dates.current).toEqual({ at });
+    await dates.dispose();
+    client.rows = [{ missing: undefined }];
+    const missing = await command.executeReader("SELECT missing FROM items");
+    expect(await missing.next()).toBe(true);
+    expect(missing.current).toEqual({ missing: null });
+    await missing.dispose();
     const empty = await command.executeReaderNative(new Native(""));
     expect(await empty.next()).toBe(false);
     expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);
@@ -285,7 +306,7 @@ describe("MysqlCommand", () => {
       ),
     ).toMatchObject({
       parameters: [
-        { name: "blob", direction: ParameterDirection.Output, value: "a" },
+        { name: "blob", direction: ParameterDirection.Output, value: new Uint8Array([97]) },
         { name: "meta", direction: ParameterDirection.Output, value: '{"a":1}' },
       ],
     });

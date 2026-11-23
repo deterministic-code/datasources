@@ -36,9 +36,9 @@ test("0 Warning(s), 0 Error(s), npm env-config warn, npm deprecated, git integri
   assert.equal(result.status, 0);
 });
 
-test("expected.txt diff fails", () => {
-  const result = sh(`e2e_fail_line ${JSON.stringify("samples/typescript/contacts-simple-cli: --- expected.txt")}`);
-  assert.equal(result.status, 0);
+test("unified-diff expected.txt header does not fail-fast", () => {
+  const result = sh(`e2e_fail_line ${JSON.stringify("samples/typescript/outliers: --- expected.txt")}`);
+  assert.notEqual(result.status, 0);
 });
 
 test("rustc error and npm error fail", () => {
