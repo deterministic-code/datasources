@@ -13,6 +13,7 @@ internal static class PostgresRowTypeConverters
             ["datetime"] = new DateTimeConverter(),
             ["uuid"] = new UuidConverter(),
             ["decimal"] = new DecimalConverter(),
+            ["float"] = new FloatConverter(),
             ["binary"] = new BinaryConverter(),
             ["integer"] = integer,
             ["unsignedinteger"] = integer,

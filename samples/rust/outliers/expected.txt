@@ -16,7 +16,7 @@ map create guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map create id 1
 map create int_to_boolean true
 map create int_to_decimal 7
-map create int_to_float 9007199254740992
+map create int_to_float 10
 map create int_to_integer 10
 map create text_to_binary 01020304
 map create text_to_datetime 2020-01-02T03:04:05.000Z
@@ -39,7 +39,7 @@ map create_again guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map create_again id 3
 map create_again int_to_boolean true
 map create_again int_to_decimal 7
-map create_again int_to_float 9007199254740992
+map create_again int_to_float 10
 map create_again int_to_integer 10
 map create_again text_to_binary 01020304
 map create_again text_to_datetime 2020-01-02T03:04:05.000Z
@@ -62,7 +62,7 @@ map delete guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map delete id 2
 map delete int_to_boolean true
 map delete int_to_decimal 7
-map delete int_to_float 9007199254740992
+map delete int_to_float 10
 map delete int_to_integer 10
 map delete text_to_binary 01020304
 map delete text_to_datetime 2020-01-02T03:04:05.000Z
@@ -85,7 +85,7 @@ map delete_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map delete_where id 1
 map delete_where int_to_boolean true
 map delete_where int_to_decimal 7
-map delete_where int_to_float 9007199254740992
+map delete_where int_to_float 10
 map delete_where int_to_integer 10
 map delete_where text_to_binary 01020304
 map delete_where text_to_datetime 2020-01-02T03:04:05.000Z
@@ -102,7 +102,7 @@ map read decimal_to_float 1.2345678901234567
 map read decimal_to_integer 10
 map read float_to_decimal 10.5
 map read float_to_float 10.9
-map read float_to_integer 0
+map read float_to_integer 10
 map read guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read id 1
@@ -125,7 +125,7 @@ map read_single decimal_to_float 1.2345678901234567
 map read_single decimal_to_integer 10
 map read_single float_to_decimal 10.5
 map read_single float_to_float 10.9
-map read_single float_to_integer 0
+map read_single float_to_integer 10
 map read_single guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single id 1
@@ -148,7 +148,7 @@ map read_single_by_id decimal_to_float 1.2345678901234567
 map read_single_by_id decimal_to_integer 10
 map read_single_by_id float_to_decimal 10.5
 map read_single_by_id float_to_float 10.9
-map read_single_by_id float_to_integer 0
+map read_single_by_id float_to_integer 10
 map read_single_by_id guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id id 1
@@ -171,7 +171,7 @@ map read_single_by_id_row decimal_to_float 1.2345678901234567
 map read_single_by_id_row decimal_to_integer 10
 map read_single_by_id_row float_to_decimal 10.5
 map read_single_by_id_row float_to_float 10.9
-map read_single_by_id_row float_to_integer 0
+map read_single_by_id_row float_to_integer 10
 map read_single_by_id_row guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id_row guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id_row id 1
@@ -194,7 +194,7 @@ map read_single_where decimal_to_float 1.2345678901234567
 map read_single_where decimal_to_integer 10
 map read_single_where float_to_decimal 10.5
 map read_single_where float_to_float 10.9
-map read_single_where float_to_integer 0
+map read_single_where float_to_integer 10
 map read_single_where guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_single_where id 1
@@ -217,7 +217,7 @@ map read_where decimal_to_float 1.2345678901234567
 map read_where decimal_to_integer 10
 map read_where float_to_decimal 10.5
 map read_where float_to_float 10.9
-map read_where float_to_integer 0
+map read_where float_to_integer 10
 map read_where guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map read_where id 1
@@ -240,7 +240,7 @@ map update decimal_to_float 1.2345678901234567
 map update decimal_to_integer 10
 map update float_to_decimal 10.5
 map update float_to_float 10.9
-map update float_to_integer 0
+map update float_to_integer 10
 map update guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map update guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map update id 1
@@ -263,7 +263,7 @@ map update_where decimal_to_float 1.2345678901234567
 map update_where decimal_to_integer 10
 map update_where float_to_decimal 10.5
 map update_where float_to_float 10.9
-map update_where float_to_integer 0
+map update_where float_to_integer 10
 map update_where guid_to_guid 550e8400-e29b-41d4-a716-446655440000
 map update_where guid_to_string 550e8400-e29b-41d4-a716-446655440000
 map update_where id 1

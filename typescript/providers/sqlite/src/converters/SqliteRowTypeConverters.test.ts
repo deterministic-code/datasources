@@ -36,6 +36,8 @@ describe("SqliteRowTypeConverters", () => {
       decimalToDecimal: "decimal",
       datetimeToDatetime: "datetime",
       guidToGuid: "uuid",
+      binaryToGuid: "uuid",
+      boolToBoolean: "boolean",
     });
     expect(
       converter.convert({
@@ -74,6 +76,17 @@ describe("SqliteRowTypeConverters", () => {
       decimalToInteger: 10,
     });
     expect(() => converter.convert({ decimalToInteger: "10.50000000000000" })).toThrow(/is not a long/);
+    expect(converter.convert({ decimalToFloat: "1.2345678901234567" })).toEqual({
+      decimalToFloat: Number("1.2345678901234567"),
+    });
+    const tokenBytes = "550e8400-e29b-41d4-a716-446655440000";
+    expect(converter.convert({ binaryToGuid: Buffer.from(tokenBytes, "utf8") })).toEqual({
+      binaryToGuid: tokenBytes,
+    });
+    expect(converter.reverseConvert({ intToBoolean: true, boolToBoolean: false })).toEqual({
+      intToBoolean: 1,
+      boolToBoolean: 0,
+    });
     expect(
       converter.reverseConvert({
         intToInteger: 10,

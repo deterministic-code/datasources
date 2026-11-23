@@ -11,7 +11,10 @@ impl TypeConverter<Value, Value> for BoolConverter {
     }
 
     fn reverse_convert(&self, to: &Value) -> Result<Value> {
-        Ok(to.clone())
+        Ok(match to {
+            Value::Bool(flag) => Value::Int(if *flag { 1 } else { 0 }),
+            other => other.clone(),
+        })
     }
 }
 
@@ -37,11 +40,11 @@ mod tests {
         );
         assert_eq!(
             converter.reverse_convert(&Value::Bool(true)).unwrap(),
-            Value::Bool(true)
+            Value::Int(1)
         );
         assert_eq!(
             converter.reverse_convert(&Value::Bool(false)).unwrap(),
-            Value::Bool(false)
+            Value::Int(0)
         );
         assert_eq!(
             converter.reverse_convert(&Value::from("x")).unwrap(),

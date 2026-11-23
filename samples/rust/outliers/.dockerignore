@@ -2,3 +2,7 @@ generated
 .git
 .env
 target
+app.sqlite
+app.sqlite-wal
+app.sqlite-shm
+app.sqlite-journal

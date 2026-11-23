@@ -2,6 +2,7 @@ mod binary_converter;
 mod bool_converter;
 mod datetime_converter;
 mod decimal_converter;
+mod float_converter;
 mod integer_converter;
 mod string_converter;
 mod uuid_converter;
@@ -13,6 +14,7 @@ pub use binary_converter::BinaryConverter;
 pub use bool_converter::BoolConverter;
 pub use datetime_converter::DateTimeConverter;
 pub use decimal_converter::DecimalConverter;
+pub use float_converter::FloatConverter;
 pub use integer_converter::IntegerConverter;
 pub use string_converter::StringConverter;
 pub use uuid_converter::UuidConverter;
@@ -26,6 +28,7 @@ fn catalog() -> Vec<(
         ("datetime", Box::new(DateTimeConverter)),
         ("uuid", Box::new(UuidConverter)),
         ("decimal", Box::new(DecimalConverter)),
+        ("float", Box::new(FloatConverter)),
         ("binary", Box::new(BinaryConverter)),
         ("integer", Box::new(IntegerConverter)),
         ("unsignedinteger", Box::new(IntegerConverter)),
@@ -78,6 +81,7 @@ mod tests {
             "datetime",
             "uuid",
             "decimal",
+            "float",
             "binary",
             "integer",
             "unsignedinteger",

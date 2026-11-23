@@ -14,6 +14,10 @@ const fromBytes = (bytes: Uint8Array): string => {
 const canonicalUuid = (from: Value): Value => {
   if (typeof from === "string") return uuid.test(from) ? from.toLowerCase() : from;
   if (from instanceof Uint8Array && from.length === 16) return fromBytes(from);
+  if (from instanceof Uint8Array) {
+    const text = Buffer.from(from).toString("utf8");
+    if (uuid.test(text)) return text.toLowerCase();
+  }
   return from;
 };
 

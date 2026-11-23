@@ -13,15 +13,21 @@ impl TypeConverter<Value, Value> for UuidConverter {
     }
 }
 
+fn guid_bytes(bytes: &[u8]) -> Option<Value> {
+    if let Ok(id) = Uuid::from_slice(bytes) {
+        return Some(Value::Text(id.to_string()));
+    }
+    let text = std::str::from_utf8(bytes).ok()?;
+    Uuid::parse_str(text.trim()).ok().map(|id| Value::Text(id.to_string()))
+}
+
 fn canonical(value: &Value) -> Value {
     match value {
         Value::Uuid(id) => Value::Text(id.to_string()),
         Value::Text(text) => Uuid::parse_str(text)
             .map(|id| Value::Text(id.to_string()))
             .unwrap_or_else(|_| value.clone()),
-        Value::Binary(bytes) => Uuid::from_slice(bytes)
-            .map(|id| Value::Text(id.to_string()))
-            .unwrap_or_else(|_| value.clone()),
+        Value::Binary(bytes) => guid_bytes(bytes).unwrap_or_else(|| value.clone()),
         other => other.clone(),
     }
 }
@@ -42,6 +48,12 @@ mod tests {
         assert_eq!(
             converter
                 .convert(&Value::Binary(uuid.as_bytes().to_vec()))
+                .unwrap(),
+            text
+        );
+        assert_eq!(
+            converter
+                .convert(&Value::Binary(id.as_bytes().to_vec()))
                 .unwrap(),
             text
         );

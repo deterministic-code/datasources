@@ -103,4 +103,80 @@ public class MappingCellConversionsTests
         Assert.Equal(new Value.Text("2020-01-02T03:04:05.000Z"), stored["DatetimeToDatetime"]);
         Assert.Equal(new Value.Text("10.5"), stored["DecimalToDecimal"]);
     }
+
+    [Fact]
+    public void ConvertsAndReversesTheMappingCellMatrix()
+    {
+        var converter = Converter();
+        var row = converter.Convert(new Row
+        {
+            ["Id"] = 1L,
+            ["TextToString"] = "ada",
+            ["TextToInteger"] = "10.0",
+            ["TextToDecimal"] = "10.50",
+            ["TextToDatetime"] = "2020-01-02T03:04:05.000Z",
+            ["TextToBinary"] = Convert.ToBase64String(Blob),
+            ["TextToGuid"] = Token.ToString("D"),
+            ["IntToInteger"] = 10L,
+            ["IntToFloat"] = 10L,
+            ["IntToDecimal"] = 7L,
+            ["IntToBoolean"] = 1L,
+            ["FloatToInteger"] = 10.0,
+            ["FloatToFloat"] = 10.9,
+            ["FloatToDecimal"] = 10.5,
+            ["DecimalToInteger"] = 10.00000000000000m,
+            ["DecimalToFloat"] = "1.2345678901234567",
+            ["DecimalToDecimal"] = "10.50000000000000",
+            ["BoolToBoolean"] = 0L,
+            ["DatetimeToDatetime"] = Opened,
+            ["BinaryToBinary"] = Blob,
+            ["BinaryToGuid"] = System.Text.Encoding.ASCII.GetBytes(Token.ToString("D")),
+            ["GuidToString"] = Token.ToString("D"),
+            ["GuidToGuid"] = Token,
+        });
+        Assert.Equal(new Value.Int(1), row["Id"]);
+        Assert.Equal(new Value.Text("ada"), row["TextToString"]);
+        Assert.Equal(new Value.Int(10), row["TextToInteger"]);
+        Assert.Equal(new Value.Text("10.5"), row["TextToDecimal"]);
+        Assert.Equal(new Value.DateTime(Opened), row["TextToDatetime"]);
+        Assert.Equal(new Value.Text(Convert.ToBase64String(Blob)), row["TextToBinary"]);
+        Assert.Equal(new Value.Text(Token.ToString("D")), row["TextToGuid"]);
+        Assert.Equal(new Value.Int(10), row["IntToInteger"]);
+        Assert.Equal(new Value.Float(10), row["IntToFloat"]);
+        Assert.Equal(new Value.Text("7"), row["IntToDecimal"]);
+        Assert.Equal(new Value.Bool(true), row["IntToBoolean"]);
+        Assert.Equal(new Value.Int(10), row["FloatToInteger"]);
+        Assert.Equal(new Value.Float(10.9), row["FloatToFloat"]);
+        Assert.Equal(new Value.Text("10.5"), row["FloatToDecimal"]);
+        Assert.Equal(new Value.Int(10), row["DecimalToInteger"]);
+        Assert.Equal(new Value.Float(double.Parse("1.2345678901234567", System.Globalization.CultureInfo.InvariantCulture)), row["DecimalToFloat"]);
+        Assert.Equal(new Value.Text("10.5"), row["DecimalToDecimal"]);
+        Assert.Equal(new Value.Bool(false), row["BoolToBoolean"]);
+        Assert.Equal(new Value.DateTime(Opened), row["DatetimeToDatetime"]);
+        Assert.Equal(Blob, row["BinaryToBinary"].ToObject());
+        Assert.Equal(new Value.Text(Token.ToString("D")), row["BinaryToGuid"]);
+        Assert.Equal(new Value.Text(Token.ToString("D")), row["GuidToString"]);
+        Assert.Equal(new Value.Text(Token.ToString("D")), row["GuidToGuid"]);
+        var stored = converter.ReverseConvert(new Row
+        {
+            ["IntToInteger"] = 10L,
+            ["IntToBoolean"] = true,
+            ["BoolToBoolean"] = false,
+            ["FloatToInteger"] = 10L,
+            ["DecimalToInteger"] = 10L,
+            ["DecimalToFloat"] = 1.2345678901234567,
+            ["DecimalToDecimal"] = 10.50m,
+            ["DatetimeToDatetime"] = Opened,
+            ["BinaryToGuid"] = Token,
+        });
+        Assert.Equal(new Value.Int(10), stored["IntToInteger"]);
+        Assert.Equal(new Value.Int(1), stored["IntToBoolean"]);
+        Assert.Equal(new Value.Int(0), stored["BoolToBoolean"]);
+        Assert.Equal(new Value.Int(10), stored["FloatToInteger"]);
+        Assert.Equal(new Value.Int(10), stored["DecimalToInteger"]);
+        Assert.Equal(new Value.Float(1.2345678901234567), stored["DecimalToFloat"]);
+        Assert.Equal(new Value.Text("10.5"), stored["DecimalToDecimal"]);
+        Assert.Equal(new Value.Text("2020-01-02T03:04:05.000Z"), stored["DatetimeToDatetime"]);
+        Assert.Equal(new Value.Text(Token.ToString("D")), stored["BinaryToGuid"]);
+    }
 }

@@ -10,10 +10,16 @@ internal sealed class IntegerConverter : TypeConverter<Value, Value>
         Value.Text(var text) => Parse(text),
         Value.Float(var n) when double.IsFinite(n) && n == Math.Truncate(n)
             && n is >= long.MinValue and <= long.MaxValue => (long)n,
+        Value.Decimal(var n) => Integral(n),
         _ => from
     };
 
     public override Value ReverseConvert(Value to) => to;
+
+    static Value Integral(decimal number) =>
+        number == decimal.Truncate(number) && number >= long.MinValue && number <= long.MaxValue
+            ? (long)number
+            : throw new FormatException($"\"{number.ToString(CultureInfo.InvariantCulture)}\" is not a long");
 
     static Value Parse(string text) =>
         long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)

@@ -65,7 +65,7 @@ fn default_value_converter() {
 fn row_type_converters() {
     let catalog = MysqlDriver.row_type_converters();
     for key in [
-        "boolean", "datetime", "uuid", "decimal", "binary", "integer", "unsignedinteger",
+        "boolean", "datetime", "uuid", "decimal", "float", "binary", "integer", "unsignedinteger",
         "smallinteger", "unsignedsmallinteger", "biginteger", "unsignedbiginteger", "string",
     ] {
         assert!(catalog.contains_key(key), "{key}");

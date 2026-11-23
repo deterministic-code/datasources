@@ -105,8 +105,9 @@ public class PostgresTests
         Assert.True(row["Created"] is Value.DateTime);
         var stored = converter.ReverseConvert(row);
         Assert.Equal(new Value.Text(id.ToString()), stored["Key"]);
-        Assert.Equal(new Value.Bool(true), stored["Active"]);
+        Assert.Equal(new Value.Int(1), stored["Active"]);
         Assert.Equal(new Value.Text("ada"), stored["Login"]);
         Assert.Equal(new Value.Text("2020-01-02T03:04:05.000Z"), stored["Created"]);
     }
+
 }

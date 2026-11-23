@@ -1,3 +1,4 @@
+using System.Text;
 using Datasources;
 
 namespace Datasources.Postgres;
@@ -13,6 +14,7 @@ internal sealed class UuidConverter : TypeConverter<Value, Value>
         Value.Guid(var guid) => Text(guid),
         Value.Text(var text) when System.Guid.TryParse(text, out var guid) => Text(guid),
         Value.Binary(var bytes) when bytes.Length == 16 => Text(new System.Guid(bytes)),
+        Value.Binary(var bytes) when System.Guid.TryParse(Encoding.UTF8.GetString(bytes), out var guid) => Text(guid),
         _ => value
     };
 

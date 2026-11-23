@@ -15,6 +15,7 @@ internal static class SqliteRowTypeConverters
             ["datetime"] = new DateTimeConverter(),
             ["uuid"] = new UuidConverter(),
             ["decimal"] = new DecimalConverter(),
+            ["float"] = new FloatConverter(),
             ["binary"] = new BinaryConverter(),
             ["integer"] = integer,
             ["unsignedinteger"] = integer,
