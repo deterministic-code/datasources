@@ -7,5 +7,6 @@ export class IntegerConverter extends TypeConverter<Value, Value> {
     return Number(from);
   };
 
-  reverseConvert = (to: Value): Value => to;
+  reverseConvert = (to: Value): Value =>
+    typeof to === "number" && Number.isInteger(to) ? BigInt(to) : to;
 }

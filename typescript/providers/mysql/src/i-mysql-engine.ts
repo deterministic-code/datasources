@@ -38,7 +38,7 @@ export type MysqlCreateConnection = (url: string) => Promise<IMysqlClient>;
 
 export type Mysql2Module = {
   createConnection: (
-    options: { uri: string; namedPlaceholders: boolean; timezone: string },
+    options: { uri: string; namedPlaceholders: boolean; timezone: string; decimalNumbers: boolean },
   ) => Promise<IMysqlClient>;
 };
 
@@ -47,6 +47,7 @@ export const mysql2Connect = (mysql: Mysql2Module): MysqlCreateConnection => asy
     uri,
     namedPlaceholders: true,
     timezone: "Z",
+    decimalNumbers: true,
   })) as Mysql2PromiseConnection;
   return {
     query: (sql, params) => client.query(sql, params),

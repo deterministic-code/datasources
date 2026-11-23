@@ -12,6 +12,7 @@ describe("DateTimeConverter", () => {
     expect(converter.convert("nope")).toBe("nope");
     expect(converter.convert(date)).toBe(date);
     expect(converter.reverseConvert(date)).toBe("2020-01-02 03:04:05.000");
+    expect(converter.reverseConvert(new Date("nope"))).toEqual(new Date("nope"));
     expect(converter.reverseConvert("2020-01-02T03:04:05.000Z")).toBe("2020-01-02 03:04:05.000");
     expect(converter.reverseConvert("x")).toBe("x");
   });

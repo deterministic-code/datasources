@@ -10,6 +10,7 @@ describe("IntegerConverter", () => {
     expect(() => converter.convert("")).toThrow(DatasourceError);
     expect(() => converter.convert("1.0")).toThrow(DatasourceError);
     expect(converter.convert(7)).toBe(7);
-    expect(converter.reverseConvert(7)).toBe(7);
+    expect(converter.reverseConvert(7)).toBe(7n);
+    expect(converter.reverseConvert(10.9)).toBe(10.9);
   });
 });

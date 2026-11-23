@@ -271,7 +271,7 @@ impl MysqlCommand {
                         .cloned()
                         .unwrap_or(Value::Null);
                     Parameter {
-                        value: output_value(value),
+                        value,
                         ..parameter.clone()
                     }
                 }
@@ -330,13 +330,6 @@ fn to_mysql_value(value: &Value) -> MysqlValue {
     }
 }
 
-fn output_value(value: Value) -> Value {
-    match &value {
-        Value::Text(text) => text.parse::<i64>().map(Value::Int).unwrap_or(value),
-        _ => value,
-    }
-}
-
 fn from_mysql_value(value: MysqlValue) -> Value {
     match value {
         MysqlValue::NULL => Value::Null,
@@ -344,9 +337,7 @@ fn from_mysql_value(value: MysqlValue) -> Value {
         MysqlValue::UInt(value) => Value::Int(value as i64),
         MysqlValue::Float(value) => Value::Float(value as f64),
         MysqlValue::Double(value) => Value::Float(value),
-        MysqlValue::Bytes(bytes) => converters::convert(&Value::Text(
-            String::from_utf8_lossy(&bytes).into_owned(),
-        )),
+        MysqlValue::Bytes(bytes) => Value::Text(String::from_utf8_lossy(&bytes).into_owned()),
         MysqlValue::Date(year, month, day, hour, min, sec, micros) => {
             converters::DateTimeConverter::from_ymd_hms_micro(
                 year, month, day, hour, min, sec, micros,
@@ -417,4 +408,17 @@ where
     std::future::poll_fn(|cx| stream.as_mut().poll_next(cx))
         .await
         .transpose()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn byte_cells_are_text() {
+        let value = from_mysql_value(MysqlValue::Bytes(b"10.50000000000000".to_vec()));
+        assert_eq!(value, Value::Text("10.50000000000000".into()));
+        let text = from_mysql_value(MysqlValue::Bytes(b"ada".to_vec()));
+        assert_eq!(text, Value::Text("ada".into()));
+    }
 }

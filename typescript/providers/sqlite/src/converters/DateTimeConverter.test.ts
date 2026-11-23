@@ -9,6 +9,7 @@ describe("DateTimeConverter", () => {
     expect(Number.isNaN((converter.convert("nope") as Date).getTime())).toBe(true);
     expect(converter.convert(date)).toBe(date);
     expect(converter.reverseConvert(date)).toBe("2020-01-02T03:04:05.000Z");
+    expect(converter.reverseConvert(new Date("nope"))).toEqual(new Date("nope"));
     expect(converter.reverseConvert("x")).toBe("x");
   });
 });

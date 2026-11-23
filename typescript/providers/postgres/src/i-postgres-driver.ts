@@ -35,10 +35,13 @@ type PgNativeCtor = new (options: { connectionString: string }) => PgNativeClien
 
 export type PgModule = {
   Client: PgNativeCtor;
-  default?: { Client: PgNativeCtor };
+  types?: { setTypeParser: (oid: number, parser: (value: string) => number) => void };
+  default?: { Client: PgNativeCtor; types?: { setTypeParser: (oid: number, parser: (value: string) => number) => void } };
 };
 
 export const pgClient = (imported: PgModule): PgClientCtor => {
+  const types = imported.types ?? imported.default?.types;
+  types?.setTypeParser(1700, (value) => Number(value));
   const Client = imported.default?.Client ?? imported.Client;
   return class implements IPgClient {
     private readonly inner: PgNativeClient;

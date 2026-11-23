@@ -16,7 +16,9 @@ export class DateTimeConverter extends TypeConverter<Value, Value> {
     typeof from === "string" ? utcDate(from) : from;
   reverseConvert = (to: Value): Value =>
     to instanceof Date
-      ? stamp(to)
+      ? Number.isNaN(to.getTime())
+        ? to
+        : stamp(to)
       : typeof to === "string" && /^\d{4}-\d{2}-\d{2}T/.test(to)
         ? stamp(new Date(to))
         : to;
