@@ -11,4 +11,5 @@ public record ReadonlyRepositoryMappingOptions<T>
     public IReadOnlyList<string>? ReadProperties { get; init; }
     public Schema? Schema { get; init; }
     public IReadonlyEnrichmentStrategy<T>? Enrichment { get; init; }
+    public EnrichmentSelection? Enrich { get; init; }
 }

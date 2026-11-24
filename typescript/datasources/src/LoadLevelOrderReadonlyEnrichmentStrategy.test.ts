@@ -13,6 +13,7 @@ import type { Parameter } from "./Parameter.ts";
 import { Schema } from "./Schema.ts";
 import type { ReadQuery } from "./IReadonlyRepository.ts";
 import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
+import { EnrichmentSelection } from "./EnrichmentSelection.ts";
 
 class Kind {
   Id = 0;
@@ -115,6 +116,13 @@ const openConnection = async (): Promise<IConnection> => {
 const assign = <T extends object>(type: new () => T, values: Partial<T>): T => Object.assign(new type(), values);
 
 describe("LoadLevelOrderReadonlyEnrichmentStrategy", () => {
+  it("keyOf matches int text and nested Id", () => {
+    const keys = new DefaultReadonlyEnrichmentStrategy<Parent>();
+    expect(keys.keyOf(1)).toBe("1");
+    expect(keys.keyOf("1")).toBe("1");
+    expect(keys.keyOf({ Id: 5, Name: "x" })).toBe("5");
+  });
+
   it("parity object missing duplicate and null keys", async () => {
     const connection = await openConnection();
     const kindsRepo = open(Kind, connection);
@@ -323,38 +331,99 @@ describe("LoadLevelOrderReadonlyEnrichmentStrategy", () => {
   });
 
   it("one hundred twenty one games three settings one attribute is three queries", async () => {
-    const connection = await openConnection();
-    const gamesRepo = open(Game, connection);
-    const settingsRepo = open(Setting, connection, settingSchema);
-    const attributesRepo = open(GameAttribute, connection, settingSchema);
-    for (let i = 0; i < 121; i++) {
-      const game = await gamesRepo.create(assign(Game, { Name: `g${i}` }));
-      await settingsRepo.create(assign(Setting, { ParentId: game.Id, Name: "a", Value: "1" }));
-      await settingsRepo.create(assign(Setting, { ParentId: game.Id, Name: "b", Value: "2" }));
-      await settingsRepo.create(assign(Setting, { ParentId: game.Id, Name: "c", Value: "3" }));
-      await attributesRepo.create(assign(GameAttribute, { ParentId: game.Id, Name: "theme", Value: "dark" }));
-    }
-    const reads = { count: 0 };
-    const strategy = new LoadLevelOrderReadonlyEnrichmentStrategy<Game>();
-    gamesRepo.addEnriched(
+    await assertDictionaryQueryCount(await seedGames(), new LoadLevelOrderReadonlyEnrichmentStrategy<Game>());
+  });
+
+  it("omitted strategy dictionary is one read per enrichment", async () => {
+    await assertDictionaryQueryCount(await seedGames());
+  });
+
+  it("default strategy dictionary is one read per enrichment", async () => {
+    await assertDictionaryQueryCount(await seedGames(), new DefaultReadonlyEnrichmentStrategy<Game>());
+  });
+
+  it("enrich only settings skips other fills", async () => {
+    const seeded = await seedGames();
+    const settingsReads = { count: 0 };
+    const attributeReads = { count: 0 };
+    seeded.gamesRepo.addEnriched(
       { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" },
-      new CountingRepository(settingsRepo, reads),
-      strategy,
+      new CountingRepository(seeded.settingsRepo, settingsReads),
     );
-    gamesRepo.addEnriched(
+    seeded.gamesRepo.addEnriched(
       { destinationProperty: "Attributes", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" },
-      new CountingRepository(attributesRepo, reads),
-      strategy,
+      new CountingRepository(seeded.attributesRepo, attributeReads),
     );
-    const items = await collectAsync(new CountingRepository(gamesRepo, reads).read());
+    const items = await collectAsync(
+      seeded.gamesRepo.read(undefined, undefined, { enrich: EnrichmentSelection.only("Settings") }),
+    );
     expect(items).toHaveLength(121);
-    for (const game of items) {
-      expect(Object.keys(game.Settings)).toHaveLength(3);
-      expect(game.Attributes.theme).toBe("dark");
-    }
-    expect(reads.count).toBe(3);
+    for (const game of items) expect(Object.keys(game.Settings)).toHaveLength(3);
+    expect(settingsReads.count).toBe(1);
+    expect(attributeReads.count).toBe(0);
+  });
+
+  it("default zero queries when parents empty", async () => {
+    const connection = await openConnection();
+    const reads = { count: 0 };
+    await new DefaultReadonlyEnrichmentStrategy<Parent>().apply(
+      new CountingRepository(open(Child, connection), reads),
+      { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
+      [],
+    );
+    expect(reads.count).toBe(0);
+  });
+
+  it("default zero queries when keys null", async () => {
+    const connection = await openConnection();
+    const reads = { count: 0 };
+    await new DefaultReadonlyEnrichmentStrategy<Parent>().apply(
+      new CountingRepository(open(Kind, connection), reads),
+      { destinationProperty: "KindName", sourceProperty: "Kind", relatedKey: "Id", relatedProperty: "Name" },
+      [new Parent(), new Parent()],
+    );
+    expect(reads.count).toBe(0);
   });
 });
+
+const seedGames = async () => {
+  const connection = await openConnection();
+  const gamesRepo = open(Game, connection);
+  const settingsRepo = open(Setting, connection, settingSchema);
+  const attributesRepo = open(GameAttribute, connection, settingSchema);
+  for (let i = 0; i < 121; i++) {
+    const game = await gamesRepo.create(assign(Game, { Name: `g${i}` }));
+    await settingsRepo.create(assign(Setting, { ParentId: game.Id, Name: "a", Value: "1" }));
+    await settingsRepo.create(assign(Setting, { ParentId: game.Id, Name: "b", Value: "2" }));
+    await settingsRepo.create(assign(Setting, { ParentId: game.Id, Name: "c", Value: "3" }));
+    await attributesRepo.create(assign(GameAttribute, { ParentId: game.Id, Name: "theme", Value: "dark" }));
+  }
+  return { gamesRepo, settingsRepo, attributesRepo };
+};
+
+const assertDictionaryQueryCount = async (
+  seeded: Awaited<ReturnType<typeof seedGames>>,
+  strategy?: IReadonlyEnrichmentStrategy<Game>,
+) => {
+  const reads = { count: 0 };
+  seeded.gamesRepo.addEnriched(
+    { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" },
+    new CountingRepository(seeded.settingsRepo, reads),
+    strategy,
+  );
+  seeded.gamesRepo.addEnriched(
+    { destinationProperty: "Attributes", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", dictionaryKey: "Name", type: "dictionary" },
+    new CountingRepository(seeded.attributesRepo, reads),
+    strategy,
+  );
+  const items = await collectAsync(new CountingRepository(seeded.gamesRepo, reads).read());
+  expect(items).toHaveLength(121);
+  for (const game of items) {
+    expect(Object.keys(game.Settings)).toHaveLength(3);
+    expect(game.Attributes.theme).toBe("dark");
+  }
+  expect(reads.count).toBe(3);
+};
 
 const readKinds = (connection: IConnection, strategy: IReadonlyEnrichmentStrategy<Parent>) => {
   const clone = open(Parent, connection);

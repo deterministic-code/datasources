@@ -1,4 +1,5 @@
 import type { Enrichment } from "./Enrichment.ts";
+import type { EnrichmentSelection } from "./EnrichmentSelection.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Row } from "./Row.ts";
@@ -26,6 +27,18 @@ export class StoredEnrichment<T, TRelated = T, TLink = TRelated> {
     this.link = link;
     this.via = via;
   }
+
+  selected = (enrich?: EnrichmentSelection): boolean =>
+    enrich ? enrich.includes(this.enrichment.destinationProperty) : true;
+
+  applySelected = async (
+    parents: T[],
+    sources?: (Row | undefined)[],
+    enrich?: EnrichmentSelection,
+  ): Promise<void> => {
+    if (!this.selected(enrich)) return;
+    await this.apply(parents, sources);
+  };
 }
 
 export const asRelated = <T, TRelated, TLink>(

@@ -17,7 +17,7 @@ import { enrichmentsOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
-import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import { LoadLevelOrderReadonlyEnrichmentStrategy } from "./LoadLevelOrderReadonlyEnrichmentStrategy.ts";
 import { asRelated, StoredEnrichment } from "./StoredEnrichment.ts";
 import { execute } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
@@ -129,7 +129,7 @@ export class CRUDRepository<T = Cells>
     link: ICRUDRepository<TLink>,
     strategy?: IReadonlyEnrichmentStrategy<T & object>,
   ): this {
-    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
+    const chosen = strategy ?? new LoadLevelOrderReadonlyEnrichmentStrategy<T & object>();
     super.addEnriched(enrichment, via, strategy);
     const stored = lastEnrichment<T, TRelated, TLink>(this);
     stored.apply = (parents, sources) =>

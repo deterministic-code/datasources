@@ -24,7 +24,7 @@ addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepos
 
 - `enrichment` — [Enrichment](./enrichment.md)
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `strategy` — optional [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md)
+- `strategy` — optional [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md) for this edge. Omitted uses [LoadLevelOrderReadonlyEnrichmentStrategy](./load-level-order-readonly-enrichment-strategy.md)
 
 **Returns** `this`
 
@@ -47,7 +47,7 @@ IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TR
 
 - `enrichment` — [Enrichment](./enrichment.md)
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `strategy` — optional [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md)
+- `strategy` — optional [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md) for this edge. Omitted uses [LoadLevelOrderReadonlyEnrichmentStrategy](./load-level-order-readonly-enrichment-strategy.md)
 
 **Returns** [IEnriched](#ienriched)`<T>`
 
@@ -70,7 +70,7 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 
 - `enrichment` — [Enrichment](./enrichment.md)
 - `via` — related [IReadonlyRepository](./readonly-repository.md). The readonly path keeps the read repository only
-- `strategy` — optional [ReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md)
+- `strategy` — optional [ReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md) for this edge. Omitted uses [LoadLevelOrderReadonlyEnrichmentStrategy](./load-level-order-readonly-enrichment-strategy.md)
 
 **Returns** `&mut Self`
 :::

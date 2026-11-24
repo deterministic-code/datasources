@@ -60,7 +60,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         IReadonlyRepository<TRelated> via,
         IReadonlyEnrichmentStrategy<T>? strategy = null)
     {
-        var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
+        var chosen = strategy ?? new LoadLevelOrderReadonlyEnrichmentStrategy<T>();
         enrichments.Add(new StoredEnrichment<T>(enrichment, new ReadEnrichment<T, TRelated>(via, chosen)));
         return this;
     }
@@ -157,7 +157,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     private IAsyncEnumerable<(T Item, Row? Source)> Apply(
         IAsyncEnumerable<(T Item, Row? Source)> pairs,
         ReadonlyRepositoryMappingOptions<T>? options) =>
-        Enriched || options?.Enrichment is not null ? Sourced(pairs, options) : pairs;
+        Fills(options) ? Sourced(pairs, options) : pairs;
 
     private async IAsyncEnumerable<(T Item, Row? Source)> ReadItems(
         IStatement? query,
@@ -217,7 +217,14 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             return;
         }
         foreach (var entry in enrichments)
-            await entry.Read.Apply(entry.Enrichment, parents, sources);
+            await entry.Read.ApplySelected(entry.Enrichment, parents, sources, options?.Enrich);
+    }
+
+    bool Fills(ReadonlyRepositoryMappingOptions<T>? options)
+    {
+        if (options?.Enrichment is not null) return true;
+        if (!Enriched) return false;
+        return enrichments.Any(entry => entry.Read.Selected(entry.Enrichment, options?.Enrich));
     }
 
     private static async IAsyncEnumerable<T> Items(IAsyncEnumerable<(T Item, Row? Source)> pairs)

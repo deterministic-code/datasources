@@ -23,7 +23,7 @@ import type { IMapper } from "./mappers/IMapper.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
 import type { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { StatementMappers } from "./StatementMappers.ts";
-import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import { LoadLevelOrderReadonlyEnrichmentStrategy } from "./LoadLevelOrderReadonlyEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
@@ -115,7 +115,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     via: IReadonlyRepository<TRelated>,
     strategy?: IReadonlyEnrichmentStrategy<T & object>,
   ): this {
-    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
+    const chosen = strategy ?? new LoadLevelOrderReadonlyEnrichmentStrategy<T & object>();
     this.entries().push(
       new StoredEnrichment<T, TRelated>(
         enrichment,
@@ -229,7 +229,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     pairs: AsyncIterable<Sourced<T>>,
     options?: ReadonlyRepositoryMappingOptions<T>,
   ): AsyncIterable<Sourced<T>> {
-    if (!this.enriched && !options?.enrichment) {
+    if (!this.fills(options)) {
       yield* pairs;
       return;
     }
@@ -299,7 +299,14 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
       );
       return;
     }
-    for (const entry of this.entries()) await entry.apply(parents, sources);
+    const enrich = options?.enrich;
+    for (const entry of this.entries()) await entry.applySelected(parents, sources, enrich);
+  };
+
+  private fills = (options?: ReadonlyRepositoryMappingOptions<T>): boolean => {
+    if (options?.enrichment) return true;
+    const entries = this.entries();
+    return entries.some((entry) => entry.selected(options?.enrich));
   };
 
   private columnToPropertyName = (row: Cells, mappers: StatementMappers): Cells =>

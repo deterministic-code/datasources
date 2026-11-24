@@ -65,7 +65,7 @@ public sealed class Api
                 "POST /categories" => Post(categories, StampCategory(Read<Category>(body))),
                 "PUT /categories" => Put(categories, query, StampCategory(Read<Category>(body))),
                 "DELETE /categories" => Delete(categories, query),
-                "GET /games" => Get(games, query, ["Id", "Name"]),
+                "GET /games" => GetGames(query),
                 "POST /games" => Post(games, StampGame(Read<Game>(body))),
                 "PUT /games" => Put(games, query, StampGame(Read<Game>(body))),
                 "DELETE /games" => Delete(games, query),
@@ -103,6 +103,19 @@ public sealed class Api
         {
             return (400, error.Message);
         }
+    }
+
+    async Task<(int Status, string Body)> GetGames(Dictionary<string, string> query)
+    {
+        var options = new ReadonlyRepositoryMappingOptions<Game> { Enrich = EnrichmentSelection.Only("Settings") };
+        var id = query.GetValueOrDefault("id") ?? "";
+        var name = query.GetValueOrDefault("name") ?? "";
+        if (id.Length > 0 && name.Length == 0)
+        {
+            var game = await games.ReadSingle(new Where(new Datasources.Operator.Equals("Id", long.Parse(id))), options);
+            return (200, JsonObject.ToString(game is null ? new List<Game>() : new List<Game> { game }));
+        }
+        return (200, JsonObject.ToString(await List(games, WhereOf(query, ["Id", "Name"]), options)));
     }
 
     async Task<(int Status, string Body)> GetCategories(Dictionary<string, string> query)
@@ -231,10 +244,10 @@ public sealed class Api
         else if (row is ItemLink link) link.Id = id;
     }
 
-    static async Task<List<T>> List<T>(IReadonlyRepository<T> repo, IWhere? query)
+    static async Task<List<T>> List<T>(IReadonlyRepository<T> repo, IWhere? query, ReadonlyRepositoryMappingOptions<T>? options = null)
     {
         var rows = new List<T>();
-        await foreach (var row in query is null ? repo.Read() : repo.Read(query)) rows.Add(row);
+        await foreach (var row in query is null ? repo.Read(options: options) : repo.Read(query, options)) rows.Add(row);
         return rows;
     }
 

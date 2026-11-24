@@ -8,8 +8,10 @@ use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
 use futures_util::TryStreamExt;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+const DEFAULT_FILL_BATCH_SIZE: usize = 500;
 
 #[async_trait]
 pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + Sync {
@@ -45,19 +47,24 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        let mut cache: HashMap<String, Option<TRelated>> = HashMap::new();
-        for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(cache_key) = match_key(parent, enrichment, source_at(sources, index)) else {
+        let loaded = load_by_keys(
+            via,
+            &enrichment.related_key,
+            &distinct_keys(parents, sources, enrichment),
+            self.fill_batch_size(),
+        )
+        .await?;
+        let mut index = HashMap::new();
+        for related in loaded {
+            if let Some(cache_key) = row_match_key(&related, enrichment) {
+                index.entry(cache_key).or_insert(related);
+            }
+        }
+        for (index_i, parent) in parents.iter_mut().enumerate() {
+            let Some(cache_key) = match_key(parent, enrichment, source_at(sources, index_i)) else {
                 continue;
             };
-            if !cache.contains_key(&cache_key) {
-                let Some(clause) = match_where(parent, enrichment, source_at(sources, index)) else {
-                    continue;
-                };
-                let related = via.read_single_where(&clause, None).await?;
-                cache.insert(cache_key.clone(), related);
-            }
-            let Some(related) = cache.get(&cache_key).cloned().flatten() else {
+            let Some(related) = index.get(&cache_key).cloned() else {
                 continue;
             };
             match enrichment.related_property.as_deref() {
@@ -79,11 +86,21 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(clause) = match_where(parent, enrichment, source_at(sources, index)) else {
+        let index = group(
+            load_by_keys(
+                via,
+                &enrichment.related_key,
+                &distinct_keys(parents, sources, enrichment),
+                self.fill_batch_size(),
+            )
+            .await?,
+            enrichment,
+        );
+        for (index_i, parent) in parents.iter_mut().enumerate() {
+            let Some(cache_key) = match_key(parent, enrichment, source_at(sources, index_i)) else {
                 continue;
             };
-            let related = via.read_where(&clause, None).try_collect::<Vec<_>>().await?;
+            let related = index.get(&cache_key).cloned().unwrap_or_default();
             assign_related(parent, &enrichment.destination_property, related)?;
         }
         Ok(())
@@ -96,7 +113,30 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        apply_dictionary(via, enrichment, parents, sources).await
+        let schema = via.schema().clone();
+        let index = group(
+            load_by_keys(
+                via,
+                &enrichment.related_key,
+                &distinct_keys(parents, sources, enrichment),
+                self.fill_batch_size(),
+            )
+            .await?,
+            enrichment,
+        );
+        for (index_i, parent) in parents.iter_mut().enumerate() {
+            let Some(cache_key) = match_key(parent, enrichment, source_at(sources, index_i)) else {
+                continue;
+            };
+            let related = index.get(&cache_key).cloned().unwrap_or_default();
+            let rows = shape_dictionary_rows(related, enrichment, &schema)?;
+            parent.set_payload(&enrichment.destination_property, rows)?;
+        }
+        Ok(())
+    }
+
+    fn fill_batch_size(&self) -> usize {
+        DEFAULT_FILL_BATCH_SIZE
     }
 
     fn linked_batch_size(&self) -> Option<usize> {
@@ -104,21 +144,59 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
     }
 }
 
-async fn apply_dictionary<T: Entity, TRelated: Entity>(
-    via: Arc<dyn IReadonlyRepository<TRelated>>,
-    enrichment: &Enrichment,
-    parents: &mut Vec<T>,
+pub(crate) async fn load_by_keys<TItem: Entity>(
+    via: Arc<dyn IReadonlyRepository<TItem>>,
+    column: &str,
+    keys: &[Value],
+    batch_size: usize,
+) -> Result<Vec<TItem>> {
+    let mut related = Vec::new();
+    if keys.is_empty() {
+        return Ok(related);
+    }
+    for chunk in keys.chunks(batch_size.max(1)) {
+        let loaded = via
+            .read_where(
+                &Where::new(Operator::in_list(column.to_string(), chunk.to_vec())),
+                None,
+            )
+            .try_collect::<Vec<_>>()
+            .await?;
+        related.extend(loaded);
+    }
+    Ok(related)
+}
+
+pub(crate) fn distinct_keys<T: Entity>(
+    parents: &[T],
     sources: Option<&[Option<Row>]>,
-) -> Result<()> {
-    for (index, parent) in parents.iter_mut().enumerate() {
-        let Some(clause) = match_where(parent, enrichment, source_at(sources, index)) else {
+    enrichment: &Enrichment,
+) -> Vec<Value> {
+    let mut keys = Vec::new();
+    let mut seen = HashSet::new();
+    for (index, parent) in parents.iter().enumerate() {
+        let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
+        else {
             continue;
         };
-        let related = via.read_where(&clause, None).try_collect::<Vec<_>>().await?;
-        let rows = shape_dictionary_rows(related, enrichment, via.schema())?;
-        parent.set_payload(&enrichment.destination_property, rows)?;
+        if seen.insert(key_of(&key)) {
+            keys.push(key);
+        }
     }
-    Ok(())
+    keys
+}
+
+pub(crate) fn group<TRelated: Entity>(
+    items: Vec<TRelated>,
+    enrichment: &Enrichment,
+) -> HashMap<String, Vec<TRelated>> {
+    let mut index: HashMap<String, Vec<TRelated>> = HashMap::new();
+    for related in items {
+        if let Some(cache_key) = row_match_key(&related, enrichment) {
+            index.entry(cache_key).or_default().push(related);
+        }
+    }
+    index
 }
 
 pub(crate) fn shape_dictionary_rows<TRelated: Entity>(
@@ -227,18 +305,6 @@ pub(crate) fn where_equals(pairs: impl IntoIterator<Item = (String, Value)>) -> 
         });
     }
     condition.map(Where::new)
-}
-
-pub(crate) fn match_where<T: Entity>(
-    parent: &T,
-    enrichment: &Enrichment,
-    source: Option<&Row>,
-) -> Option<Where> {
-    let mut pairs = Vec::new();
-    for (source_name, related) in enrichment.pairs() {
-        pairs.push((related, source_key_of(parent, &source_name, source)?));
-    }
-    where_equals(pairs)
 }
 
 pub(crate) fn match_key<T: Entity>(

@@ -1,6 +1,6 @@
 # DefaultReadonlyEnrichmentStrategy
 
-Default read fill. A lookup reads one related row per distinct key and caches it. A list reads the related rows for that parent key. A link reads the junction, then each related row.
+Default read fill. Lookups, lists, and dictionaries load distinct parent keys with a chunked `IN` query. A link reads the junction, then each related row.
 
 ## Classes
 
@@ -28,7 +28,7 @@ constructor()
 
 ##### apply(via, enrichment, parents, sources?)
 
-Fills a lookup from a cached related row, or a list from the rows for that parent key.
+Fills lookups, lists, and dictionaries from chunked `IN` reads of the related repository.
 
 ```typescript
 apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
@@ -80,7 +80,7 @@ public DefaultReadonlyEnrichmentStrategy()
 
 ##### Apply(via, enrichment, parents, sources)
 
-Fills a lookup from a cached related row, or a list from the rows for that parent key.
+Fills lookups, lists, and dictionaries from chunked `IN` reads of the related repository.
 
 ```csharp
 public virtual Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
@@ -122,7 +122,7 @@ Uses the default methods on [ReadonlyEnrichmentStrategy](./i-readonly-enrichment
 
 ##### apply(via, enrichment, parents, sources)
 
-Fills a lookup from a cached related row, or a list from the rows for that parent key.
+Fills lookups, lists, and dictionaries from chunked `IN` reads of the related repository.
 
 ```rust
 async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
@@ -154,7 +154,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IR
 
 ## Remarks
 
-[IEnriched](./i-enriched.md) uses this strategy when the call omits one. A missing related row leaves the destination unset. [HashsetOptimizedReadonlyEnrichmentStrategy](./hashset-optimized-readonly-enrichment-strategy.md) replaces the per-key reads with one `IN` query.
+[IEnriched](./i-enriched.md) uses [LoadLevelOrderReadonlyEnrichmentStrategy](./load-level-order-readonly-enrichment-strategy.md) when the call omits a strategy. Pass this type to keep linked fills per-parent. Lookups, lists, and dictionaries still use chunked `IN` reads. Zero keys issue zero queries. A missing lookup is skipped. A missing list or dictionary is empty. [HashsetOptimizedReadonlyEnrichmentStrategy](./hashset-optimized-readonly-enrichment-strategy.md) batches lookups and lists without chunking.
 
 ## Examples
 

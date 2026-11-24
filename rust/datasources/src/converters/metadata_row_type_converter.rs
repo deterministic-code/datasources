@@ -202,7 +202,7 @@ pub(crate) fn set_value<'a>(
 ) -> Result<Partial<'a>> {
     let cell = match assignable(cell, shape, coerce_id) {
         true => cell.clone(),
-        false => match coerced(cell, shape, coerce_id) {
+        false => match coerced(cell, shape, coerce_id).or_else(|| changed(cell, shape, coerce_id)) {
             Some(cell) => cell,
             None => return partial.set_default().map_err(reflect),
         },

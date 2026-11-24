@@ -7,7 +7,7 @@ Strategies that fill related fields on read and write nested rows or bulk lists.
 - [IEnriched](./i-enriched.md) — registers a related fill
 - [Enrichment](./enrichment.md) — one related fill
 - [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md) — fills parents on read
-- [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md) — reads each related key, and caches lookups
+- [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md) — chunked `IN` for lookups, lists, and dictionaries; per-parent linked fills
 - [HashsetOptimizedReadonlyEnrichmentStrategy](./hashset-optimized-readonly-enrichment-strategy.md) — one `IN` query for the key set
 - [NestedToObjectEnrichmentStrategy](./nested-to-object-enrichment-strategy.md) — collapses join rows
 - [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) — writes nested rows with the parent

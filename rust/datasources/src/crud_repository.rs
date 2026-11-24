@@ -6,7 +6,7 @@ use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
 use crate::entity::Entity;
-use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+use crate::load_level_order_readonly_enrichment_strategy::LoadLevelOrderReadonlyEnrichmentStrategy;
 use crate::converters::SchemaObject;
 use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
@@ -144,7 +144,7 @@ impl<T: Entity> CRUDRepository<T> {
         via: impl EnrichmentVia<TRelated>,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>>,
     ) -> &mut Self {
-        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        let strategy = strategy.unwrap_or_else(|| Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new()));
         let (via, persist) = via.into_repos();
         self.readonly
             .enrichments
@@ -161,7 +161,7 @@ impl<T: Entity> CRUDRepository<T> {
         link: Arc<dyn ICRUDRepository<TLink>>,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>>,
     ) -> &mut Self {
-        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        let strategy = strategy.unwrap_or_else(|| Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new()));
         let (via, _) = via.into_repos();
         self.readonly
             .enrichments

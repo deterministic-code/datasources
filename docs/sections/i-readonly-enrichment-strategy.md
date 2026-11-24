@@ -1,6 +1,6 @@
 # IReadonlyEnrichmentStrategy
 
-Fills each parent from a related repository. [IEnriched](./i-enriched.md) uses one strategy per edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md).
+Fills each parent from a related repository. [IEnriched](./i-enriched.md) uses one strategy per edge. Omitted uses [LoadLevelOrderReadonlyEnrichmentStrategy](./load-level-order-readonly-enrichment-strategy.md).
 
 ## Classes
 
@@ -111,7 +111,7 @@ async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment
 
 ##### apply_object(via, enrichment, parents, sources)
 
-Fills a scalar related value. The default reads one related row per distinct key.
+Fills a scalar related value. The default loads distinct keys with a chunked `IN` query.
 
 ```rust
 async fn apply_object(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
@@ -126,7 +126,7 @@ async fn apply_object(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enr
 
 ##### apply_list(via, enrichment, parents, sources)
 
-Fills a list. The default reads the related rows for each parent key.
+Fills a list. The default loads distinct keys with a chunked `IN` query.
 
 ```rust
 async fn apply_list(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
@@ -141,7 +141,7 @@ async fn apply_list(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enric
 
 ##### apply_dictionary(via, enrichment, parents, sources)
 
-Fills a dictionary. The default reads the related rows for each parent key.
+Fills a dictionary. The default loads distinct keys with a chunked `IN` query.
 
 ```rust
 async fn apply_dictionary(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
@@ -163,11 +163,21 @@ fn linked_batch_size(&self) -> Option<usize>
 ```
 
 **Returns** `Option<usize>`
+
+##### fill_batch_size()
+
+Maximum keys per `IN` list for lookups, lists, and dictionaries. Default is 500.
+
+```rust
+fn fill_batch_size(&self) -> usize
+```
+
+**Returns** `usize`
 :::
 
 ## Remarks
 
-Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the object, list, dictionary, and linked fills on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Rust overrides `apply_object`, `apply_list`, and `apply_dictionary` on this trait. Linked batching uses `linked_batch_size`.
+Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `List` is walked. A `RelatedProperty` scalar is not. Lookups, lists, and dictionaries use chunked `IN` reads. Linked fills stay per-parent unless [LoadLevelOrderReadonlyEnrichmentStrategy](./load-level-order-readonly-enrichment-strategy.md) is chosen. Rust `fill_batch_size` and `linked_batch_size` set those chunk sizes.
 
 ## Examples
 

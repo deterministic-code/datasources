@@ -36,7 +36,7 @@ addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepos
 | --- | --- |
 | `enrichment` | [Enrichment](#) |
 | `via` | related [IReadonlyRepository](readonly-repository.md) |
-| `strategy` | optional [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](docs/sections/default-readonly-enrichment-strategy.md) |
+| `strategy` | optional [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md) for this edge. Omitted uses [LoadLevelOrderReadonlyEnrichmentStrategy](docs/sections/load-level-order-readonly-enrichment-strategy.md) |
 
 **Returns**
 
@@ -72,7 +72,7 @@ IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TR
 | --- | --- |
 | `enrichment` | [Enrichment](#) |
 | `via` | related [IReadonlyRepository](readonly-repository.md) |
-| `strategy` | optional [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](docs/sections/default-readonly-enrichment-strategy.md) |
+| `strategy` | optional [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md) for this edge. Omitted uses [LoadLevelOrderReadonlyEnrichmentStrategy](docs/sections/load-level-order-readonly-enrichment-strategy.md) |
 
 **Returns**
 
@@ -108,7 +108,7 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 | --- | --- |
 | `enrichment` | [Enrichment](#) |
 | `via` | related [IReadonlyRepository](readonly-repository.md). The readonly path keeps the read repository only |
-| `strategy` | optional [ReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md) for this edge. Omitted uses [DefaultReadonlyEnrichmentStrategy](docs/sections/default-readonly-enrichment-strategy.md) |
+| `strategy` | optional [ReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md) for this edge. Omitted uses [LoadLevelOrderReadonlyEnrichmentStrategy](docs/sections/load-level-order-readonly-enrichment-strategy.md) |
 
 **Returns**
 

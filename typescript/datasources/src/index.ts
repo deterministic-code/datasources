@@ -85,6 +85,7 @@ export { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnri
 export { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 export { LoadLevelOrderReadonlyEnrichmentStrategy } from "./LoadLevelOrderReadonlyEnrichmentStrategy.ts";
+export { EnrichmentSelection } from "./EnrichmentSelection.ts";
 export { TreeReadonlyEnrichmentStrategy } from "./TreeReadonlyEnrichmentStrategy.ts";
 export { TreeCreateEnrichmentStrategy } from "./TreeCreateEnrichmentStrategy.ts";
 export { GraphReadonlyEnrichmentStrategy } from "./GraphReadonlyEnrichmentStrategy.ts";
