@@ -11,7 +11,7 @@ use futures_util::TryStreamExt;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-const DEFAULT_FILL_BATCH_SIZE: usize = 500;
+pub(crate) const DEFAULT_FILL_BATCH_SIZE: usize = 500;
 
 #[async_trait]
 pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + Sync {
@@ -140,7 +140,7 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
     }
 
     fn linked_batch_size(&self) -> Option<usize> {
-        None
+        Some(DEFAULT_FILL_BATCH_SIZE)
     }
 }
 
@@ -225,49 +225,6 @@ pub(crate) fn shape_dictionary_rows<TRelated: Entity>(
             Some(row)
         })
         .collect())
-}
-
-pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
-    via: Arc<dyn IReadonlyRepository<TRelated>>,
-    link: Arc<dyn IReadonlyRepository<TLink>>,
-    enrichment: &Enrichment,
-    parents: &mut Vec<T>,
-    sources: Option<&[Option<Row>]>,
-) -> Result<()> {
-    let association = enrichment.association.as_ref().expect("association");
-    for (index, parent) in parents.iter_mut().enumerate() {
-        let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-        else {
-            continue;
-        };
-        let links = link
-            .read_where(
-                &Where::new(Operator::equals(association.parent.clone(), key)),
-                None,
-            )
-            .try_collect::<Vec<_>>()
-            .await?;
-        let mut related = Vec::new();
-        for row in links {
-            let Some(id) = row.cell(&association.related) else {
-                continue;
-            };
-            if let Some(entity) = via
-                .read_single_where(
-                    &Where::new(Operator::equals(
-                        enrichment.related_key.clone(),
-                        id,
-                    )),
-                    None,
-                )
-                .await?
-            {
-                related.push(entity);
-            }
-        }
-        assign_related(parent, &enrichment.destination_property, related)?;
-    }
-    Ok(())
 }
 
 pub(crate) fn source_key_of<T: Entity>(

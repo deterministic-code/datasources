@@ -60,16 +60,16 @@ public abstract class CreateEnrichmentStrategy<T>
 
     internal async Task ResolveLookups(IReadOnlyList<StoredEnrichment> entries, IList<T> items, Row record, Schema schema)
     {
+        foreach (var entry in entries)
+            if (entry is StoredEnrichment<T> { Enrichment: { Association: not null, RelatedProperty: { } linkedBy } } linked)
+                await ResolveLinked(linked, items, linkedBy);
         foreach (var item in items)
         foreach (var entry in entries)
         {
             if (entry is not StoredEnrichment<T> stored || entry.Enrichment.RelatedProperty is not { } related)
                 continue;
             if (entry.Enrichment.Association is not null)
-            {
-                await ResolveLinked(stored, item, related);
                 continue;
-            }
             if (entry.Enrichment.Type is not EnrichmentPropertyType.Object) continue;
             var dest = entry.Enrichment.DestinationProperty;
             var source = entry.Enrichment.SourceProperty;
@@ -86,16 +86,31 @@ public abstract class CreateEnrichmentStrategy<T>
         }
     }
 
-    static async Task ResolveLinked(StoredEnrichment<T> stored, T item, string related)
+    /// <summary>
+    /// Fills the missing related keys of every item's linked rows from their names, with one batched
+    /// lookup per enrichment instead of one per row.
+    /// </summary>
+    static async Task ResolveLinked(StoredEnrichment<T> stored, IList<T> items, string related)
     {
-        foreach (var row in Payload<T, object>(item, stored.Enrichment.DestinationProperty))
+        var enrichment = stored.Enrichment;
+        var rows = items
+            .SelectMany(item => Payload<T, object>(item, enrichment.DestinationProperty))
+            .Where(row => Missing(Value.From(Get(row, enrichment.RelatedKey))))
+            .Select(row => (Row: row, Name: Value.From(Get(row, related))))
+            .Where(pair => !Missing(pair.Name))
+            .ToList();
+        if (rows.Count == 0) return;
+        var names = new List<Value>();
+        var seen = new HashSet<string>();
+        foreach (var pair in rows)
+            if (seen.Add(DefaultReadonlyEnrichmentStrategy<object>.KeyOf(pair.Name)))
+                names.Add(pair.Name);
+        var found = await stored.Read.LookupBatch(related, names, enrichment.RelatedKey);
+        foreach (var (row, name) in rows)
         {
-            if (!Missing(Value.From(Get(row, stored.Enrichment.RelatedKey)))) continue;
-            var name = Value.From(Get(row, related));
-            if (Missing(name)) continue;
-            var id = await stored.Read.Lookup(related, name, stored.Enrichment.RelatedKey)
-                ?? throw new DatasourceException($"Unknown {stored.Enrichment.DestinationProperty} \"{name.ToObject()}\"");
-            Set(row, stored.Enrichment.RelatedKey, id.ToObject());
+            if (!found.TryGetValue(DefaultReadonlyEnrichmentStrategy<object>.KeyOf(name), out var id) || Missing(id))
+                throw new DatasourceException($"Unknown {enrichment.DestinationProperty} \"{name.ToObject()}\"");
+            Set(row, enrichment.RelatedKey, id.ToObject());
         }
     }
 

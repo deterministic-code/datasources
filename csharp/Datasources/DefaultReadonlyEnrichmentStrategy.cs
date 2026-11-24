@@ -27,17 +27,44 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         IReadOnlyList<Row?>? sources = null)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
+        var parentKeys = DistinctKeys(parents, sources, enrichment);
+        var links = await LoadByKeys(link, association.Parent, parentKeys);
+        var relatedIds = new List<Value>();
+        var seen = new HashSet<string>();
+        foreach (var row in links)
+        {
+            if (Get(row!, association.Related) is not { } id) continue;
+            if (seen.Add(KeyOf(id)))
+                relatedIds.Add(Value.From(id));
+        }
+        var relatedById = new Dictionary<string, TRelated>();
+        foreach (var item in await LoadByKeys(via, enrichment.RelatedKey, relatedIds))
+        {
+            if (Get(item!, enrichment.RelatedKey) is { } id)
+                relatedById.TryAdd(KeyOf(id), item);
+        }
+        var linksByParent = new Dictionary<string, List<TLink>>();
+        foreach (var row in links)
+        {
+            if (Get(row!, association.Parent) is not { } parentKey) continue;
+            var cacheKey = KeyOf(parentKey);
+            if (!linksByParent.TryGetValue(cacheKey, out var list))
+                linksByParent[cacheKey] = list = [];
+            list.Add(row);
+        }
         for (var i = 0; i < parents.Count; i++)
         {
             var key = SourceKey(parents[i], enrichment, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
-            await foreach (var row in link.Read(new Where(new Operator.Equals(association.Parent, Value.From(key)))))
+            if (linksByParent.TryGetValue(KeyOf(key), out var rows))
             {
-                if (Get(row!, association.Related) is not { } id) continue;
-                var entity = await via.ReadSingle(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(id))));
-                if (entity is not null)
-                    related.Add(entity);
+                foreach (var row in rows)
+                {
+                    if (Get(row!, association.Related) is not { } id) continue;
+                    if (relatedById.TryGetValue(KeyOf(id), out var entity))
+                        related.Add(entity);
+                }
             }
             Set(parents[i], enrichment.DestinationProperty, related);
         }

@@ -47,16 +47,19 @@ export abstract class CreateEnrichmentStrategy<T> {
   };
 
   async resolveLookups(entries: readonly StoredEnrichment<T>[], items: T[], record: Cells, schema: Schema): Promise<void> {
+    for (const entry of entries) {
+      const { enrichment } = entry;
+      const via = entry.via ?? entry.persist;
+      if (enrichment.relatedProperty && enrichment.association && via)
+        await this.resolveLinked(via, enrichment, items);
+    }
     for (const item of items) {
       for (const entry of entries) {
         const { enrichment } = entry;
         if (!enrichment.relatedProperty) continue;
         const via = entry.via ?? entry.persist;
         if (!via) continue;
-        if (enrichment.association) {
-          await this.resolveLinked(via, enrichment, item);
-          continue;
-        }
+        if (enrichment.association) continue;
         if ((enrichment.type ?? "object") !== "object") continue;
         const dest = enrichment.destinationProperty;
         if (this.presentCell(record[enrichment.sourceProperty])) continue;
@@ -77,25 +80,58 @@ export abstract class CreateEnrichmentStrategy<T> {
     }
   }
 
+  /**
+   * Fills the missing related keys of every item's linked rows from their names, with one batched
+   * lookup per enrichment instead of one per row.
+   */
   private resolveLinked = async <TRelated>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
-    item: T,
+    items: T[],
   ): Promise<void> => {
     const property = enrichment.relatedProperty;
     if (!property) return;
-    for (const related of this.payloadOf<TRelated, T>(item, enrichment.destinationProperty)) {
-      if (this.presentCell(this.getCell(related, enrichment.relatedKey))) continue;
-      const name = this.getCell(related, property);
-      if (!this.presentCell(name)) continue;
-      const found = await via.readSingle(new Where(new Operator.Equals(property, name)));
-      if (!found)
-        throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
-      const id = this.getCell(found, enrichment.relatedKey);
+    const rows: { related: TRelated; name: Scalar }[] = [];
+    for (const item of items)
+      for (const related of this.payloadOf<TRelated, T>(item, enrichment.destinationProperty)) {
+        if (this.presentCell(this.getCell(related, enrichment.relatedKey))) continue;
+        const name = this.getCell(related, property);
+        if (this.presentCell(name)) rows.push({ related, name });
+      }
+    if (rows.length === 0) return;
+    const names = [...new Map(rows.map(({ name }) => [String(name), name])).values()];
+    const found = await this.lookupBatch(via, property, names, enrichment.relatedKey);
+    for (const { related, name } of rows) {
+      const id = found.get(String(name));
       if (!this.presentCell(id))
         throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
       Object.assign(related, { [enrichment.relatedKey]: id });
     }
+  };
+
+  /**
+   * One `IN` read per chunk of names; the first row per name wins, as in a single-row lookup. A name
+   * the batch read does not return falls back to the single-name read, so results match.
+   */
+  protected lookupBatch = async <TRelated>(
+    via: IReadonlyRepository<TRelated>,
+    property: string,
+    names: Scalar[],
+    key: string,
+  ): Promise<Map<string, Scalar | object | undefined>> => {
+    const found = new Map<string, Scalar | object | undefined>();
+    for (let offset = 0; offset < names.length; offset += 500)
+      for await (const item of via.read(new Where(new Operator.In(property, names.slice(offset, offset + 500))))) {
+        const name = this.getCell(item, property);
+        if (name === undefined || name === null || found.has(String(name))) continue;
+        found.set(String(name), this.getCell(item, key));
+      }
+    for (const name of names) {
+      if (found.has(String(name))) continue;
+      const item = await via.readSingle(new Where(new Operator.Equals(property, name)));
+      if (item) found.set(String(name), this.getCell(item, key));
+    }
+    return found;
   };
 
   collectChildren<TChild>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): TChild[] {

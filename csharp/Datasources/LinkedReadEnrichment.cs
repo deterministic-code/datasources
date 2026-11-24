@@ -24,4 +24,7 @@ internal sealed class LinkedReadEnrichment<T, TRelated, TLink> : ReadEnrichment<
         var found = await via.ReadSingle(new Where(new Operator.Equals(property, name)));
         return found is null ? null : Value.From(EnrichmentCells.Get(found, key));
     }
+
+    internal override Task<Dictionary<string, Value>> LookupBatch(string property, IReadOnlyList<Value> names, string key) =>
+        LookupBatchVia(via, property, names, key);
 }

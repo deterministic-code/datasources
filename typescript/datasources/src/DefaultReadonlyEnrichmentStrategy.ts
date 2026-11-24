@@ -41,16 +41,43 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     const association = enrichment.association ?? (() => {
       throw new DatasourceError("Missing association");
     })();
+    const links = await this.loadByKeys(link, association.parent, this.distinctKeys(parents, sources, enrichment));
+    const relatedIds: Scalar[] = [];
+    const seen = new Set<string>();
+    for (const row of links) {
+      const id = this.props(row)[association.related];
+      if (id === undefined || id === null) continue;
+      const identity = this.lookupKey(id);
+      if (identity !== null && typeof identity === "object") continue;
+      const cacheKey = this.keyOf(id);
+      if (seen.has(cacheKey)) continue;
+      seen.add(cacheKey);
+      relatedIds.push(this.scalar(id));
+    }
+    const relatedById = new Map<string, TRelated>();
+    for (const item of await this.loadByKeys(via, enrichment.relatedKey, relatedIds)) {
+      const id = this.props(item)[enrichment.relatedKey];
+      if (id === undefined || id === null) continue;
+      const cacheKey = this.keyOf(id);
+      if (!relatedById.has(cacheKey)) relatedById.set(cacheKey, item);
+    }
+    const linksByParent = new Map<string, TLink[]>();
+    for (const row of links) {
+      const parentKey = this.props(row)[association.parent];
+      if (parentKey === undefined || parentKey === null) continue;
+      const cacheKey = this.keyOf(parentKey);
+      const list = linksByParent.get(cacheKey) ?? [];
+      list.push(row);
+      linksByParent.set(cacheKey, list);
+    }
     for (const [index, parent] of parents.entries()) {
       const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
       const related: TRelated[] = [];
-      for await (const row of link.read(
-        new Where(new Operator.Equals(association.parent, this.scalar(key))),
-      )) {
+      for (const row of linksByParent.get(this.keyOf(key)) ?? []) {
         const id = this.props(row)[association.related];
         if (id === undefined || id === null) continue;
-        const entity = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedKey, id)));
+        const entity = relatedById.get(this.keyOf(id));
         if (entity) related.push(entity);
       }
       Object.assign(parent, { [enrichment.destinationProperty]: related });
