@@ -88,17 +88,23 @@ Drivers for C#. Click a tile for Information, Overrides, TypeConverter, RowTypeC
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
+| `integer` | `10.0d` | `10L` |
 | `integer` | `""` | `FormatException` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `boolean` | `true` | `1L` |
 | `boolean` | `false` | `0L` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
@@ -185,17 +191,24 @@ _None._
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| `binary` | `System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 })` | `new byte[] { 1, 2, 3, 4 }` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `10.0d` | `10L` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `integer` | `""` | `FormatException` |
 | `boolean` | `true` | `1L` |
 | `boolean` | `false` | `0L` |
@@ -280,17 +293,23 @@ _None._
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `10.0d` | `10L` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `integer` | `""` | `FormatException` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `10.5m` | `"10.5"` |
@@ -391,17 +410,23 @@ Drivers for Rust. Click a tile for information, Overrides, type_converter, row_t
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
+| `integer` | `10.0d` | `10L` |
 | `integer` | `""` | `FormatException` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `boolean` | `true` | `1L` |
 | `boolean` | `false` | `0L` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
@@ -488,17 +513,24 @@ _None._
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| `binary` | `System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 })` | `new byte[] { 1, 2, 3, 4 }` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `10.0d` | `10L` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `integer` | `""` | `FormatException` |
 | `boolean` | `true` | `1L` |
 | `boolean` | `false` | `0L` |
@@ -583,17 +615,23 @@ _None._
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `10.0d` | `10L` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `integer` | `""` | `FormatException` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `10.5m` | `"10.5"` |
@@ -694,17 +732,23 @@ Drivers for TypeScript. Click a tile for information, Overrides, typeConverter, 
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
+| `integer` | `10.0d` | `10L` |
 | `integer` | `""` | `FormatException` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `boolean` | `true` | `1L` |
 | `boolean` | `false` | `0L` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
@@ -791,17 +835,24 @@ _None._
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| `binary` | `System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 })` | `new byte[] { 1, 2, 3, 4 }` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `10.0d` | `10L` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `integer` | `""` | `FormatException` |
 | `boolean` | `true` | `1L` |
 | `boolean` | `false` | `0L` |
@@ -886,17 +937,23 @@ _None._
 | `boolean` | `1L` | `true` |
 | `boolean` | `0L` | `false` |
 | `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
+| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `7L` | `"7"` |
 | `decimal` | `10.5d` | `"10.5"` |
 | `decimal` | `"10.50"` | `"10.5"` |
+| `decimal` | `"10.50000000000000"` | `"10.5"` |
 | `decimal` | `0L` | `"0"` |
 | `decimal` | `"0.00"` | `"0"` |
 | `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
 | `integer` | `"10"` | `10L` |
 | `integer` | `"0"` | `0L` |
-| `integer` | `"1.0"` | `FormatException` |
+| `integer` | `10.0d` | `10L` |
+| `integer` | `"1.0"` | `1L` |
+| `integer` | `"10.0"` | `10L` |
+| `integer` | `"10.00000000000000"` | `10L` |
+| `integer` | `"10.50000000000000"` | `FormatException` |
 | `integer` | `""` | `FormatException` |
 | `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `10.5m` | `"10.5"` |
