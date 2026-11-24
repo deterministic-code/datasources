@@ -138,8 +138,8 @@ mod tests {
         ));
         assert_eq!(param_type(&Value::from("AA==")).oid(), 0);
         assert_eq!(param_type(&Value::Binary(vec![0])), Type::BYTEA);
-        assert_eq!(param_type(&Value::Int(1)), Type::INT4);
-        assert_eq!(param_type(&Value::Int(i64::MAX)), Type::INT8);
+        assert_eq!(param_type(&Value::Int(1)).oid(), 0);
+        assert_eq!(param_type(&Value::Int(i64::MAX)).oid(), 0);
         assert_eq!(
             isolation_sql(IsolationLevel::ReadUncommitted),
             "READ UNCOMMITTED"

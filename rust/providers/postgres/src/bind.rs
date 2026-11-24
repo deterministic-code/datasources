@@ -44,8 +44,7 @@ pub fn to_postgres(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<V
 pub fn param_type(value: &Value) -> Type {
     match value {
         Value::Bool(_) => Type::BOOL,
-        Value::Int(number) if *number >= i32::MIN as i64 && *number <= i32::MAX as i64 => Type::INT4,
-        Value::Int(_) => Type::INT8,
+        Value::Int(_) => unspecified(),
         Value::Float(_) => Type::FLOAT8,
         Value::DateTime(_) => Type::TIMESTAMPTZ,
         Value::Uuid(_) => Type::UUID,

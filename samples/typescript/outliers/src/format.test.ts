@@ -45,8 +45,11 @@ describe("format", () => {
     expect(mapLines("create", row)).toContain("map create text_to_binary 0102");
     expect(mapLines("create", row)).toContain("map create binary_to_binary 0102");
     expect(mapLines("create", row)).toContain("map create int_to_boolean true");
-    expect(mapLines("read", mappingCell({ decimalToFloat: 1.2345678901234567 }))).toContain(
-      "map read decimal_to_float 1.23456789",
+    expect(mapLines("read", mappingCell({ decimalToFloat: 1.23456789012346 }))).toContain(
+      "map read decimal_to_float 1.23456789012346",
+    );
+    expect(mapLines("read", mappingCell({ decimalToFloat: Number.POSITIVE_INFINITY }))).toContain(
+      "map read decimal_to_float Infinity",
     );
     expect(mapError("read", '"10.9" is not a long')).toEqual(['map read error "10.9" is not a long']);
     expect(mapLines("create", new MappingCell())).toContain("map create guid_to_guid");

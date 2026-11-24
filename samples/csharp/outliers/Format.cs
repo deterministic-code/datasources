@@ -61,7 +61,7 @@ public static class Format
         yield return ("float_to_float", Text(row.FloatToFloat));
         yield return ("float_to_decimal", Text(row.FloatToDecimal));
         yield return ("decimal_to_integer", Text(row.DecimalToInteger));
-        yield return ("decimal_to_float", row.DecimalToFloat.ToString("F8", CultureInfo.InvariantCulture));
+        yield return ("decimal_to_float", row.DecimalToFloat.ToString("G15", CultureInfo.InvariantCulture));
         yield return ("decimal_to_decimal", Text(row.DecimalToDecimal));
         yield return ("bool_to_boolean", Text(row.BoolToBoolean));
         yield return ("datetime_to_datetime", Text(row.DatetimeToDatetime));

@@ -119,7 +119,7 @@ public class MappingCellConversionsTests
             ["FloatToFloat"] = 10.9,
             ["FloatToDecimal"] = 10.5,
             ["DecimalToInteger"] = 10.00000000000000m,
-            ["DecimalToFloat"] = 1.2345678901234567m,
+            ["DecimalToFloat"] = 1.23456789012346m,
             ["DecimalToDecimal"] = 10.50000000000000m,
             ["BoolToBoolean"] = 1L,
             ["DatetimeToDatetime"] = Opened,
@@ -142,7 +142,7 @@ public class MappingCellConversionsTests
         Assert.Equal(new Value.Float(10.9), row["FloatToFloat"]);
         Assert.Equal(new Value.Text("10.5"), row["FloatToDecimal"]);
         Assert.Equal(new Value.Int(10), row["DecimalToInteger"]);
-        Assert.Equal(new Value.Float((double)1.2345678901234567m), row["DecimalToFloat"]);
+        Assert.Equal(new Value.Float((double)1.23456789012346m), row["DecimalToFloat"]);
         Assert.Equal(new Value.Text("10.5"), row["DecimalToDecimal"]);
         Assert.Equal(new Value.Bool(true), row["BoolToBoolean"]);
         Assert.Equal(new Value.DateTime(Opened), row["DatetimeToDatetime"]);
@@ -162,7 +162,7 @@ public class MappingCellConversionsTests
             ["FloatToInteger"] = 10L,
             ["FloatToDecimal"] = 10.5m,
             ["DecimalToInteger"] = 10L,
-            ["DecimalToFloat"] = 1.2345678901234567,
+            ["DecimalToFloat"] = 1.23456789012346,
             ["DecimalToDecimal"] = 10.50m,
             ["BoolToBoolean"] = false,
             ["DatetimeToDatetime"] = Opened,
@@ -175,7 +175,7 @@ public class MappingCellConversionsTests
         Assert.Equal(new Value.Int(10), stored["FloatToInteger"]);
         Assert.Equal(new Value.Text("10.5"), stored["FloatToDecimal"]);
         Assert.Equal(new Value.Int(10), stored["DecimalToInteger"]);
-        Assert.Equal(new Value.Float(1.2345678901234567), stored["DecimalToFloat"]);
+        Assert.Equal(new Value.Float(1.23456789012346), stored["DecimalToFloat"]);
         Assert.Equal(new Value.Text("10.5"), stored["DecimalToDecimal"]);
         Assert.Equal(new Value.Int(0), stored["BoolToBoolean"]);
         Assert.Equal(new Value.Text("2020-01-02 03:04:05.000"), stored["DatetimeToDatetime"]);

@@ -172,7 +172,7 @@ public static class Mapping
         FloatToFloat = 10.9,
         FloatToDecimal = 10.5m,
         DecimalToInteger = 10,
-        DecimalToFloat = 1.2345678901234567,
+        DecimalToFloat = 1.23456789012346,
         DecimalToDecimal = 10.50m,
         BoolToBoolean = true,
         DatetimeToDatetime = Opened,

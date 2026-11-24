@@ -58,8 +58,8 @@ describe("PostgresRowTypeConverters", () => {
       decimalToInteger: 10,
     });
     expect(() => converter.convert({ decimalToInteger: "10.50000000000000" })).toThrow(/is not a long/);
-    expect(converter.convert({ decimalToFloat: "1.2345678901234567" })).toEqual({
-      decimalToFloat: Number("1.2345678901234567"),
+    expect(converter.convert({ decimalToFloat: "1.23456789012346" })).toEqual({
+      decimalToFloat: 1.23456789012346,
     });
     expect(converter.convert({ intToBoolean: true, boolToBoolean: false })).toEqual({
       intToBoolean: true,

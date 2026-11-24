@@ -38,7 +38,7 @@ mod tests {
         let converter = FloatConverter;
         assert_eq!(converter.convert(&Value::Int(10)).unwrap(), Value::Float(10.0));
         assert_eq!(converter.convert(&Value::Float(10.9)).unwrap(), Value::Float(10.9));
-        let decimal = "1.2345678901234567".parse::<Decimal>().unwrap();
+        let decimal = "1.23456789012346".parse::<Decimal>().unwrap();
         assert_eq!(
             converter.convert(&Value::Decimal(decimal)).unwrap(),
             Value::Float(decimal.to_f64().unwrap())
