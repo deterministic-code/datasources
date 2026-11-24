@@ -13,8 +13,8 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         bool useTransaction = false)
     {
         this.create = create ?? new DefaultCreateEnrichmentStrategy<T>();
-        this.delete = delete ?? new CascadeDeleteEnrichmentStrategy<T>();
-        this.update = update ?? new DefaultUpdateEnrichmentStrategy<T>();
+        this.delete = delete ?? new BatchDeleteEnrichmentStrategy<T>();
+        this.update = update ?? new BatchUpdateEnrichmentStrategy<T>();
         UseTransaction = useTransaction;
     }
 
@@ -68,6 +68,13 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         var stored = (StoredEnrichment<T>)entry;
         if (entry.Enrichment is { Association: { } } bulkAssociation && stored.Link is not null)
         {
+            if (mode is WriteMode.Update)
+            {
+                var linked = parents.Where(parent => !Skip(parent, bulkAssociation.DestinationProperty, mode)).ToList();
+                if (linked.Count > 0)
+                    await stored.Link.WriteMany(bulkAssociation, create, update, delete, mode, linked);
+                return;
+            }
             var link = stored.Link;
             foreach (var parent in parents)
             {
@@ -83,7 +90,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         var ready = parents.Where(parent => !Skip(parent, entry.Enrichment.DestinationProperty, mode)).ToList();
         if (ready.Count == 0) return;
         await Required(stored.Persist, entry.Enrichment.DestinationProperty)
-            .WriteBulk(entry.Enrichment, create, mode, ready);
+            .WriteBulk(entry.Enrichment, create, update, mode, ready);
     }
 
     async Task PersistEntry(StoredEnrichment entry, IList<T> parents, WriteMode mode)
@@ -93,12 +100,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         var stored = (StoredEnrichment<T>)entry;
         if (entry.Enrichment is { Association: { } } enrichment && stored.Link is not null)
         {
-            var link = stored.Link;
-            foreach (var parent in parents)
-            {
-                if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
-                await link.Write(enrichment, create, update, delete, mode, parent);
-            }
+            var ready = parents.Where(parent => !Skip(parent, enrichment.DestinationProperty, mode)).ToList();
+            if (ready.Count > 0)
+                await stored.Link.WriteMany(enrichment, create, update, delete, mode, ready);
             return;
         }
         if (entry.Enrichment is { Type: EnrichmentPropertyType.List, RelatedProperty: not null })
@@ -107,11 +111,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             return;
         var children = entry.Enrichment;
         var persist = Required(stored.Persist, children.DestinationProperty);
-        foreach (var parent in parents)
-        {
-            if (Skip(parent, children.DestinationProperty, mode)) continue;
-            await persist.Write(children, create, update, delete, mode, parent);
-        }
+        var pending = parents.Where(parent => !Skip(parent, children.DestinationProperty, mode)).ToList();
+        if (pending.Count > 0)
+            await persist.WriteMany(children, create, update, delete, mode, pending);
     }
 
     static TWriter Required<TWriter>(TWriter? writer, string into) where TWriter : class =>

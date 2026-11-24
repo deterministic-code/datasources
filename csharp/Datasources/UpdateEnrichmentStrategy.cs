@@ -8,6 +8,22 @@ public abstract class UpdateEnrichmentStrategy<T>
     public abstract Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
         where TChild : new();
 
+    /// <summary>Updates the children of every parent. Loops <see cref="UpdateChildren{TChild}"/>; batching strategies override it.</summary>
+    public virtual async Task UpdateChildrenBatch<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, IReadOnlyList<T> parents)
+        where TChild : new()
+    {
+        foreach (var parent in parents)
+            await UpdateChildren(writer, enrichment, parent);
+    }
+
+    /// <summary>Updates the links of every parent. Loops <see cref="UpdateLinked{TChild}"/>; batching strategies override it.</summary>
+    public virtual async Task UpdateLinkedBatch<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, IReadOnlyList<T> parents)
+        where TChild : new()
+    {
+        foreach (var parent in parents)
+            await UpdateLinked(writer, enrichment, parent);
+    }
+
     protected static List<Value> RelatedIds<TParent>(TParent parent, Enrichment enrichment) =>
         EnrichmentCells.RelatedIds(parent, enrichment);
 

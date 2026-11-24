@@ -1,8 +1,8 @@
-use crate::cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
 use crate::create_enrichment_strategy::{missing, CreateEnrichmentStrategy};
 use crate::datasource_error::DatasourceError;
+use crate::batch_delete_enrichment_strategy::BatchDeleteEnrichmentStrategy;
+use crate::batch_update_enrichment_strategy::BatchUpdateEnrichmentStrategy;
 use crate::default_create_enrichment_strategy::DefaultCreateEnrichmentStrategy;
-use crate::default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
 use crate::delete_enrichment_strategy::DeleteEnrichmentStrategy;
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
@@ -39,8 +39,8 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
     ) -> Self {
         Self {
             create: create.unwrap_or_else(|| Arc::new(DefaultCreateEnrichmentStrategy)),
-            delete: delete.unwrap_or_else(|| Arc::new(CascadeDeleteEnrichmentStrategy)),
-            update: update.unwrap_or_else(|| Arc::new(DefaultUpdateEnrichmentStrategy)),
+            delete: delete.unwrap_or_else(|| Arc::new(BatchDeleteEnrichmentStrategy)),
+            update: update.unwrap_or_else(|| Arc::new(BatchUpdateEnrichmentStrategy)),
             skip_unloaded: false,
             use_transaction,
             entity: PhantomData,
@@ -187,6 +187,20 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
             }
             if enrichment.association.is_some() {
                 if let Some(link) = &entry.link {
+                    if mode == WriteMode::Update {
+                        if let Some(writer) = link.row_writer() {
+                            let mut active: Vec<&mut T> = parents
+                                .iter_mut()
+                                .filter(|parent| {
+                                    !self.skip(parent, &enrichment.destination_property, mode)
+                                })
+                                .collect();
+                            return self
+                                .update
+                                .update_linked_batch(writer, enrichment, &mut active)
+                                .await;
+                        }
+                    }
                     for parent in parents.iter_mut() {
                         if self.skip(parent, &enrichment.destination_property, mode) {
                             continue;
@@ -247,6 +261,20 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                 }
                 return Ok(());
             }
+            if mode == WriteMode::Update {
+                if let Some(writer) = persist.row_writer() {
+                    let mut active: Vec<&mut T> = parents
+                        .iter_mut()
+                        .filter(|parent| {
+                            !self.skip(parent, &enrichment.destination_property, mode)
+                        })
+                        .collect();
+                    return self
+                        .update
+                        .update_children_batch(writer, enrichment, &mut active)
+                        .await;
+                }
+            }
             for parent in parents.iter_mut() {
                 if self.skip(parent, &enrichment.destination_property, mode) {
                     continue;
@@ -273,23 +301,39 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
             }
             if enrichment.association.is_some() {
                 if let Some(link) = entry.link.as_ref() {
-                    for parent in parents.iter_mut() {
-                        if self.skip(parent, &enrichment.destination_property, mode) {
-                            continue;
-                        }
-                        if let Some(writer) = link.row_writer() {
-                            match mode {
-                                WriteMode::Create => {
-                                    self.create.create_linked(writer, enrichment, parent).await?
-                                }
-                                WriteMode::Update => {
-                                    self.update.update_linked(writer, enrichment, parent).await?
-                                }
-                                WriteMode::Delete => {
-                                    self.delete.delete_linked(writer, enrichment, parent).await?
+                    if let Some(writer) = link.row_writer() {
+                        let mut active: Vec<&mut T> = parents
+                            .iter_mut()
+                            .filter(|parent| {
+                                !self.skip(parent, &enrichment.destination_property, mode)
+                            })
+                            .collect();
+                        match mode {
+                            WriteMode::Create => {
+                                for parent in active.iter_mut() {
+                                    self.create
+                                        .create_linked(writer.clone(), enrichment, parent)
+                                        .await?;
                                 }
                             }
-                        } else {
+                            WriteMode::Update => {
+                                self.update
+                                    .update_linked_batch(writer, enrichment, &mut active)
+                                    .await?
+                            }
+                            WriteMode::Delete => {
+                                let view: Vec<&T> =
+                                    active.iter().map(|parent| &**parent).collect();
+                                self.delete
+                                    .delete_linked_batch(writer, enrichment, &view)
+                                    .await?
+                            }
+                        }
+                    } else {
+                        for parent in parents.iter_mut() {
+                            if self.skip(parent, &enrichment.destination_property, mode) {
+                                continue;
+                            }
                             link.write(enrichment, parent, mode).await?;
                         }
                     }
@@ -312,25 +356,38 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                     enrichment.destination_property
                 ))
             })?;
+            if let Some(writer) = persist.row_writer() {
+                let mut active: Vec<&mut T> = parents
+                    .iter_mut()
+                    .filter(|parent| !self.skip(parent, &enrichment.destination_property, mode))
+                    .collect();
+                match mode {
+                    WriteMode::Create => {
+                        for parent in active.iter_mut() {
+                            self.create
+                                .create_children(writer.clone(), enrichment, parent)
+                                .await?;
+                        }
+                    }
+                    WriteMode::Update => {
+                        self.update
+                            .update_children_batch(writer, enrichment, &mut active)
+                            .await?
+                    }
+                    WriteMode::Delete => {
+                        let view: Vec<&T> = active.iter().map(|parent| &**parent).collect();
+                        self.delete
+                            .delete_children_batch(writer, enrichment, &view, self)
+                            .await?
+                    }
+                }
+                return Ok(());
+            }
             for parent in parents.iter_mut() {
                 if self.skip(parent, &enrichment.destination_property, mode) {
                     continue;
                 }
-                if let Some(writer) = persist.row_writer() {
-                    match mode {
-                        WriteMode::Create => {
-                            self.create.create_children(writer, enrichment, parent).await?
-                        }
-                        WriteMode::Update => {
-                            self.update.update_children(writer, enrichment, parent).await?
-                        }
-                        WriteMode::Delete => {
-                            self.delete
-                                .delete_children(writer, enrichment, parent, self)
-                                .await?
-                        }
-                    }
-                } else if mode == WriteMode::Create {
+                if mode == WriteMode::Create {
                     persist
                         .write_create(self.create.as_ref(), enrichment, parent)
                         .await?;

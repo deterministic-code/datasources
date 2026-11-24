@@ -12,6 +12,16 @@ export abstract class UpdateEnrichmentStrategy<T> {
 
   abstract updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
+  /** Updates the children of every parent. Loops `updateChildren`; batching strategies override it. */
+  async updateChildrenBatch<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parents: T[]): Promise<void> {
+    for (const parent of parents) await this.updateChildren(writer, enrichment, parent);
+  }
+
+  /** Updates the links of every parent. Loops `updateLinked`; batching strategies override it. */
+  async updateLinkedBatch<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parents: T[]): Promise<void> {
+    for (const parent of parents) await this.updateLinked(writer, enrichment, parent);
+  }
+
   protected getCell = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
     (item as never as Props)[name];
 

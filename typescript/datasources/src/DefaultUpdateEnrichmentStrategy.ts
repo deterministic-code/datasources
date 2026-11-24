@@ -7,7 +7,16 @@ import { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 
 export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T> {
   async updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
-    const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
+    await this.updateChildrenWith(writer, enrichment, parent, await DeleteEnrichmentStrategy.load(writer, enrichment, parent));
+  }
+
+  /** `updateChildren` for a parent whose current children were already loaded. */
+  async updateChildrenWith<TChild extends object>(
+    writer: ICRUDRepository<TChild>,
+    enrichment: Enrichment,
+    parent: T,
+    existing: TChild[],
+  ): Promise<void> {
     const rows = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer);
     for (const related of rows)
       for (const match of enrichmentMatches(enrichment))
@@ -23,10 +32,20 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
   }
 
   async updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
+    await this.updateLinkedWith(writer, enrichment, parent);
+  }
+
+  /** `updateLinked` for a parent whose current link rows were already loaded (`undefined` loads them). */
+  async updateLinkedWith<TChild extends object>(
+    writer: ICRUDRepository<TChild>,
+    enrichment: Enrichment,
+    parent: T,
+    loaded?: TChild[],
+  ): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
     const parentKey = this.requiredKey(parent, enrichment);
-    const existing = await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey);
+    const existing = loaded ?? (await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey));
     const wanted = this.relatedIds(parent, enrichment);
     const keep = new Set(wanted.map((id) => String(id)));
     for (const row of existing) {

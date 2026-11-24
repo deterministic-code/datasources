@@ -18,15 +18,35 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
   ): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     await deleteNested(existing);
+    await this.deleteExisting(writer, enrichment, parent, existing);
+  }
+
+  /** Deletes already-loaded children of `parent`, without cascading into their children. */
+  async deleteExisting<TChild extends object>(
+    writer: ICRUDRepository<TChild>,
+    enrichment: Enrichment,
+    parent: T,
+    existing: TChild[],
+  ): Promise<void> {
     for (const row of existing) await writer.delete(row, DeleteEnrichmentStrategy.childrenWhere(writer, enrichment, parent));
   }
 
   async deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
+    await this.deleteLinkedWith(writer, enrichment, parent);
+  }
+
+  /** `deleteLinked` for a parent whose current link rows were already loaded (`undefined` loads them). */
+  async deleteLinkedWith<TChild extends object>(
+    writer: ICRUDRepository<TChild>,
+    enrichment: Enrichment,
+    parent: T,
+    loaded?: TChild[],
+  ): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
     const key = get(parent, enrichment.sourceProperty);
     if (key === undefined || key === null || typeof key === "object") return;
-    for (const row of await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, key))
+    for (const row of loaded ?? (await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, key)))
       await writer.delete(
         row,
         DeleteEnrichmentStrategy.linkWhere(association, key, DeleteEnrichmentStrategy.linkKey(get(row, association.related))),
