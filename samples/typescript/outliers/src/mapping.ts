@@ -215,7 +215,7 @@ const seed = (id: number): MappingCell =>
     floatToFloat: 10.9,
     floatToDecimal: "10.5",
     decimalToInteger: 10,
-    decimalToFloat: 1.2345678901234567,
+    decimalToFloat: 1.23456789012346,
     decimalToDecimal: "10.50",
     boolToBoolean: true,
     datetimeToDatetime: opened,

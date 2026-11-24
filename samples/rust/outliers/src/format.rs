@@ -51,6 +51,17 @@ pub fn graph_line(node: &GraphNode) -> String {
     }
 }
 
+pub fn significant_float(value: f64) -> String {
+    if !value.is_finite() {
+        return value.to_string();
+    }
+    if value == 0.0 {
+        return "0".into();
+    }
+    let factor = 10f64.powf(14.0 - value.abs().log10().floor());
+    ((value * factor).round() / factor).to_string()
+}
+
 pub fn map_error(method: &str, message: &str) -> Vec<String> {
     vec![format!("map {method} error {message}")]
 }
@@ -138,5 +149,7 @@ mod tests {
         );
         assert_eq!(map_lines("create", &[("guid_to_guid", String::new())]), vec!["map create guid_to_guid".to_string()]);
         assert_eq!(map_error("read", "\"10.9\" is not a long"), vec!["map read error \"10.9\" is not a long".to_string()]);
+        assert_eq!(significant_float(1.2345678901234567), "1.23456789012346");
+        assert_eq!(significant_float(1.23456789012346), "1.23456789012346");
     }
 }

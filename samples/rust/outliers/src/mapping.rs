@@ -1,4 +1,4 @@
-use crate::format::{map_error, map_lines};
+use crate::format::{map_error, map_lines, significant_float};
 use crate::mapping_cell::MappingCell;
 use datasources::chrono::{TimeZone, Utc};
 use datasources::rust_decimal::Decimal;
@@ -279,7 +279,7 @@ fn seed(id: i64) -> MappingCell {
         float_to_float: 10.9,
         float_to_decimal: Decimal::new(105, 1),
         decimal_to_integer: 10,
-        decimal_to_float: 1.2345678901234567,
+        decimal_to_float: 1.23456789012346,
         decimal_to_decimal: Decimal::new(1050, 2),
         bool_to_boolean: true,
         datetime_to_datetime: opened,
@@ -317,7 +317,7 @@ fn pairs(row: &MappingCell) -> Vec<(&'static str, String)> {
         ("float_to_float", row.float_to_float.to_string()),
         ("float_to_decimal", row.float_to_decimal.to_string()),
         ("decimal_to_integer", row.decimal_to_integer.to_string()),
-        ("decimal_to_float", row.decimal_to_float.to_string()),
+        ("decimal_to_float", significant_float(row.decimal_to_float)),
         ("decimal_to_decimal", row.decimal_to_decimal.to_string()),
         ("bool_to_boolean", if row.bool_to_boolean { "true".into() } else { "false".into() }),
         ("datetime_to_datetime", date(row.datetime_to_datetime)),

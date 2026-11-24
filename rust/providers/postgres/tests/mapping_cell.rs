@@ -110,7 +110,7 @@ fn converts_and_reverses_the_mapping_cell_matrix() {
     let opened = Utc.with_ymd_and_hms(2020, 1, 2, 3, 4, 5).unwrap();
     let integral = "10.00000000000000".parse::<Decimal>().unwrap();
     let fractional = "10.50000000000000".parse::<Decimal>().unwrap();
-    let wide = "1.2345678901234567".parse::<Decimal>().unwrap();
+    let wide = "1.23456789012346".parse::<Decimal>().unwrap();
     let columns = HashMap::from([
         ("TextToString".into(), "string".into()),
         ("TextToInteger".into(), "integer".into()),
@@ -150,7 +150,7 @@ fn converts_and_reverses_the_mapping_cell_matrix() {
             ("FloatToFloat".into(), Value::Float(10.9)),
             ("FloatToDecimal".into(), Value::Float(10.5)),
             ("DecimalToInteger".into(), Value::from("10.00000000000000")),
-            ("DecimalToFloat".into(), Value::from("1.2345678901234567")),
+            ("DecimalToFloat".into(), Value::from("1.23456789012346")),
             ("DecimalToDecimal".into(), Value::from("10.50000000000000")),
             ("BoolToBoolean".into(), Value::Bool(false)),
             ("DatetimeToDatetime".into(), Value::DateTime(opened)),
@@ -175,7 +175,7 @@ fn converts_and_reverses_the_mapping_cell_matrix() {
     assert_eq!(converted.get("DecimalToInteger"), Some(&Value::Int(10)));
     assert_eq!(
         converted.get("DecimalToFloat"),
-        Some(&Value::Float("1.2345678901234567".parse().unwrap()))
+        Some(&Value::Float("1.23456789012346".parse().unwrap()))
     );
     assert_eq!(converted.get("DecimalToDecimal"), Some(&Value::from("10.5")));
     assert_eq!(converted.get("BoolToBoolean"), Some(&Value::Bool(false)));

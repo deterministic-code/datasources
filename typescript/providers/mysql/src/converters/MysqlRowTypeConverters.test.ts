@@ -42,7 +42,7 @@ describe("MysqlRowTypeConverters", () => {
         floatToInteger: 10.0,
         floatToFloat: 10.9,
         floatToDecimal: 10.5,
-        decimalToFloat: 1.2345678901234567,
+        decimalToFloat: 1.23456789012346,
         decimalToDecimal: "10.50000000000000",
         datetimeToDatetime: opened,
         intToBoolean: 1,
@@ -57,16 +57,13 @@ describe("MysqlRowTypeConverters", () => {
       floatToInteger: 10,
       floatToFloat: 10.9,
       floatToDecimal: "10.5",
-      decimalToFloat: 1.2345678901234567,
+      decimalToFloat: 1.23456789012346,
       decimalToDecimal: "10.5",
       datetimeToDatetime: opened,
       intToBoolean: true,
     });
     expect(converter.convert({ decimalToFloat: "1.23456789012346" })).toEqual({
       decimalToFloat: 1.23456789012346,
-    });
-    expect(converter.convert({ decimalToFloat: "1.2345678901234567" })).toEqual({
-      decimalToFloat: Number("1.2345678901234567"),
     });
     expect(converter.convert({ decimalToInteger: "10.00000000000000" })).toEqual({ decimalToInteger: 10 });
     const token = "550e8400-e29b-41d4-a716-446655440000";

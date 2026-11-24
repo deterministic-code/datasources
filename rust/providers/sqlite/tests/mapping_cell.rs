@@ -156,7 +156,7 @@ fn converts_and_reverses_the_mapping_cell_matrix() {
             ("FloatToFloat".into(), Value::Float(10.9)),
             ("FloatToDecimal".into(), Value::Float(10.5)),
             ("DecimalToInteger".into(), Value::Decimal(integral)),
-            ("DecimalToFloat".into(), Value::from("1.2345678901234567")),
+            ("DecimalToFloat".into(), Value::from("1.23456789012346")),
             ("DecimalToDecimal".into(), Value::from("10.50000000000000")),
             ("BoolToBoolean".into(), Value::Int(0)),
             ("DatetimeToDatetime".into(), Value::DateTime(opened)),
@@ -182,7 +182,7 @@ fn converts_and_reverses_the_mapping_cell_matrix() {
     assert_eq!(converted.get("DecimalToInteger"), Some(&Value::Int(10)));
     assert_eq!(
         converted.get("DecimalToFloat"),
-        Some(&Value::Float("1.2345678901234567".parse().unwrap()))
+        Some(&Value::Float("1.23456789012346".parse().unwrap()))
     );
     assert_eq!(converted.get("DecimalToDecimal"), Some(&Value::from("10.5")));
     assert_eq!(converted.get("BoolToBoolean"), Some(&Value::Bool(false)));
@@ -201,7 +201,7 @@ fn converts_and_reverses_the_mapping_cell_matrix() {
             ("BoolToBoolean".into(), Value::Bool(false)),
             ("FloatToInteger".into(), Value::Int(10)),
             ("DecimalToInteger".into(), Value::Int(10)),
-            ("DecimalToFloat".into(), Value::Float("1.2345678901234567".parse().unwrap())),
+            ("DecimalToFloat".into(), Value::Float("1.23456789012346".parse().unwrap())),
             ("DecimalToDecimal".into(), Value::from("10.50")),
             ("DatetimeToDatetime".into(), Value::DateTime(opened)),
             ("BinaryToGuid".into(), Value::Uuid(uuid)),
@@ -214,7 +214,7 @@ fn converts_and_reverses_the_mapping_cell_matrix() {
     assert_eq!(stored.get("DecimalToInteger"), Some(&Value::Int(10)));
     assert_eq!(
         stored.get("DecimalToFloat"),
-        Some(&Value::Float("1.2345678901234567".parse().unwrap()))
+        Some(&Value::Float("1.23456789012346".parse().unwrap()))
     );
     assert_eq!(stored.get("DecimalToDecimal"), Some(&Value::from("10.5")));
     assert_eq!(

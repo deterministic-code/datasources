@@ -6,7 +6,7 @@ map create binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map create bool_to_boolean true
 map create datetime_to_datetime 2020-01-02T03:04:05.000Z
 map create decimal_to_decimal 10.50
-map create decimal_to_float 1.23456789
+map create decimal_to_float 1.23456789012346
 map create decimal_to_integer 10
 map create float_to_decimal 10.5
 map create float_to_float 10.9
@@ -29,7 +29,7 @@ map create_again binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map create_again bool_to_boolean true
 map create_again datetime_to_datetime 2020-01-02T03:04:05.000Z
 map create_again decimal_to_decimal 10.50
-map create_again decimal_to_float 1.23456789
+map create_again decimal_to_float 1.23456789012346
 map create_again decimal_to_integer 10
 map create_again float_to_decimal 10.5
 map create_again float_to_float 10.9
@@ -52,7 +52,7 @@ map delete binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map delete bool_to_boolean true
 map delete datetime_to_datetime 2020-01-02T03:04:05.000Z
 map delete decimal_to_decimal 10.50
-map delete decimal_to_float 1.23456789
+map delete decimal_to_float 1.23456789012346
 map delete decimal_to_integer 10
 map delete float_to_decimal 10.5
 map delete float_to_float 10.9
@@ -75,7 +75,7 @@ map delete_where binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map delete_where bool_to_boolean true
 map delete_where datetime_to_datetime 2020-01-02T03:04:05.000Z
 map delete_where decimal_to_decimal 10.50
-map delete_where decimal_to_float 1.23456789
+map delete_where decimal_to_float 1.23456789012346
 map delete_where decimal_to_integer 10
 map delete_where float_to_decimal 10.5
 map delete_where float_to_float 10.9
@@ -98,7 +98,7 @@ map read binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read bool_to_boolean true
 map read datetime_to_datetime 2020-01-02T03:04:05.000Z
 map read decimal_to_decimal 10.5
-map read decimal_to_float 1.23456789
+map read decimal_to_float 1.23456789012346
 map read decimal_to_integer 10
 map read float_to_decimal 10.5
 map read float_to_float 10.9
@@ -121,7 +121,7 @@ map read_single binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single bool_to_boolean true
 map read_single datetime_to_datetime 2020-01-02T03:04:05.000Z
 map read_single decimal_to_decimal 10.5
-map read_single decimal_to_float 1.23456789
+map read_single decimal_to_float 1.23456789012346
 map read_single decimal_to_integer 10
 map read_single float_to_decimal 10.5
 map read_single float_to_float 10.9
@@ -144,7 +144,7 @@ map read_single_by_id binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id bool_to_boolean true
 map read_single_by_id datetime_to_datetime 2020-01-02T03:04:05.000Z
 map read_single_by_id decimal_to_decimal 10.5
-map read_single_by_id decimal_to_float 1.23456789
+map read_single_by_id decimal_to_float 1.23456789012346
 map read_single_by_id decimal_to_integer 10
 map read_single_by_id float_to_decimal 10.5
 map read_single_by_id float_to_float 10.9
@@ -167,7 +167,7 @@ map read_single_by_id_row binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single_by_id_row bool_to_boolean true
 map read_single_by_id_row datetime_to_datetime 2020-01-02T03:04:05.000Z
 map read_single_by_id_row decimal_to_decimal 10.5
-map read_single_by_id_row decimal_to_float 1.23456789
+map read_single_by_id_row decimal_to_float 1.23456789012346
 map read_single_by_id_row decimal_to_integer 10
 map read_single_by_id_row float_to_decimal 10.5
 map read_single_by_id_row float_to_float 10.9
@@ -190,7 +190,7 @@ map read_single_where binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_single_where bool_to_boolean true
 map read_single_where datetime_to_datetime 2020-01-02T03:04:05.000Z
 map read_single_where decimal_to_decimal 10.5
-map read_single_where decimal_to_float 1.23456789
+map read_single_where decimal_to_float 1.23456789012346
 map read_single_where decimal_to_integer 10
 map read_single_where float_to_decimal 10.5
 map read_single_where float_to_float 10.9
@@ -213,7 +213,7 @@ map read_where binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map read_where bool_to_boolean true
 map read_where datetime_to_datetime 2020-01-02T03:04:05.000Z
 map read_where decimal_to_decimal 10.5
-map read_where decimal_to_float 1.23456789
+map read_where decimal_to_float 1.23456789012346
 map read_where decimal_to_integer 10
 map read_where float_to_decimal 10.5
 map read_where float_to_float 10.9
@@ -236,7 +236,7 @@ map update binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map update bool_to_boolean true
 map update datetime_to_datetime 2020-01-02T03:04:05.000Z
 map update decimal_to_decimal 10.5
-map update decimal_to_float 1.23456789
+map update decimal_to_float 1.23456789012346
 map update decimal_to_integer 10
 map update float_to_decimal 10.5
 map update float_to_float 10.9
@@ -259,7 +259,7 @@ map update_where binary_to_guid 550e8400-e29b-41d4-a716-446655440000
 map update_where bool_to_boolean true
 map update_where datetime_to_datetime 2020-01-02T03:04:05.000Z
 map update_where decimal_to_decimal 10.5
-map update_where decimal_to_float 1.23456789
+map update_where decimal_to_float 1.23456789012346
 map update_where decimal_to_integer 10
 map update_where float_to_decimal 10.5
 map update_where float_to_float 10.9
