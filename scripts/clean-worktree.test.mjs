@@ -16,6 +16,8 @@ test("clean removes disposable outputs and keeps tracked and skipped paths", () 
   const root = mkdtempSync(join(tmpdir(), "clean-worktree-"));
   const gone = [
     "scripts/artifacts/e2e-matrix/index.html",
+    "performance/mapping_comparison/reports/index.html",
+    ".tmp/node-compile-cache/x",
     "csharp/artifacts/Datasources.1.0.0.nupkg",
     "docs/evals/workspace/iteration-1/id/with_skill/a.ts",
     "docs/.vitepress/cache/x",

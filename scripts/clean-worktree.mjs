@@ -6,6 +6,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const SKIP = new Set([".git", "node_modules", "target", "bin", "obj", "deterministic-generators-common"]);
 const DROP_DIRS = [
   "scripts/artifacts",
+  "performance/mapping_comparison/reports",
+  ".tmp",
   "csharp/artifacts",
   "dest-cli",
   "docs/evals/workspace",

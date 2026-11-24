@@ -17,3 +17,4 @@ app.db-wal
 app.db-shm
 app.db-journal
 var/folders/
+**/.migraters.yaml

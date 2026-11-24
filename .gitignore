@@ -27,8 +27,11 @@ coverage.cobertura.xml
 coverage.info
 *.nupkg
 .deterministic-cache/
+.tmp/
+.cursor/plans/
 file:*
 scripts/artifacts/
+performance/mapping_comparison/reports/
 samples/**/sql/
 performance/**/sql/
 performance/**/generated/
@@ -36,6 +39,7 @@ performance/**/node_modules/
 performance/**/app.sqlite
 performance/**/.env
 performance/**/.migraters.yaml
+samples/**/.migraters.yaml
 performance/**/package-lock.json
 csharp/artifacts/
 dest-cli/
