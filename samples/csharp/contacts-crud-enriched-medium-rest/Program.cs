@@ -216,6 +216,35 @@ for (var index = 0; index < createdBulk.Count; index++)
     RequireBulkContact(loadedAll.Single(item => item.Id == created.Id), index);
 }
 
+var strategy = new LoadLevelOrderReadonlyEnrichmentStrategy<Contact>().WithBatchSize(3);
+var loadLevel = new ReadonlyRepository<Contact>(connection, ContactsRepository.Options(connection));
+var loadLevelAddresses = new AddressesRepository(connection);
+var loadLevelPhones = new PhonesRepository(connection);
+var loadLevelSettings = new ContactSettingsRepository(connection);
+var loadLevelPrefs = new ContactPreferencesRepository(connection);
+var loadLevelSources = new ContactSourcesRepository(connection);
+loadLevel.AddEnriched(new("Addresses", "Id", "ContactId", Type: EnrichmentPropertyType.List), loadLevelAddresses, strategy);
+loadLevel.AddEnriched(new("Phones", "Id", "ContactId", Type: EnrichmentPropertyType.List), loadLevelPhones, strategy);
+loadLevel.AddEnriched(new("Settings", "Id", "ContactId", "Value", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), loadLevelSettings, strategy);
+loadLevel.AddEnriched(new("Prefs", "Id", "ContactId", Type: EnrichmentPropertyType.Dictionary, DictionaryKey: "Key"), loadLevelPrefs, strategy);
+loadLevel.AddEnriched(new("ContactSourceName", "ContactSourceId", "Id", "Name"), loadLevelSources, strategy);
+loadLevel.AddEnriched(new("Description", "ContactSourceId", "Id", "Description"), loadLevelSources, strategy);
+var loadLevelAda = await loadLevel.ReadSingle(new Where(new Datasources.Operator.Equals("Id", after.Id)));
+if (loadLevelAda is null || loadLevelAda.FirstName != "Ada Byron"
+    || loadLevelAda.Settings.GetValueOrDefault("theme") != "sepia"
+    || loadLevelAda.Prefs.GetValueOrDefault("home")?.Locale != "en-GB")
+    throw new InvalidOperationException("load-level-order ada");
+RequireAdaChildren(loadLevelAda, "Work", "Cambridge", "555-0111");
+var loadLevelAll = new List<Contact>();
+await foreach (var row in loadLevel.Read()) loadLevelAll.Add(row);
+for (var index = 0; index < createdBulk.Count; index++)
+{
+    var created = createdBulk[index];
+    var loadLevelRow = loadLevelAll.SingleOrDefault(item => item.Id == created.Id)
+        ?? throw new InvalidOperationException("load-level-order bulk");
+    RequireBulkContact(loadLevelRow, index);
+}
+
 await contacts.Delete(after);
 if (await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id))) is not null)
     throw new InvalidOperationException("delete ada");

@@ -3,7 +3,8 @@ use contacts_crud_enriched_medium_rest::{
 };
 use datasources::{
     default, BatchCommandIBulkWriteStrategy, BulkCRUDRepository, DatasourceError,
-    Enrichment, EnrichmentPropertyType, Entity, Operator, Result, Row, Where,
+    Enrichment, EnrichmentPropertyType, Entity, LoadLevelOrderReadonlyEnrichmentStrategy,
+    Operator, ReadonlyRepository, Result, Row, Where,
 };
 use datasources::chrono::{DateTime, Datelike, Utc};
 use futures_util::TryStreamExt;
@@ -533,6 +534,92 @@ async fn main() -> Result<()> {
             .find(|row| i64::from(row.id) == *id)
             .ok_or_else(|| DatasourceError::message("bulk read child counts"))?;
         require_bulk_contact(loaded, index)?;
+    }
+
+    let strategy = Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new().with_batch_size(3));
+    let options = repositories::contactsRepository::ContactsRepository::options(Arc::clone(&connection))?;
+    let mut load_level = ReadonlyRepository::<Contact>::new(Arc::clone(&connection), options.read)?;
+    let load_level_addresses = repositories::addressesRepository::AddressesRepository::new(Arc::clone(&connection))?;
+    let load_level_phones = repositories::phonesRepository::PhonesRepository::new(Arc::clone(&connection))?;
+    let load_level_settings =
+        repositories::contactSettingsRepository::ContactSettingsRepository::new(Arc::clone(&connection))?;
+    let load_level_prefs =
+        repositories::contactPreferencesRepository::ContactPreferencesRepository::new(Arc::clone(&connection))?;
+    let load_level_sources =
+        repositories::contactSourcesRepository::ContactSourcesRepository::new(Arc::clone(&connection))?;
+    load_level.add_enriched(
+        Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List),
+        &load_level_addresses,
+        Some(Arc::clone(&strategy) as _),
+    );
+    load_level.add_enriched(
+        Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List),
+        &load_level_phones,
+        Some(Arc::clone(&strategy) as _),
+    );
+    load_level.add_enriched(
+        Enrichment::new(
+            "settings",
+            "id",
+            "contact_id",
+            Some("value".into()),
+            EnrichmentPropertyType::Dictionary,
+        )
+        .with_dictionary_key("key"),
+        &load_level_settings,
+        Some(Arc::clone(&strategy) as _),
+    );
+    load_level.add_enriched(
+        Enrichment::new("prefs", "id", "contact_id", None, EnrichmentPropertyType::Dictionary)
+            .with_dictionary_key("key"),
+        &load_level_prefs,
+        Some(Arc::clone(&strategy) as _),
+    );
+    load_level.add_enriched(
+        Enrichment::new(
+            "contact_source_name",
+            "contact_source_id",
+            "id",
+            Some("name".into()),
+            EnrichmentPropertyType::Object,
+        ),
+        &load_level_sources,
+        Some(Arc::clone(&strategy) as _),
+    );
+    load_level.add_enriched(
+        Enrichment::new(
+            "description",
+            "contact_source_id",
+            "id",
+            Some("description".into()),
+            EnrichmentPropertyType::Object,
+        ),
+        &load_level_sources,
+        Some(Arc::clone(&strategy) as _),
+    );
+    let load_level_ada = load_level
+        .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
+        .await?
+        .ok_or_else(|| DatasourceError::message("load-level-order ada"))?;
+    if load_level_ada.first_name != "Ada Byron"
+        || load_level_ada.settings.get("theme") != Some(&"sepia".into())
+        || load_level_ada
+            .prefs
+            .get("home")
+            .map(|pref| pref.locale.as_str())
+            != Some("en-GB")
+    {
+        return Err(DatasourceError::message("load-level-order ada"));
+    }
+    require_ada_children(&load_level_ada, "Work", "Cambridge", "555-0111")
+        .map_err(|_| DatasourceError::message("load-level-order ada"))?;
+    let load_level_all: Vec<Contact> = load_level.read(None, None).try_collect().await?;
+    for (index, id) in ids.iter().enumerate() {
+        let loaded = load_level_all
+            .iter()
+            .find(|row| i64::from(row.id) == *id)
+            .ok_or_else(|| DatasourceError::message("load-level-order bulk"))?;
+        require_bulk_contact(loaded, index).map_err(|_| DatasourceError::message("load-level-order bulk"))?;
     }
 
     contacts_repo.delete(ada_after, None).await?;

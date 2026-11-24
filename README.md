@@ -2329,6 +2329,7 @@ _None._
     - [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md)
     - [DefaultReadonlyEnrichmentStrategy](docs/sections/default-readonly-enrichment-strategy.md)
     - [HashsetOptimizedReadonlyEnrichmentStrategy](docs/sections/hashset-optimized-readonly-enrichment-strategy.md)
+    - [LoadLevelOrderReadonlyEnrichmentStrategy](docs/sections/load-level-order-readonly-enrichment-strategy.md)
     - [NestedToObjectEnrichmentStrategy](docs/sections/nested-to-object-enrichment-strategy.md)
     - [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md)
     - [DefaultWriteEnrichmentStrategy](docs/sections/default-write-enrichment-strategy.md)

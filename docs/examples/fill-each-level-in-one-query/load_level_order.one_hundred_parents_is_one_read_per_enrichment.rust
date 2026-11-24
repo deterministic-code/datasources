@@ -1,0 +1,20 @@
+let connection = setup().await;
+let mut parents = mapped_crud(connection.clone(), "Parent");
+let children = Arc::new(mapped_crud(connection, "Child"));
+for i in 0..100 {
+    let parent = parents.create(record(&[])).await.unwrap();
+    children
+        .create(record(&[
+            ("ParentId", id_of(&parent)),
+            ("Label", Value::from(i.to_string())),
+        ]))
+        .await
+        .unwrap();
+}
+let reads = Arc::new(Mutex::new(0));
+parents.add_enriched(
+    list_fill(),
+    count(as_read(children), reads.clone()),
+    Some(Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new())),
+);
+let items: Vec<Row> = parents.read(None, None).try_collect().await.unwrap();

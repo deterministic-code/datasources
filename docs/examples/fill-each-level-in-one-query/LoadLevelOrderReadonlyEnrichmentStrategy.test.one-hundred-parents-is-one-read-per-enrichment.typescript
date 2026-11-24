@@ -1,0 +1,13 @@
+const connection = await openConnection();
+for (let i = 0; i < 100; i++) {
+  const parent = await parentsRepo.create(new Parent());
+  await childrenRepo.create(assign(Child, { ParentId: parent.Id, Label: `${i}` }));
+}
+const reads = { count: 0 };
+parentsRepo.addEnriched(
+  { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
+  new CountingRepository(childrenRepo, reads),
+  new LoadLevelOrderReadonlyEnrichmentStrategy(),
+);
+const items = await collectAsync(parentsRepo.read());
+expect(items).toHaveLength(100);

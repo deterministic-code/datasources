@@ -226,6 +226,10 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Fill with one query](./sections/hashset-optimized-readonly-enrichment-strategy.md#fill-with-one-query)
 
+## LoadLevelOrderReadonlyEnrichmentStrategy
+
+- [Fill each level in one query](./sections/load-level-order-readonly-enrichment-strategy.md#fill-each-level-in-one-query)
+
 ## NestedToObjectEnrichmentStrategy
 
 - [Collapse join rows](./sections/nested-to-object-enrichment-strategy.md#collapse-join-rows)

@@ -569,6 +569,13 @@ Find the closest title. Open that language's snippet. Topic files already includ
   - `docs/examples/fill-with-one-query/readonly_repository.fills_roles_with_a_hashset.rust`
   - `docs/examples/fill-with-one-query/ReadonlyRepository.test.hashset-fills-lookup-select-and-leaves-missing-default.typescript`
 
+## LoadLevelOrderReadonlyEnrichmentStrategy
+
+- Fill each level in one query
+  - `docs/examples/fill-each-level-in-one-query/LoadLevelOrderReadonlyEnrichmentStrategyTests.OneHundredParentsIsOneReadPerEnrichment.csharp`
+  - `docs/examples/fill-each-level-in-one-query/load_level_order.one_hundred_parents_is_one_read_per_enrichment.rust`
+  - `docs/examples/fill-each-level-in-one-query/LoadLevelOrderReadonlyEnrichmentStrategy.test.one-hundred-parents-is-one-read-per-enrichment.typescript`
+
 ## NestedToObjectEnrichmentStrategy
 
 - Collapse join rows

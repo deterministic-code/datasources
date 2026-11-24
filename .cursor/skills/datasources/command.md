@@ -1769,7 +1769,7 @@ var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
 5
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L319-L337)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L321-L339)
 
 ```rust
 async fn read_return_value(command: &dyn Command) {
