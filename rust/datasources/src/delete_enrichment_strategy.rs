@@ -28,6 +28,35 @@ pub trait DeleteEnrichmentStrategy<T: Entity = Row>: Send + Sync {
         enrichment: &Enrichment,
         parent: &T,
     ) -> Result<()>;
+
+    /// Deletes the children of every parent. The default loops `delete_children`; batching
+    /// strategies override it to load all current children in one read.
+    async fn delete_children_batch(
+        &self,
+        writer: Arc<dyn ICRUDRepository>,
+        enrichment: &Enrichment,
+        parents: &[&T],
+        delete_nested: &dyn DeleteNested,
+    ) -> Result<()> {
+        for parent in parents {
+            self.delete_children(writer.clone(), enrichment, parent, delete_nested)
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// Deletes the links of every parent. The default loops `delete_linked`.
+    async fn delete_linked_batch(
+        &self,
+        writer: Arc<dyn ICRUDRepository>,
+        enrichment: &Enrichment,
+        parents: &[&T],
+    ) -> Result<()> {
+        for parent in parents {
+            self.delete_linked(writer.clone(), enrichment, parent).await?;
+        }
+        Ok(())
+    }
 }
 
 pub(crate) async fn load<T: Entity, TChild: Entity>(

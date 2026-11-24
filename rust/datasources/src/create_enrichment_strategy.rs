@@ -160,83 +160,117 @@ pub(crate) async fn resolve_lookups<T: Entity>(
     record: &mut Row,
     schema: &Schema,
 ) -> Result<()> {
-    for item in items.iter_mut() {
-        for entry in entries {
-            let enrichment = &entry.enrichment;
-            let Some(related) = enrichment.related_property.as_deref() else {
-                continue;
-            };
-            if enrichment.association.is_some() {
-                resolve_linked(entry, item, related).await?;
-                continue;
-            }
-            if enrichment.r#type != crate::EnrichmentPropertyType::Object {
-                continue;
-            }
-            let dest = &enrichment.destination_property;
-            if record
-                .get(&enrichment.source_property)
-                .is_some_and(|value| !missing(value))
-            {
-                continue;
-            }
-            let Some(name) = record.get(dest).cloned().filter(|value| !missing(value)) else {
-                if schema
-                    .columns
-                    .get(dest)
-                    .is_some_and(|column| !column.nullable)
-                {
-                    return Err(DatasourceError::message(format!("Unknown {dest}")));
-                }
-                continue;
-            };
-            let found = entry
-                .lookup(related, name.clone(), &enrichment.related_key)
-                .await?;
-            let id = found
-                .filter(|value| !missing(value))
-                .ok_or_else(|| {
-                    DatasourceError::message(format!("Unknown {dest} \"{}\"", name.wire_text()))
-                })?;
-            set(record, &enrichment.source_property, id)?;
+    for entry in entries {
+        let enrichment = &entry.enrichment;
+        if let (Some(related), true) = (
+            enrichment.related_property.as_deref(),
+            enrichment.association.is_some(),
+        ) {
+            resolve_linked(entry, items, related).await?;
         }
     }
-    Ok(())
-}
-
-async fn resolve_linked<T: Entity>(
-    entry: &StoredEnrichment<T>,
-    item: &mut T,
-    related: &str,
-) -> Result<()> {
-    let enrichment = &entry.enrichment;
-    let mut rows = item.payload(&enrichment.destination_property);
-    let mut changed = false;
-    for row in &mut rows {
-        if row
-            .get(&enrichment.related_key)
+    if items.is_empty() {
+        return Ok(());
+    }
+    for entry in entries {
+        let enrichment = &entry.enrichment;
+        let Some(related) = enrichment.related_property.as_deref() else {
+            continue;
+        };
+        if enrichment.association.is_some() {
+            continue;
+        }
+        if enrichment.r#type != crate::EnrichmentPropertyType::Object {
+            continue;
+        }
+        let dest = &enrichment.destination_property;
+        if record
+            .get(&enrichment.source_property)
             .is_some_and(|value| !missing(value))
         {
             continue;
         }
-        let Some(name) = row.get(related).cloned().filter(|value| !missing(value)) else {
+        let Some(name) = record.get(dest).cloned().filter(|value| !missing(value)) else {
+            if schema
+                .columns
+                .get(dest)
+                .is_some_and(|column| !column.nullable)
+            {
+                return Err(DatasourceError::message(format!("Unknown {dest}")));
+            }
             continue;
         };
         let found = entry
             .lookup(related, name.clone(), &enrichment.related_key)
             .await?;
-        let id = found.filter(|value| !missing(value)).ok_or_else(|| {
-            DatasourceError::message(format!(
-                "Unknown {} \"{}\"",
-                enrichment.destination_property,
-                name.wire_text()
-            ))
-        })?;
-        row.insert(enrichment.related_key.clone(), id);
-        changed = true;
+        let id = found
+            .filter(|value| !missing(value))
+            .ok_or_else(|| {
+                DatasourceError::message(format!("Unknown {dest} \"{}\"", name.wire_text()))
+            })?;
+        set(record, &enrichment.source_property, id)?;
     }
-    if changed {
-        item.set_payload(&enrichment.destination_property, rows)?;
+    Ok(())
+}
+
+/// Fills the missing related keys of every item's linked rows from their names, with one
+/// batched lookup per enrichment instead of one per row.
+async fn resolve_linked<T: Entity>(
+    entry: &StoredEnrichment<T>,
+    items: &mut [T],
+    related: &str,
+) -> Result<()> {
+    let enrichment = &entry.enrichment;
+    let needs_key = |row: &Row| {
+        !row.get(&enrichment.related_key)
+            .is_some_and(|value| !missing(value))
+    };
+    let mut payloads: Vec<Vec<Row>> = Vec::with_capacity(items.len());
+    let mut names: Vec<Value> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for item in items.iter() {
+        let rows = item.payload(&enrichment.destination_property);
+        for row in rows.iter().filter(|row| needs_key(row)) {
+            if let Some(name) = row.get(related).cloned().filter(|value| !missing(value)) {
+                if seen.insert(name.wire_text()) {
+                    names.push(name);
+                }
+            }
+        }
+        payloads.push(rows);
+    }
+    if names.is_empty() {
+        return Ok(());
+    }
+    let found = entry
+        .lookup_batch(related, &names, &enrichment.related_key)
+        .await?;
+    for (item, mut rows) in items.iter_mut().zip(payloads) {
+        let mut changed = false;
+        for row in &mut rows {
+            if !needs_key(row) {
+                continue;
+            }
+            let Some(name) = row.get(related).cloned().filter(|value| !missing(value)) else {
+                continue;
+            };
+            let id = found
+                .get(&name.wire_text())
+                .cloned()
+                .filter(|value| !missing(value))
+                .ok_or_else(|| {
+                    DatasourceError::message(format!(
+                        "Unknown {} \"{}\"",
+                        enrichment.destination_property,
+                        name.wire_text()
+                    ))
+                })?;
+            row.insert(enrichment.related_key.clone(), id);
+            changed = true;
+        }
+        if changed {
+            item.set_payload(&enrichment.destination_property, rows)?;
+        }
     }
     Ok(())
 }

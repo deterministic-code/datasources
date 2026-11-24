@@ -9,7 +9,9 @@ use crate::enrichment::Enrichment;
 use crate::enrichment_selection::EnrichmentSelection;
 use crate::entity::Entity;
 use crate::load_level_order_readonly_enrichment_strategy::load_level_order_apply_linked;
-use crate::readonly_enrichment_strategy::{apply_linked, ReadonlyEnrichmentStrategy};
+use crate::readonly_enrichment_strategy::{
+    key_of, load_by_keys, ReadonlyEnrichmentStrategy, DEFAULT_FILL_BATCH_SIZE,
+};
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
@@ -18,6 +20,7 @@ use crate::write_mode::WriteMode;
 use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::any::TypeId;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[async_trait]
@@ -30,6 +33,52 @@ pub(crate) trait AppliedRead<T: Entity>: Send + Sync {
     ) -> Result<()>;
 
     async fn lookup(&self, property: &str, name: Value, key: &str) -> Result<Option<Value>>;
+
+    /// Resolves every name in one batched read; names with no match are absent from the map.
+    async fn lookup_batch(
+        &self,
+        property: &str,
+        names: &[Value],
+        key: &str,
+    ) -> Result<HashMap<String, Value>> {
+        let mut found = HashMap::new();
+        for name in names {
+            if let Some(value) = self.lookup(property, name.clone(), key).await? {
+                found.insert(key_of(name), value);
+            }
+        }
+        Ok(found)
+    }
+}
+
+/// One `IN` read per chunk of names; the first row per name wins, as in a single-row lookup.
+/// A name the `IN` read does not return (for example a case-insensitive collation) falls back
+/// to the single-name read, so results match the per-name path.
+async fn lookup_batch_via<TRelated: Entity>(
+    via: &Arc<dyn IReadonlyRepository<TRelated>>,
+    property: &str,
+    names: &[Value],
+    key: &str,
+) -> Result<HashMap<String, Value>> {
+    let loaded = load_by_keys(via.clone(), property, names, DEFAULT_FILL_BATCH_SIZE).await?;
+    let mut found = HashMap::new();
+    for item in loaded {
+        let (Some(name), Some(value)) = (item.cell(property), item.cell(key)) else {
+            continue;
+        };
+        found.entry(key_of(&name)).or_insert(value);
+    }
+    for name in names {
+        if !found.contains_key(&key_of(name)) {
+            let row = via
+                .read_single_where(&Where::new(Operator::equals(property, name.clone())), None)
+                .await?;
+            if let Some(value) = row.and_then(|item| item.cell(key)) {
+                found.insert(key_of(name), value);
+            }
+        }
+    }
+    Ok(found)
 }
 
 struct AppliedReadImpl<T, TRelated> {
@@ -57,6 +106,15 @@ impl<T: Entity, TRelated: Entity> AppliedRead<T> for AppliedReadImpl<T, TRelated
             .await?;
         Ok(found.and_then(|item| item.cell(key)))
     }
+
+    async fn lookup_batch(
+        &self,
+        property: &str,
+        names: &[Value],
+        key: &str,
+    ) -> Result<HashMap<String, Value>> {
+        lookup_batch_via(&self.via, property, names, key).await
+    }
 }
 
 struct AppliedLinkedImpl<T, TRelated, TLink> {
@@ -75,26 +133,17 @@ impl<T: Entity, TRelated: Entity, TLink: Entity> AppliedRead<T>
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        if let Some(batch_size) = self.strategy.linked_batch_size() {
-            load_level_order_apply_linked(
-                self.via.clone(),
-                self.link.clone(),
-                enrichment,
-                parents,
-                sources,
-                batch_size,
-            )
-            .await
-        } else {
-            apply_linked(
-                self.via.clone(),
-                self.link.clone(),
-                enrichment,
-                parents,
-                sources,
-            )
-            .await
-        }
+        load_level_order_apply_linked(
+            self.via.clone(),
+            self.link.clone(),
+            enrichment,
+            parents,
+            sources,
+            self.strategy
+                .linked_batch_size()
+                .unwrap_or(DEFAULT_FILL_BATCH_SIZE),
+        )
+        .await
     }
 
     async fn lookup(&self, property: &str, name: Value, key: &str) -> Result<Option<Value>> {
@@ -103,6 +152,15 @@ impl<T: Entity, TRelated: Entity, TLink: Entity> AppliedRead<T>
             .read_single_where(&Where::new(Operator::equals(property, name)), None)
             .await?;
         Ok(found.and_then(|item| item.cell(key)))
+    }
+
+    async fn lookup_batch(
+        &self,
+        property: &str,
+        names: &[Value],
+        key: &str,
+    ) -> Result<HashMap<String, Value>> {
+        lookup_batch_via(&self.via, property, names, key).await
     }
 }
 
@@ -310,6 +368,15 @@ impl<T: Entity> StoredEnrichment<T> {
         key: &str,
     ) -> Result<Option<Value>> {
         self.read.lookup(property, name, key).await
+    }
+
+    pub(crate) async fn lookup_batch(
+        &self,
+        property: &str,
+        names: &[Value],
+        key: &str,
+    ) -> Result<HashMap<String, Value>> {
+        self.read.lookup_batch(property, names, key).await
     }
 }
 

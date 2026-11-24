@@ -42,6 +42,16 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
     parent: &mut T,
 ) -> Result<()> {
     let existing = load(writer, enrichment, parent).await?;
+    update_children_with(writer, enrichment, parent, existing).await
+}
+
+/// `update_children` for a parent whose current children were already loaded.
+pub(crate) async fn update_children_with<T: Entity, TChild: Entity>(
+    writer: &dyn ICRUDRepository<TChild>,
+    enrichment: &Enrichment,
+    parent: &mut T,
+    existing: Vec<TChild>,
+) -> Result<()> {
     let schema = writer.schema();
     let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent, schema)?;
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
@@ -88,6 +98,16 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
     enrichment: &Enrichment,
     parent: &mut T,
 ) -> Result<()> {
+    update_linked_with(writer, enrichment, parent, None).await
+}
+
+/// `update_linked` for a parent whose current link rows were already loaded (`None` loads them).
+pub(crate) async fn update_linked_with<T: Entity, TLink: Entity>(
+    writer: &dyn ICRUDRepository<TLink>,
+    enrichment: &Enrichment,
+    parent: &mut T,
+    loaded: Option<Vec<TLink>>,
+) -> Result<()> {
     let association = enrichment
         .association
         .as_ref()
@@ -97,13 +117,18 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         &enrichment.source_property,
         &enrichment.destination_property,
     )?;
-    let existing = writer
-        .read_where(&Where::new(Operator::equals(
-            association.parent.clone(),
-            parent_key.clone(),
-        )), None)
-        .try_collect::<Vec<_>>()
-        .await?;
+    let existing = match loaded {
+        Some(rows) => rows,
+        None => {
+            writer
+                .read_where(&Where::new(Operator::equals(
+                    association.parent.clone(),
+                    parent_key.clone(),
+                )), None)
+                .try_collect::<Vec<_>>()
+                .await?
+        }
+    };
     let wanted = related_ids(parent, enrichment)?;
     let keep: HashSet<String> = wanted.iter().map(Value::wire_text).collect();
     for row in &existing {

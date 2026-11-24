@@ -76,6 +76,8 @@ export type { WriteMode } from "./WriteMode.ts";
 export { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 export { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 export { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
+export { BatchDeleteEnrichmentStrategy } from "./BatchDeleteEnrichmentStrategy.ts";
+export { BatchUpdateEnrichmentStrategy } from "./BatchUpdateEnrichmentStrategy.ts";
 export { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrategy.ts";
 export { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 export { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";

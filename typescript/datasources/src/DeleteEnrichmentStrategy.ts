@@ -32,6 +32,49 @@ export abstract class DeleteEnrichmentStrategy<T> {
 
   abstract deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
+  /** Deletes the children of every parent. Loops `deleteChildren`; batching strategies override it. */
+  async deleteChildrenBatch<TChild extends object>(
+    writer: ICRUDRepository<TChild>,
+    enrichment: Enrichment,
+    parents: T[],
+    deleteNested: (rows: TChild[]) => Promise<void>,
+  ): Promise<void> {
+    for (const parent of parents) await this.deleteChildren(writer, enrichment, parent, deleteNested);
+  }
+
+  /** Deletes the links of every parent. Loops `deleteLinked`; batching strategies override it. */
+  async deleteLinkedBatch<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parents: T[]): Promise<void> {
+    for (const parent of parents) await this.deleteLinked(writer, enrichment, parent);
+  }
+
+  /**
+   * Loads, with one `IN` read per chunk of keys, the rows of `writer` whose `column` equals each
+   * parent's `source` cell. The result lines up with `parents`; a parent with no key or no rows gets
+   * an empty list.
+   */
+  static loadGrouped = async <TParent, TChild extends object>(
+    writer: ICRUDRepository<TChild>,
+    column: string,
+    source: string,
+    parents: TParent[],
+  ): Promise<TChild[][]> => {
+    const keys = parents.map((parent) => {
+      const key = get(parent, source);
+      return key === undefined || key === null ? undefined : (key as Scalar);
+    });
+    const distinct = [...new Map(keys.filter((key) => key !== undefined).map((key) => [String(key), key as Scalar])).values()];
+    const groups = new Map<string, TChild[]>();
+    for (let offset = 0; offset < distinct.length; offset += 500)
+      for await (const item of writer.read(new Where(new Operator.In(column, distinct.slice(offset, offset + 500))))) {
+        const owner = get(item, column);
+        if (owner === undefined || owner === null) continue;
+        const list = groups.get(String(owner)) ?? [];
+        list.push(item);
+        groups.set(String(owner), list);
+      }
+    return keys.map((key) => (key === undefined ? [] : (groups.get(String(key)) ?? [])));
+  };
+
   static load = async <TParent, TChild extends object>(
     writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,

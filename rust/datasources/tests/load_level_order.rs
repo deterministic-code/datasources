@@ -863,3 +863,86 @@ async fn dictionary_query_count(
     assert_eq!(items[0].payload("Settings").len(), 3);
     assert_eq!(*reads.lock().unwrap(), 3);
 }
+
+#[tokio::test]
+async fn default_strategy_linked_is_one_read_per_table_for_one_hundred_parents() {
+    let connection = setup().await;
+    let mut parents = mapped_crud(connection.clone(), "Parent");
+    let tags = Arc::new(mapped_crud(connection.clone(), "Tag"));
+    let links = Arc::new(mapped_crud(connection, "ParentTag"));
+    let tag = tags.create(record(&[("Name", Value::from("t"))])).await.unwrap();
+    for _ in 0..100 {
+        let parent = parents.create(record(&[])).await.unwrap();
+        links
+            .create(record(&[("ParentId", id_of(&parent)), ("TagId", id_of(&tag))]))
+            .await
+            .unwrap();
+    }
+    let tag_reads = Arc::new(Mutex::new(0));
+    let link_reads = Arc::new(Mutex::new(0));
+    let counted_tags: Arc<dyn ICRUDRepository<Row>> = Arc::new(CountingCrud { inner: tags, reads: tag_reads.clone() });
+    let counted_links: Arc<dyn ICRUDRepository<Row>> = Arc::new(CountingCrud { inner: links, reads: link_reads.clone() });
+    parents.add_linked(
+        linked_fill(),
+        counted_tags,
+        counted_links,
+        Some(Arc::new(DefaultReadonlyEnrichmentStrategy)),
+    );
+    let items: Vec<Row> = parents.read(None, None).try_collect().await.unwrap();
+    assert_eq!(items.len(), 100);
+    assert!(items.iter().all(|row| row.related::<Row>("Tags").len() == 1));
+    assert_eq!(*link_reads.lock().unwrap(), 1);
+    assert_eq!(*tag_reads.lock().unwrap(), 1);
+}
+
+#[tokio::test]
+async fn create_resolves_twenty_linked_names_with_one_tag_read() {
+    let connection = setup().await;
+    let mut parents = mapped_crud(connection.clone(), "Parent");
+    let tags = Arc::new(mapped_crud(connection.clone(), "Tag"));
+    let links = Arc::new(mapped_crud(connection, "ParentTag"));
+    let mut wanted = Vec::new();
+    for i in 0..20 {
+        let name = format!("tag{i}");
+        let tag = tags
+            .create(record(&[("Name", Value::from(name.clone()))]))
+            .await
+            .unwrap();
+        wanted.push((name, id_of(&tag)));
+    }
+    let reads = Arc::new(Mutex::new(0));
+    let counted: Arc<dyn ICRUDRepository<Row>> =
+        Arc::new(CountingCrud { inner: tags, reads: reads.clone() });
+    parents.add_linked(
+        Enrichment::new("Tags", "Id", "Id", Some("Name".into()), EnrichmentPropertyType::List)
+            .linked(Association::new("ParentId", "TagId")),
+        counted,
+        links.clone(),
+        None,
+    );
+    let rows: Vec<Row> = wanted
+        .iter()
+        .map(|(name, _)| record(&[("Name", Value::from(name.clone()))]))
+        .collect();
+    let created = parents
+        .create(record(&[("Tags", encode_rows(&rows))]))
+        .await
+        .unwrap();
+    let parent_id = id_of(&created);
+    let stored: Vec<Row> = links
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|row| row.get("ParentId") == Some(&parent_id))
+        .collect();
+    let key = |v: &Value| format!("{v:?}");
+    let mut linked: Vec<String> = stored.iter().map(|row| key(row.get("TagId").unwrap())).collect();
+    let mut expected: Vec<String> = wanted.iter().map(|(_, id)| key(id)).collect();
+    linked.sort();
+    expected.sort();
+    assert_eq!(linked, expected);
+    // One batched name lookup, plus one read when the created row is enriched; was 21.
+    assert_eq!(*reads.lock().unwrap(), 2);
+}

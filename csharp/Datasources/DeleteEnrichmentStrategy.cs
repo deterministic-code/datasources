@@ -15,6 +15,63 @@ public abstract class DeleteEnrichmentStrategy<T>
         T parent)
         where TChild : new();
 
+    /// <summary>Deletes the children of every parent. Loops <see cref="DeleteChildren{TChild}"/>; batching strategies override it.</summary>
+    public virtual async Task DeleteChildrenBatch<TChild>(
+        ICRUDRepository<TChild> writer,
+        Enrichment enrichment,
+        IReadOnlyList<T> parents,
+        Func<IReadOnlyList<TChild>, Task> deleteNested)
+        where TChild : new()
+    {
+        foreach (var parent in parents)
+            await DeleteChildren(writer, enrichment, parent, deleteNested);
+    }
+
+    /// <summary>Deletes the links of every parent. Loops <see cref="DeleteLinked{TChild}"/>; batching strategies override it.</summary>
+    public virtual async Task DeleteLinkedBatch<TChild>(
+        ICRUDRepository<TChild> writer,
+        Enrichment enrichment,
+        IReadOnlyList<T> parents)
+        where TChild : new()
+    {
+        foreach (var parent in parents)
+            await DeleteLinked(writer, enrichment, parent);
+    }
+
+    /// <summary>
+    /// Loads, with one <c>IN</c> read per chunk of keys, the rows of <paramref name="writer"/> whose
+    /// <paramref name="column"/> equals each parent's <paramref name="source"/> cell. The result lines up with
+    /// <paramref name="parents"/>; a parent with no key or no rows gets an empty list.
+    /// </summary>
+    internal static async Task<List<List<TChild>>> LoadGrouped<TParent, TChild>(
+        ICRUDRepository<TChild> writer,
+        string column,
+        string source,
+        IReadOnlyList<TParent> parents)
+    {
+        var keys = parents.Select(parent => Get(parent, source)).ToList();
+        var distinct = new List<Value>();
+        var seen = new HashSet<string>();
+        foreach (var key in keys)
+            if (key is not null && seen.Add(DefaultReadonlyEnrichmentStrategy<object>.KeyOf(key)))
+                distinct.Add(Value.From(key));
+        var groups = new Dictionary<string, List<TChild>>();
+        foreach (var chunk in distinct.Chunk(500))
+            await foreach (var item in writer.Read(new Where(new Operator.In(column, chunk))))
+            {
+                if (Get(item, column) is not { } owner) continue;
+                var cacheKey = DefaultReadonlyEnrichmentStrategy<object>.KeyOf(owner);
+                if (!groups.TryGetValue(cacheKey, out var list))
+                    groups[cacheKey] = list = [];
+                list.Add(item);
+            }
+        return keys
+            .Select(key => key is not null && groups.TryGetValue(DefaultReadonlyEnrichmentStrategy<object>.KeyOf(key), out var list)
+                ? list
+                : new List<TChild>())
+            .ToList();
+    }
+
     internal static async Task<List<TChild>> Load<TParent, TChild>(
         ICRUDRepository<TChild> writer,
         Enrichment enrichment,

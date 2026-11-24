@@ -2,9 +2,13 @@ namespace Datasources;
 
 public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrategy<T>
 {
-    public override async Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+    public override async Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) =>
+        await UpdateChildrenWith(writer, enrichment, parent, await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent));
+
+    /// <summary><see cref="UpdateChildren{TChild}"/> for a parent whose current children were already loaded.</summary>
+    internal async Task UpdateChildrenWith<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, List<TChild> existing)
+        where TChild : new()
     {
-        var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
         var payload = Children(writer, enrichment, parent);
         foreach (var related in payload)
             foreach (var pair in enrichment.Pairs())
@@ -22,11 +26,16 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         }
     }
 
-    public override async Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+    public override Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) =>
+        UpdateLinkedWith(writer, enrichment, parent, null);
+
+    /// <summary><see cref="UpdateLinked{TChild}"/> for a parent whose current link rows were already loaded (null loads them).</summary>
+    internal async Task UpdateLinkedWith<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, List<TChild>? loaded)
+        where TChild : new()
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
-        var existing = await DeleteEnrichmentStrategy<T>.LoadLinks(writer, association.Parent, parentKey);
+        var existing = loaded ?? await DeleteEnrichmentStrategy<T>.LoadLinks(writer, association.Parent, parentKey);
         var wanted = RelatedIds(parent, enrichment);
         var keep = wanted.Select(Text).ToHashSet();
         foreach (var row in existing)

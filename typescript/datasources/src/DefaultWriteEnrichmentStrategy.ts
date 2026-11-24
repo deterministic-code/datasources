@@ -1,9 +1,9 @@
-import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrategy.ts";
+import { BatchDeleteEnrichmentStrategy } from "./BatchDeleteEnrichmentStrategy.ts";
+import { BatchUpdateEnrichmentStrategy } from "./BatchUpdateEnrichmentStrategy.ts";
 import type { CreateEnrichmentStrategy } from "./CreateEnrichmentStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
-import { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Response } from "./Response.ts";
 import { enrichmentsOf } from "./ReadonlyRepository.ts";
@@ -50,8 +50,8 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   private readonly updateStrategy: UpdateEnrichmentStrategy<T>;
 
   constructor(
-    deleteStrategy: DeleteEnrichmentStrategy<T> = new CascadeDeleteEnrichmentStrategy<T>(),
-    updateStrategy: UpdateEnrichmentStrategy<T> = new DefaultUpdateEnrichmentStrategy<T>(),
+    deleteStrategy: DeleteEnrichmentStrategy<T> = new BatchDeleteEnrichmentStrategy<T>(),
+    updateStrategy: UpdateEnrichmentStrategy<T> = new BatchUpdateEnrichmentStrategy<T>(),
     createStrategy: CreateEnrichmentStrategy<T> = new DefaultCreateEnrichmentStrategy<T>(),
     useTransaction = false,
   ) {
@@ -132,6 +132,11 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       throw new DatasourceError(`Unsupported enrichment type "${type}"`);
     if (enrichment.association && entry.link) {
       const writer = linkWriter(entry, enrichment.destinationProperty);
+      if (mode === "update") {
+        const linked = parents.filter((parent) => !this.skip(parent, enrichment.destinationProperty, mode));
+        if (linked.length > 0) await this.updateStrategy.updateLinkedBatch(writer, enrichment, linked);
+        return;
+      }
       for (const parent of parents) {
         if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
         await dispatch(mode, {
@@ -158,7 +163,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       return;
     }
     if (bulk.updateBulk) await bulk.updateBulk(children);
-    else for (const child of children) await writer.update(child);
+    else await this.updateStrategy.updateChildrenBatch(writer, enrichment, ready);
   };
 
   private persistEntry = async (
@@ -172,27 +177,29 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       throw new DatasourceError(`Unsupported enrichment type "${type}"`);
     if (enrichment.association && entry.link) {
       const writer = linkWriter(entry, enrichment.destinationProperty);
-      for (const parent of parents) {
-        if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
-        await dispatch(mode, {
-          create: () => this.createStrategy.createLinked(writer, enrichment, parent),
-          update: () => this.updateStrategy.updateLinked(writer, enrichment, parent),
-          delete: () => this.deleteStrategy.deleteLinked(writer, enrichment, parent),
-        });
-      }
+      const ready = parents.filter((parent) => !this.skip(parent, enrichment.destinationProperty, mode));
+      if (ready.length === 0) return;
+      await dispatch(mode, {
+        create: async () => {
+          for (const parent of ready) await this.createStrategy.createLinked(writer, enrichment, parent);
+        },
+        update: () => this.updateStrategy.updateLinkedBatch(writer, enrichment, ready),
+        delete: () => this.deleteStrategy.deleteLinkedBatch(writer, enrichment, ready),
+      });
       return;
     }
     if (type === EnrichmentPropertyType.List && enrichment.relatedProperty) return;
     if (type !== EnrichmentPropertyType.List && type !== EnrichmentPropertyType.Dictionary) return;
     const writer = childWriter(entry, enrichment.destinationProperty);
-    for (const parent of parents) {
-      if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
-      await dispatch(mode, {
-        create: () => this.createStrategy.createChildren(writer, enrichment, parent),
-        update: () => this.updateStrategy.updateChildren(writer, enrichment, parent),
-        delete: () => this.deleteStrategy.deleteChildren(writer, enrichment, parent, async () => {}),
-      });
-    }
+    const pending = parents.filter((parent) => !this.skip(parent, enrichment.destinationProperty, mode));
+    if (pending.length === 0) return;
+    await dispatch(mode, {
+      create: async () => {
+        for (const parent of pending) await this.createStrategy.createChildren(writer, enrichment, parent);
+      },
+      update: () => this.updateStrategy.updateChildrenBatch(writer, enrichment, pending),
+      delete: () => this.deleteStrategy.deleteChildrenBatch(writer, enrichment, pending, async () => {}),
+    });
   };
 
   private skip = (parent: T, into: string, mode: string): boolean =>
