@@ -1,6 +1,7 @@
+use crate::converters::BinaryConverter;
 use bytes::{BufMut, BytesMut};
 use chrono::{DateTime, Utc};
-use datasources::Value;
+use datasources::{TypeConverter, Value};
 use rust_decimal::Decimal;
 use std::error::Error;
 use std::str::FromStr;
@@ -122,13 +123,12 @@ fn uuid_of(value: &Value) -> Result<Uuid, Box<dyn Error + Sync + Send>> {
 }
 
 fn binary_of(value: &Value) -> Result<Vec<u8>, Box<dyn Error + Sync + Send>> {
-    match value {
-        Value::Binary(bytes) => Ok(bytes.clone()),
-        Value::Text(text) => Ok(base64::Engine::decode(
-            &base64::engine::general_purpose::STANDARD,
-            text,
-        )?),
-        _ => Err(format!("not binary: {}", value.wire_text()).into()),
+    match BinaryConverter
+        .reverse_convert(value)
+        .map_err(|err| -> Box<dyn Error + Sync + Send> { err.to_string().into() })?
+    {
+        Value::Binary(bytes) => Ok(bytes),
+        other => Err(format!("not binary: {}", other.wire_text()).into()),
     }
 }
 
@@ -149,5 +149,30 @@ mod tests {
             .to_sql(&Type::UNKNOWN, &mut unknown)
             .unwrap();
         assert_eq!(encoded, unknown);
+    }
+
+    #[test]
+    fn bytea_uuid_text_encodes_as_raw_bytes() {
+        let id = "550e8400-e29b-41d4-a716-446655440000";
+        let mut encoded = BytesMut::new();
+        let mut raw = BytesMut::new();
+        PgValue(Value::from(id))
+            .to_sql(&Type::BYTEA, &mut encoded)
+            .unwrap();
+        id.as_bytes().to_sql(&Type::BYTEA, &mut raw).unwrap();
+        assert_eq!(encoded, raw);
+    }
+
+    #[test]
+    fn bytea_base64_text_decodes() {
+        let mut encoded = BytesMut::new();
+        let mut raw = BytesMut::new();
+        PgValue(Value::from("AQIDBA=="))
+            .to_sql(&Type::BYTEA, &mut encoded)
+            .unwrap();
+        vec![1_u8, 2, 3, 4]
+            .to_sql(&Type::BYTEA, &mut raw)
+            .unwrap();
+        assert_eq!(encoded, raw);
     }
 }
