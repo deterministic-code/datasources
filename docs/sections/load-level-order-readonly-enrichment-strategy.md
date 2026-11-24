@@ -198,7 +198,7 @@ async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment
 
 ## Remarks
 
-Pass it as the strategy on [IEnriched](./i-enriched.md). Zero keys issue zero queries. A missing lookup is skipped. A missing list, dictionary, or link is empty. Composite keys use `IN` on the first pair, then match every pair in memory. Order within a group is the order the database returns rows. [HashsetOptimizedReadonlyEnrichmentStrategy](./hashset-optimized-readonly-enrichment-strategy.md) batches only lookups and lists, and does not chunk. Tree views keep TreeReadonlyEnrichmentStrategy.
+[IEnriched](./i-enriched.md) uses this strategy when the call omits one. Zero keys issue zero queries. A missing lookup is skipped. A missing list, dictionary, or link is empty. Composite keys use `IN` on the first pair, then match every pair in memory. Order within a group is the order the database returns rows. [HashsetOptimizedReadonlyEnrichmentStrategy](./hashset-optimized-readonly-enrichment-strategy.md) batches only lookups and lists, and does not chunk. Tree views keep TreeReadonlyEnrichmentStrategy.
 
 ## Examples
 

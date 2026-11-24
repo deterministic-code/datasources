@@ -35,6 +35,7 @@ pub(crate) fn assemble(
         object_converter,
         row_type_converters: _,
         enrichment: _,
+        enrich: _,
     } = options;
     let provider = connection.provider().to_string();
     let row_converter = Some(row_converter.unwrap_or_else(|| {

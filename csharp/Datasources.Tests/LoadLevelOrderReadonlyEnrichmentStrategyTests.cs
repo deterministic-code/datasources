@@ -89,6 +89,15 @@ public class LoadLevelOrderReadonlyEnrichmentStrategyTests
         public List<Tag> Tags { get; set; } = [];
     }
 
+    [Fact]
+    public void KeyOfMatchesIntTextAndNestedId()
+    {
+        Assert.Equal("1", DefaultReadonlyEnrichmentStrategy<Parent>.KeyOf(1L));
+        Assert.Equal("1", DefaultReadonlyEnrichmentStrategy<Parent>.KeyOf(new Value.Int(1)));
+        Assert.Equal("1", DefaultReadonlyEnrichmentStrategy<Parent>.KeyOf("1"));
+        Assert.Equal("5", DefaultReadonlyEnrichmentStrategy<Parent>.KeyOf(new Kind { Id = 5, Name = "x" }));
+    }
+
     static readonly ChangeCasingMapper Snake = new(Casing.Pascal, Casing.Snake);
 
     static readonly Schema SettingSchema = new(new Dictionary<string, SchemaColumn>
@@ -327,6 +336,72 @@ public class LoadLevelOrderReadonlyEnrichmentStrategyTests
     [Fact]
     public async Task OneHundredTwentyOneGamesThreeSettingsOneAttributeIsThreeQueries()
     {
+        var (gamesRepo, settingsRepo, attributesRepo) = await SeedGames();
+        await AssertDictionaryQueryCount(gamesRepo, settingsRepo, attributesRepo, new LoadLevelOrderReadonlyEnrichmentStrategy<Game>());
+    }
+
+    [Fact]
+    public async Task OmittedStrategyDictionaryIsOneReadPerEnrichment()
+    {
+        var (gamesRepo, settingsRepo, attributesRepo) = await SeedGames();
+        await AssertDictionaryQueryCount(gamesRepo, settingsRepo, attributesRepo, null);
+    }
+
+    [Fact]
+    public async Task DefaultStrategyDictionaryIsOneReadPerEnrichment()
+    {
+        var (gamesRepo, settingsRepo, attributesRepo) = await SeedGames();
+        await AssertDictionaryQueryCount(gamesRepo, settingsRepo, attributesRepo, new DefaultReadonlyEnrichmentStrategy<Game>());
+    }
+
+    [Fact]
+    public async Task EnrichOnlySettingsSkipsOtherFills()
+    {
+        var (gamesRepo, settingsRepo, attributesRepo) = await SeedGames();
+        var settingReads = new Reads();
+        var attributeReads = new Reads();
+        gamesRepo.AddEnriched(
+            new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"),
+            new CountingRepository<Setting>(settingsRepo, settingReads));
+        gamesRepo.AddEnriched(
+            new("Attributes", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"),
+            new CountingRepository<GameAttribute>(attributesRepo, attributeReads));
+        var items = await gamesRepo.Read(options: new ReadonlyRepositoryMappingOptions<Game>
+        {
+            Enrich = EnrichmentSelection.Only("Settings"),
+        }).ToListAsync();
+        Assert.Equal(121, items.Count);
+        Assert.All(items, game => Assert.Equal(3, game.Settings.Count));
+        Assert.Equal(1, settingReads.Count);
+        Assert.Equal(0, attributeReads.Count);
+    }
+
+    [Fact]
+    public async Task DefaultZeroQueriesWhenParentsEmpty()
+    {
+        var connection = await OpenConnection();
+        var reads = new Reads();
+        await new DefaultReadonlyEnrichmentStrategy<Parent>().Apply(
+            new CountingRepository<Child>(Open<Child>(connection), reads),
+            new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
+            []);
+        Assert.Equal(0, reads.Count);
+    }
+
+    [Fact]
+    public async Task DefaultZeroQueriesWhenKeysNull()
+    {
+        var connection = await OpenConnection();
+        var reads = new Reads();
+        await new DefaultReadonlyEnrichmentStrategy<Parent>().Apply(
+            new CountingRepository<Kind>(Open<Kind>(connection), reads),
+            new("KindName", "Kind", "Id", "Name"),
+            [new Parent { Kind = null }, new Parent { Kind = null }]);
+        Assert.Equal(0, reads.Count);
+    }
+
+    static async Task<(CRUDRepository<Game> Games, CRUDRepository<Setting> Settings, CRUDRepository<GameAttribute> Attributes)> SeedGames()
+    {
         var connection = await OpenConnection();
         var gamesRepo = Open<Game>(connection);
         var settingsRepo = Open<Setting>(connection, SettingSchema);
@@ -339,18 +414,24 @@ public class LoadLevelOrderReadonlyEnrichmentStrategyTests
             await settingsRepo.Create(new Setting { ParentId = game.Id, Name = "c", Value = "3" });
             await attributesRepo.Create(new GameAttribute { ParentId = game.Id, Name = "theme", Value = "dark" });
         }
+        return (gamesRepo, settingsRepo, attributesRepo);
+    }
+
+    static async Task AssertDictionaryQueryCount(
+        CRUDRepository<Game> gamesRepo,
+        CRUDRepository<Setting> settingsRepo,
+        CRUDRepository<GameAttribute> attributesRepo,
+        IReadonlyEnrichmentStrategy<Game>? strategy)
+    {
         var reads = new Reads();
         var countedGames = new CountingRepository<Game>(gamesRepo, reads);
-        var countedSettings = new CountingRepository<Setting>(settingsRepo, reads);
-        var countedAttributes = new CountingRepository<GameAttribute>(attributesRepo, reads);
-        var strategy = new LoadLevelOrderReadonlyEnrichmentStrategy<Game>();
         gamesRepo.AddEnriched(
             new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"),
-            countedSettings,
+            new CountingRepository<Setting>(settingsRepo, reads),
             strategy);
         gamesRepo.AddEnriched(
             new("Attributes", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary, DictionaryKey: "Name"),
-            countedAttributes,
+            new CountingRepository<GameAttribute>(attributesRepo, reads),
             strategy);
         var items = await countedGames.Read().ToListAsync();
         Assert.Equal(121, items.Count);

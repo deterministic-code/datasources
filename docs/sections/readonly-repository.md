@@ -185,6 +185,14 @@ Per-call [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md). Whe
 enrichment?: IReadonlyEnrichmentStrategy<T & object>
 ```
 
+##### enrich
+
+Which registered fills this read runs. Omitted runs every fill. `EnrichmentSelection.none` runs none, so a list can skip a dictionary. `EnrichmentSelection.only("categories")` runs that destination only. A per-call `enrichment` strategy still replaces the registered fills.
+
+```typescript
+enrich?: EnrichmentSelection
+```
+
 #### IRepositoryTree
 
 ```typescript
@@ -440,6 +448,14 @@ Per-call [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md). Whe
 IReadonlyEnrichmentStrategy<T>? Enrichment { get; init; }
 ```
 
+##### Enrich
+
+Which registered fills this read runs. Omitted runs every fill. `EnrichmentSelection.None` runs none, so a list can skip a dictionary. `EnrichmentSelection.Only("Categories")` runs that destination only. A per-call `Enrichment` strategy still replaces the registered fills.
+
+```csharp
+EnrichmentSelection? Enrich { get; init; }
+```
+
 #### IRepositoryTree
 
 ```csharp
@@ -644,6 +660,14 @@ Per-call [ReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md). When
 
 ```rust
 pub enrichment: Option<Arc<dyn ReadonlyEnrichmentStrategy<Row, Row>>>
+```
+
+##### enrich
+
+Which registered fills this read runs. Omitted runs every fill. `EnrichmentSelection::none()` runs none, so a list can skip a dictionary. `EnrichmentSelection::only(["categories"])` runs that destination only. A per-call `enrichment` strategy still replaces the registered fills.
+
+```rust
+pub enrich: Option<EnrichmentSelection>
 ```
 
 #### RepositoryTree

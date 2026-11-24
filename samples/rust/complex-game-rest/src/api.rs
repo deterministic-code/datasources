@@ -14,8 +14,8 @@ use crate::json_object::JsonObjectSerializer;
 use crate::{Category, Contact, Game, GameState, Item, ItemLink, Review, Skill, User};
 use chrono::{DateTime, Utc};
 use datasources::{
-    Connection, CRUDRepository, DatasourceError, Entity, Expression, Identifier, IReadonlyRepository,
-    Operator, Value, Where,
+    Connection, CRUDRepository, DatasourceError, EnrichmentSelection, Entity, Expression, Identifier,
+    IReadonlyRepository, Operator, ReadonlyRepositoryMappingOptions, Value, Where,
 };
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
@@ -112,7 +112,7 @@ impl Api {
                 put(&self.categories, &query, stamp_category(read(body)?, &self.clock), |row, id| row.id = id).await
             }
             ("DELETE", "/categories") => delete(&self.categories, &query).await,
-            ("GET", "/games") => get(&self.games, &query, &["id", "name"]).await,
+            ("GET", "/games") => self.get_games(&query).await,
             ("POST", "/games") => post(&self.games, stamp_game(read(body)?, &self.clock)).await,
             ("PUT", "/games") => {
                 put(&self.games, &query, stamp_game(read(body)?, &self.clock), |row, id| row.id = id).await
@@ -153,6 +153,33 @@ impl Api {
             ("GET", "/item_graph") => get_view(&self.item_graphs, &query, &["id", "name"]).await,
             _ => Ok(HttpResult { status: 404, body: String::new() }),
         }
+    }
+
+    async fn get_games(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
+        let mut options = ReadonlyRepositoryMappingOptions::default();
+        options.enrich = Some(EnrichmentSelection::only(["settings"]));
+        if let Some(id) = query.get("id").filter(|value| !value.is_empty()) {
+            if query.get("name").map(String::as_str).unwrap_or("").is_empty() {
+                let id: i64 = id.parse().map_err(|_| ApiError::bad("id is required"))?;
+                let game = self
+                    .games
+                    .read_single_where(&Where::new(Operator::equals("id", id)), Some(&options))
+                    .await?;
+                return Ok(ok(200, &game.into_iter().collect::<Vec<_>>())?);
+            }
+        }
+        Ok(ok(
+            200,
+            &match where_query(query, &["id", "name"]).as_ref() {
+                Some(clause) => {
+                    self.games
+                        .read_where(clause, Some(&options))
+                        .try_collect::<Vec<_>>()
+                        .await?
+                }
+                None => self.games.read(None, Some(&options)).try_collect::<Vec<_>>().await?,
+            },
+        )?)
     }
 
     async fn get_categories(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {

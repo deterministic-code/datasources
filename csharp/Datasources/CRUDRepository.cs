@@ -71,7 +71,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         IReadonlyEnrichmentStrategy<T>? strategy = null)
         where TLink : new()
     {
-        var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
+        var chosen = strategy ?? new LoadLevelOrderReadonlyEnrichmentStrategy<T>();
         base.AddEnriched(enrichment, via, strategy);
         var stored = Last();
         stored.Read = new LinkedReadEnrichment<T, TRelated, TLink>(via, link, chosen);

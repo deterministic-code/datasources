@@ -6,6 +6,7 @@ use crate::graph_create_enrichment_strategy::GraphCreateEnrichmentStrategy;
 use crate::tree_create_enrichment_strategy::TreeCreateEnrichmentStrategy;
 use crate::default_update_enrichment_strategy::{update_children, update_linked};
 use crate::enrichment::Enrichment;
+use crate::enrichment_selection::EnrichmentSelection;
 use crate::entity::Entity;
 use crate::load_level_order_readonly_enrichment_strategy::load_level_order_apply_linked;
 use crate::readonly_enrichment_strategy::{apply_linked, ReadonlyEnrichmentStrategy};
@@ -284,11 +285,21 @@ impl<T: Entity> StoredEnrichment<T> {
         }
     }
 
-    pub(crate) async fn apply(
+    pub(crate) fn selected(&self, selection: Option<&EnrichmentSelection>) -> bool {
+        selection
+            .map(|chosen| chosen.includes(&self.enrichment.destination_property))
+            .unwrap_or(true)
+    }
+
+    pub(crate) async fn apply_selected(
         &self,
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
+        selection: Option<&EnrichmentSelection>,
     ) -> Result<()> {
+        if !self.selected(selection) {
+            return Ok(());
+        }
         self.read.apply(&self.enrichment, parents, sources).await
     }
 

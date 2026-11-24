@@ -4,7 +4,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
 use crate::datasource_error::DatasourceError;
-use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+use crate::load_level_order_readonly_enrichment_strategy::LoadLevelOrderReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
 use crate::entity::Entity;
 use crate::i_repository::IRepository;
@@ -156,7 +156,7 @@ impl<T: Entity> ReadonlyRepository<T> {
         via: impl EnrichmentVia<TRelated>,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>>,
     ) -> &mut Self {
-        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        let strategy = strategy.unwrap_or_else(|| Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new()));
         let via = via.read_via();
         self.enrichments
             .lock()
@@ -174,8 +174,12 @@ impl<T: Entity> ReadonlyRepository<T> {
     }
 
     fn enriched_with(&self, options: Option<&ReadonlyRepositoryMappingOptions>) -> bool {
-        options.and_then(|opts| opts.enrichment.as_ref()).is_some()
-            || !self.enrichments.lock().expect("enrichments").is_empty()
+        if options.and_then(|opts| opts.enrichment.as_ref()).is_some() {
+            return true;
+        }
+        let entries = self.enrichments.lock().expect("enrichments");
+        let enrich = options.and_then(|opts| opts.enrich.as_ref());
+        entries.iter().any(|entry| entry.selected(enrich))
     }
 
     pub(crate) fn memory_items(&self) -> Option<&Arc<SharedItems>> {
@@ -224,9 +228,18 @@ impl<T: Entity> ReadonlyRepository<T> {
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
+        self.fill_selected(parents, sources, None).await
+    }
+
+    pub(crate) async fn fill_selected(
+        &self,
+        parents: &mut Vec<T>,
+        sources: Option<&[Option<Row>]>,
+        selection: Option<&crate::enrichment_selection::EnrichmentSelection>,
+    ) -> Result<()> {
         let entries = self.enrichments.lock().expect("enrichments").clone();
         for entry in entries {
-            entry.apply(parents, sources).await?;
+            entry.apply_selected(parents, sources, selection).await?;
         }
         Ok(())
     }
@@ -506,7 +519,8 @@ impl<T: Entity> ReadonlyRepository<T> {
             .into_iter()
             .map(crate::repository::map_row)
             .collect::<Result<Vec<_>>>()?;
-        self.fill(&mut items, Some(&sources)).await?;
+        self.fill_selected(&mut items, Some(&sources), options.and_then(|opts| opts.enrich.as_ref()))
+            .await?;
         Ok(items)
     }
 

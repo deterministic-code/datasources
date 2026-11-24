@@ -705,6 +705,108 @@ async fn linked_two_queries_and_empty_when_unlinked() {
 
 #[tokio::test]
 async fn one_hundred_twenty_one_games_three_settings_one_attribute_is_three_queries() {
+    dictionary_query_count(Some(Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new()))).await;
+}
+
+#[tokio::test]
+async fn omitted_strategy_dictionary_is_one_read_per_enrichment() {
+    dictionary_query_count(None).await;
+}
+
+#[tokio::test]
+async fn default_strategy_dictionary_is_one_read_per_enrichment() {
+    dictionary_query_count(Some(Arc::new(DefaultReadonlyEnrichmentStrategy))).await;
+}
+
+#[tokio::test]
+async fn enrich_only_settings_skips_other_fills() {
+    let connection = setup().await;
+    let mut games = mapped_crud(connection.clone(), "Game");
+    let settings = Arc::new(mapped_crud_schema(connection.clone(), "Setting", setting_schema()));
+    let attributes = Arc::new(mapped_crud_schema(connection, "GameAttribute", setting_schema()));
+    for i in 0..121 {
+        let game = games
+            .create(record(&[("Name", Value::from(format!("g{i}")))]))
+            .await
+            .unwrap();
+        for (name, value) in [("a", "1"), ("b", "2"), ("c", "3")] {
+            settings
+                .create(record(&[
+                    ("ParentId", id_of(&game)),
+                    ("Name", Value::from(name)),
+                    ("Value", Value::from(value)),
+                ]))
+                .await
+                .unwrap();
+        }
+        attributes
+            .create(record(&[
+                ("ParentId", id_of(&game)),
+                ("Name", Value::from("theme")),
+                ("Value", Value::from("dark")),
+            ]))
+            .await
+            .unwrap();
+    }
+    let settings_reads = Arc::new(Mutex::new(0));
+    let attribute_reads = Arc::new(Mutex::new(0));
+    games.add_enriched(dictionary_fill(), count(as_read(settings), settings_reads.clone()), None);
+    games.add_enriched(
+        Enrichment::new(
+            "Attributes",
+            "Id",
+            "ParentId",
+            Some("Value".into()),
+            EnrichmentPropertyType::Dictionary,
+        )
+        .with_dictionary_key("Name"),
+        count(as_read(attributes), attribute_reads.clone()),
+        None,
+    );
+    let mut options = ReadonlyRepositoryMappingOptions::default();
+    options.enrich = Some(EnrichmentSelection::only(["Settings"]));
+    let items: Vec<Row> = games.read(None, Some(&options)).try_collect().await.unwrap();
+    assert_eq!(items.len(), 121);
+    assert_eq!(items[0].payload("Settings").len(), 3);
+    assert_eq!(*settings_reads.lock().unwrap(), 1);
+    assert_eq!(*attribute_reads.lock().unwrap(), 0);
+}
+
+#[tokio::test]
+async fn default_zero_queries_when_parents_empty() {
+    let connection = setup().await;
+    let reads = Arc::new(Mutex::new(0));
+    DefaultReadonlyEnrichmentStrategy
+        .apply(
+            count(as_read(Arc::new(mapped_crud(connection, "Child"))), reads.clone()),
+            &list_fill(),
+            &mut Vec::<Row>::new(),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(*reads.lock().unwrap(), 0);
+}
+
+#[tokio::test]
+async fn default_zero_queries_when_keys_null() {
+    let connection = setup().await;
+    let reads = Arc::new(Mutex::new(0));
+    DefaultReadonlyEnrichmentStrategy
+        .apply(
+            count(as_read(Arc::new(mapped_crud(connection, "Kind"))), reads.clone()),
+            &object_fill(),
+            &mut vec![record(&[]), record(&[])],
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(*reads.lock().unwrap(), 0);
+}
+
+async fn dictionary_query_count(
+    strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<Row, Row>>>,
+) {
     let connection = setup().await;
     let mut games = mapped_crud(connection.clone(), "Game");
     let settings = Arc::new(mapped_crud_schema(connection.clone(), "Setting", setting_schema()));
@@ -738,11 +840,10 @@ async fn one_hundred_twenty_one_games_three_settings_one_attribute_is_three_quer
             .unwrap();
     }
     let reads = Arc::new(Mutex::new(0));
-    let strategy = Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new());
     games.add_enriched(
         dictionary_fill(),
         count(as_read(settings), reads.clone()),
-        Some(strategy.clone()),
+        strategy.clone(),
     );
     games.add_enriched(
         Enrichment::new(
@@ -754,7 +855,7 @@ async fn one_hundred_twenty_one_games_three_settings_one_attribute_is_three_quer
         )
         .with_dictionary_key("Name"),
         count(as_read(attributes), reads.clone()),
-        Some(strategy),
+        strategy,
     );
     let counted = count(as_read(Arc::new(games)), reads.clone());
     let items: Vec<Row> = counted.read(None, None).try_collect().await.unwrap();

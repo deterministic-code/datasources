@@ -4,6 +4,19 @@ internal abstract class ReadEnrichment<T>
 {
     internal abstract Task Apply(Enrichment enrichment, IList<T> parents, IReadOnlyList<Row?>? sources);
 
+    internal bool Selected(Enrichment enrichment, EnrichmentSelection? enrich) =>
+        enrich is not { } selection || selection.Includes(enrichment.DestinationProperty);
+
+    internal Task ApplySelected(
+        Enrichment enrichment,
+        IList<T> parents,
+        IReadOnlyList<Row?>? sources,
+        EnrichmentSelection? enrich)
+    {
+        if (!Selected(enrichment, enrich)) return Task.CompletedTask;
+        return Apply(enrichment, parents, sources);
+    }
+
     internal virtual Task<Value?> Lookup(string property, Value name, string key) => Task.FromResult<Value?>(null);
 }
 

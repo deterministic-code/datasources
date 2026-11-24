@@ -102,6 +102,13 @@ public class RowTypeConverterTests
         Assert.Equal(id.ToString(), row.Uuid);
     }
 
+    [Fact]
+    public void CoercesLongOntoString()
+    {
+        var row = new MetaDataRowTypeConverter<Keyed>().Convert(new Row { ["Uuid"] = 1L });
+        Assert.Equal("1", row.Uuid);
+    }
+
     public class Keyed
     {
         public string Uuid { get; set; } = "";

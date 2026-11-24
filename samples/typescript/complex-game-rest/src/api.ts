@@ -1,5 +1,6 @@
 import {
   DatasourceError,
+  EnrichmentSelection,
   Identifier,
   Operator,
   Where,
@@ -60,7 +61,7 @@ export class Api {
         "POST /categories": () => post(this.categories, stampRow(read(body))),
         "PUT /categories": () => put(this.categories, query, stampRow(read(body)), (row, id) => { row.id = id; }),
         "DELETE /categories": () => remove(this.categories, query),
-        "GET /games": () => get(this.games, query, ["id", "name"]),
+        "GET /games": () => this.getGames(query),
         "POST /games": () => post(this.games, stampGame(read(body))),
         "PUT /games": () => put(this.games, query, stampGame(read(body)), (row, id) => { row.id = id; }),
         "DELETE /games": () => remove(this.games, query),
@@ -97,6 +98,15 @@ export class Api {
           ? { status: 400, body: error.message }
           : Promise.reject(error);
     }
+  };
+
+  private getGames = async (query: Record<string, string>): Promise<HttpResult> => {
+    const options = { enrich: EnrichmentSelection.only("settings") };
+    if ((query.id ?? "").length > 0 && (query.name ?? "").length === 0) {
+      const game = await this.games.readSingle(new Where(new Operator.Equals("id", Number(query.id))), undefined, options);
+      return { status: 200, body: toJson(game ? [game] : []) };
+    }
+    return { status: 200, body: toJson(await list(this.games, whereOf(query, ["id", "name"]), options)) };
   };
 
   private getCategories = async (query: Record<string, string>): Promise<HttpResult> => {
@@ -189,9 +199,14 @@ const remove = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>
   return { status: 204, body: "" };
 };
 
-const list = async <T>(repo: { read: (query?: IWhere) => AsyncIterable<T> }, query: IWhere | undefined): Promise<T[]> => {
+const list = async <T>(
+  repo: { read: (query?: IWhere, parameters?: undefined, options?: { enrich?: EnrichmentSelection }) => AsyncIterable<T> },
+  query: IWhere | undefined,
+  options?: { enrich?: EnrichmentSelection },
+): Promise<T[]> => {
   const rows: T[] = [];
-  for await (const row of query == null ? repo.read() : repo.read(query)) rows.push(row);
+  for await (const row of query == null ? repo.read(undefined, undefined, options) : repo.read(query, undefined, options))
+    rows.push(row);
   return rows;
 };
 

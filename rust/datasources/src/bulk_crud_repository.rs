@@ -4,7 +4,7 @@ use crate::connection::Connection;
 use crate::crud_repository::CRUDRepository;
 use crate::entity::Entity;
 use crate::crud_repository_options::CRUDRepositoryOptions;
-use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
+use crate::load_level_order_readonly_enrichment_strategy::LoadLevelOrderReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
@@ -71,7 +71,7 @@ impl BulkCRUDRepository {
         via: impl EnrichmentVia<TRelated>,
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<Row, TRelated>>>,
     ) -> &mut Self {
-        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        let strategy = strategy.unwrap_or_else(|| Arc::new(LoadLevelOrderReadonlyEnrichmentStrategy::new()));
         let persist_bulk = via.bulk_repo();
         let (via, persist) = via.into_repos();
         self.crud

@@ -14,6 +14,8 @@ type Props = Record<string, Scalar | object>;
 export class DefaultReadonlyEnrichmentStrategy<T extends object>
   implements IReadonlyEnrichmentStrategy<T>
 {
+  protected batchSize = 500;
+
   apply<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
@@ -61,18 +63,15 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const cache = new Map<string, TRelated | undefined>();
-    for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment, sources, index);
-      if (key === undefined || key === null) continue;
-      const cacheKey = this.matchKey(parent, enrichment, sources, index);
+    const index = new Map<string, TRelated>();
+    for (const item of await this.loadByKeys(via, enrichment.relatedKey, this.distinctKeys(parents, sources, enrichment))) {
+      const cacheKey = this.rowMatchKey(item, enrichment);
+      if (cacheKey !== undefined && !index.has(cacheKey)) index.set(cacheKey, item);
+    }
+    for (const [indexOfParent, parent] of parents.entries()) {
+      const cacheKey = this.matchKey(parent, enrichment, sources, indexOfParent);
       if (cacheKey === undefined) continue;
-      if (!cache.has(cacheKey)) {
-        const clause = this.matchWhere(parent, enrichment, sources, index);
-        if (clause === undefined) continue;
-        cache.set(cacheKey, await via.readSingle(clause));
-      }
-      const related = cache.get(cacheKey);
+      const related = index.get(cacheKey);
       if (!related) continue;
       Object.assign(parent, {
         [enrichment.destinationProperty]: enrichment.relatedProperty ? this.props(related)[enrichment.relatedProperty] : related,
@@ -86,13 +85,14 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    for (const [index, parent] of parents.entries()) {
-      const clause = this.matchWhere(parent, enrichment, sources, index);
-      if (clause === undefined) continue;
-      const related: TRelated[] = [];
-      for await (const item of via.read(clause))
-        related.push(item);
-      Object.assign(parent, { [enrichment.destinationProperty]: related });
+    const index = this.group(
+      await this.loadByKeys(via, enrichment.relatedKey, this.distinctKeys(parents, sources, enrichment)),
+      enrichment,
+    );
+    for (const [indexOfParent, parent] of parents.entries()) {
+      const cacheKey = this.matchKey(parent, enrichment, sources, indexOfParent);
+      if (cacheKey === undefined) continue;
+      Object.assign(parent, { [enrichment.destinationProperty]: index.get(cacheKey) ?? [] });
     }
   }
 
@@ -102,13 +102,17 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
+    const index = this.group(
+      await this.loadByKeys(via, enrichment.relatedKey, this.distinctKeys(parents, sources, enrichment)),
+      enrichment,
+    );
     const schema = via.schema;
     const mapKey = dictionaryMapKey(enrichment);
-    for (const [index, parent] of parents.entries()) {
-      const clause = this.matchWhere(parent, enrichment, sources, index);
-      if (clause === undefined) continue;
+    for (const [indexOfParent, parent] of parents.entries()) {
+      const cacheKey = this.matchKey(parent, enrichment, sources, indexOfParent);
+      if (cacheKey === undefined) continue;
       const map: Record<string, Scalar | object> = {};
-      for await (const item of via.read(clause)) {
+      for (const item of index.get(cacheKey) ?? []) {
         const row = this.props(item);
         const entry = row[mapKey];
         if (entry === undefined || entry === null) continue;
@@ -119,6 +123,53 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
       Object.assign(parent, { [enrichment.destinationProperty]: map });
     }
   }
+
+  protected async loadByKeys<TItem extends object>(
+    via: IReadonlyRepository<TItem>,
+    column: string,
+    keys: Scalar[],
+  ): Promise<TItem[]> {
+    const related: TItem[] = [];
+    if (keys.length === 0) return related;
+    for (const chunk of this.chunks(keys)) {
+      for await (const item of via.read(new Where(new Operator.In(column, chunk))))
+        related.push(item);
+    }
+    return related;
+  }
+
+  protected distinctKeys(parents: T[], sources: (Row | undefined)[] | undefined, enrichment: Enrichment): Scalar[] {
+    const keys: Scalar[] = [];
+    const seen = new Set<string>();
+    for (const [index, parent] of parents.entries()) {
+      const key = this.sourceKey(parent, enrichment, sources, index);
+      if (key === undefined || key === null) continue;
+      const cacheKey = this.keyOf(key);
+      if (seen.has(cacheKey)) continue;
+      seen.add(cacheKey);
+      keys.push(this.scalar(key));
+    }
+    return keys;
+  }
+
+  protected group<TRelated>(items: TRelated[], enrichment: Enrichment): Map<string, TRelated[]> {
+    const index = new Map<string, TRelated[]>();
+    for (const item of items) {
+      const cacheKey = this.rowMatchKey(item, enrichment);
+      if (cacheKey === undefined) continue;
+      const list = index.get(cacheKey) ?? [];
+      list.push(item);
+      index.set(cacheKey, list);
+    }
+    return index;
+  }
+
+  protected chunks = <TItem>(items: TItem[]): TItem[][] => {
+    const out: TItem[][] = [];
+    for (let offset = 0; offset < items.length; offset += this.batchSize)
+      out.push(items.slice(offset, offset + this.batchSize));
+    return out;
+  };
 
   sourceValue(
     parent: T,
@@ -183,9 +234,9 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
 
   protected props = <TItem>(item: TItem): Props => item as never as Props;
 
-  keyOf = (key: Scalar | object, name = ""): string => String(this.lookupKey(key, name));
+  keyOf = (key: Scalar | object, name = "Id"): string => String(this.lookupKey(key, name));
 
-  protected lookupKey = (value: Scalar | object | undefined, name = ""): Scalar | object | undefined =>
+  protected lookupKey = (value: Scalar | object | undefined, name = "Id"): Scalar | object | undefined =>
     identityKey(value, name);
 
   private copyValue = (row: Props, schema: Schema, enrichment: Enrichment): Scalar | object => {

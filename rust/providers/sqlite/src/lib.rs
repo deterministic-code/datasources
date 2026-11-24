@@ -95,6 +95,9 @@ mod tree_graph_enrichment;
 #[cfg(test)]
 #[path = "../tests/mapping_cell.rs"]
 mod mapping_cell;
+#[cfg(test)]
+#[path = "../tests/game_dictionary_query_count.rs"]
+mod game_dictionary_query_count;
 
 #[cfg(test)]
 mod tests {

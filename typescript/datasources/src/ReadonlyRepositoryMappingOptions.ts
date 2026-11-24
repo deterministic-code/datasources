@@ -1,6 +1,7 @@
 import type { Value, Cells } from "./converters/Value.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
+import type { EnrichmentSelection } from "./EnrichmentSelection.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import type { Schema } from "./Schema.ts";
@@ -16,4 +17,5 @@ export type ReadonlyRepositoryMappingOptions<T = Cells> = {
   readProperties?: string[];
   schema?: Schema;
   enrichment?: IReadonlyEnrichmentStrategy<T & object>;
+  enrich?: EnrichmentSelection;
 };
