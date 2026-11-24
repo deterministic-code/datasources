@@ -1,0 +1,15 @@
+var connection = await OpenConnection();
+var parentsRepo = Open<Parent>(connection);
+var childrenRepo = Open<Child>(connection);
+for (var i = 0; i < 100; i++)
+{
+    var parent = await parentsRepo.Create(new Parent());
+    await childrenRepo.Create(new Child { ParentId = parent.Id, Label = $"{i}" });
+}
+var reads = new Reads();
+var counted = new CountingRepository<Child>(childrenRepo, reads);
+parentsRepo.AddEnriched(
+    new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
+    counted,
+    new LoadLevelOrderReadonlyEnrichmentStrategy<Parent>());
+var items = await parentsRepo.Read().ToListAsync();

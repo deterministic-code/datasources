@@ -3,16 +3,18 @@ import {
   BatchCommandIBulkWriteStrategy,
   BulkCRUDRepository,
   Datasource,
+  LoadLevelOrderReadonlyEnrichmentStrategy,
   Operator,
+  ReadonlyRepository,
   Where,
 } from "@deterministic-code/datasources";
-import { options as addressOptions } from "../generated/repositories/addressesRepository.ts";
+import { AddressesRepository, options as addressOptions } from "../generated/repositories/addressesRepository.ts";
 import { AddressTypesRepository } from "../generated/repositories/addressTypesRepository.ts";
 import { options as contactOptions } from "../generated/repositories/contactsRepository.ts";
-import { options as preferenceOptions } from "../generated/repositories/contactPreferencesRepository.ts";
-import { options as settingOptions } from "../generated/repositories/contactSettingsRepository.ts";
+import { ContactPreferencesRepository, options as preferenceOptions } from "../generated/repositories/contactPreferencesRepository.ts";
+import { ContactSettingsRepository, options as settingOptions } from "../generated/repositories/contactSettingsRepository.ts";
 import { ContactSourcesRepository } from "../generated/repositories/contactSourcesRepository.ts";
-import { options as phoneOptions } from "../generated/repositories/phonesRepository.ts";
+import { PhonesRepository, options as phoneOptions } from "../generated/repositories/phonesRepository.ts";
 import { PhoneTypesRepository } from "../generated/repositories/phoneTypesRepository.ts";
 import { address } from "../generated/types/view/address.ts";
 import { contact, type Contact } from "../generated/types/view/contact.ts";
@@ -185,6 +187,33 @@ for await (const row of contacts.read()) loadedAll.push(row);
 createdBulk.forEach((created, index) => {
   const loaded = loadedAll.find((row) => row.id === created.id);
   if (loaded == null) throw new Error("bulk read child counts");
+  requireBulkContact(loaded, index);
+});
+
+const strategy = new LoadLevelOrderReadonlyEnrichmentStrategy<Contact>().withBatchSize(3);
+const loadLevel = new ReadonlyRepository<Contact>(connection, contactOptions(connection));
+const loadLevelAddresses = new AddressesRepository(connection);
+const loadLevelPhones = new PhonesRepository(connection);
+const loadLevelSettings = new ContactSettingsRepository(connection);
+const loadLevelPrefs = new ContactPreferencesRepository(connection);
+const loadLevelSources = new ContactSourcesRepository(connection);
+loadLevel.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, loadLevelAddresses, strategy);
+loadLevel.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, loadLevelPhones, strategy);
+loadLevel.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", dictionaryKey: "key", type: "dictionary" }, loadLevelSettings, strategy);
+loadLevel.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", dictionaryKey: "key", type: "dictionary" }, loadLevelPrefs, strategy);
+loadLevel.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, loadLevelSources, strategy);
+loadLevel.addEnriched({ destinationProperty: "description", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "description", type: "object" }, loadLevelSources, strategy);
+const loadLevelAda = await loadLevel.readSingle(new Where(new Operator.Equals("id", after.id)));
+if (loadLevelAda == null || loadLevelAda.firstName !== "Ada Byron"
+  || loadLevelAda.settings.theme !== "sepia"
+  || loadLevelAda.prefs.home?.locale !== "en-GB")
+  throw new Error("load-level-order ada");
+requireAdaChildren(loadLevelAda, "Work", "Cambridge", "555-0111");
+const loadLevelAll: Contact[] = [];
+for await (const row of loadLevel.read()) loadLevelAll.push(row);
+createdBulk.forEach((created, index) => {
+  const loaded = loadLevelAll.find((row) => row.id === created.id);
+  if (loaded == null) throw new Error("load-level-order bulk");
   requireBulkContact(loaded, index);
 });
 

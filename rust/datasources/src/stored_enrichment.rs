@@ -7,6 +7,7 @@ use crate::tree_create_enrichment_strategy::TreeCreateEnrichmentStrategy;
 use crate::default_update_enrichment_strategy::{update_children, update_linked};
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
+use crate::load_level_order_readonly_enrichment_strategy::load_level_order_apply_linked;
 use crate::readonly_enrichment_strategy::{apply_linked, ReadonlyEnrichmentStrategy};
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
@@ -73,15 +74,26 @@ impl<T: Entity, TRelated: Entity, TLink: Entity> AppliedRead<T>
         parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        let _ = &self.strategy;
-        apply_linked(
-            self.via.clone(),
-            self.link.clone(),
-            enrichment,
-            parents,
-            sources,
-        )
-        .await
+        if let Some(batch_size) = self.strategy.linked_batch_size() {
+            load_level_order_apply_linked(
+                self.via.clone(),
+                self.link.clone(),
+                enrichment,
+                parents,
+                sources,
+                batch_size,
+            )
+            .await
+        } else {
+            apply_linked(
+                self.via.clone(),
+                self.link.clone(),
+                enrichment,
+                parents,
+                sources,
+            )
+            .await
+        }
     }
 
     async fn lookup(&self, property: &str, name: Value, key: &str) -> Result<Option<Value>> {

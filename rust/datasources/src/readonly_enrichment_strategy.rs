@@ -3,6 +3,7 @@ use crate::enrichment::Enrichment;
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
@@ -24,7 +25,8 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
                 self.apply_list(via, enrichment, parents, sources).await
             }
             crate::EnrichmentPropertyType::Dictionary => {
-                apply_dictionary(via, enrichment, parents, sources).await
+                self.apply_dictionary(via, enrichment, parents, sources)
+                    .await
             }
             crate::EnrichmentPropertyType::Object => {
                 self.apply_object(via, enrichment, parents, sources).await
@@ -86,6 +88,20 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
         }
         Ok(())
     }
+
+    async fn apply_dictionary(
+        &self,
+        via: Arc<dyn IReadonlyRepository<TRelated>>,
+        enrichment: &Enrichment,
+        parents: &mut Vec<T>,
+        sources: Option<&[Option<Row>]>,
+    ) -> Result<()> {
+        apply_dictionary(via, enrichment, parents, sources).await
+    }
+
+    fn linked_batch_size(&self) -> Option<usize> {
+        None
+    }
 }
 
 async fn apply_dictionary<T: Entity, TRelated: Entity>(
@@ -99,30 +115,38 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
             continue;
         };
         let related = via.read_where(&clause, None).try_collect::<Vec<_>>().await?;
-        let key_name = enrichment.map_key()?;
-        let value_columns = enrichment.value_columns(via.schema())?;
-        let rows = related
-            .into_iter()
-            .filter_map(|item| {
-                let key = item.cell(key_name)?;
-                let mut row = Row::new();
-                row.insert("key".to_string(), key.clone());
-                row.insert(key_name.to_string(), key);
-                if let Some(select) = enrichment.related_property.as_deref() {
-                    row.insert(select.to_string(), item.cell(select)?);
-                } else {
-                    for name in &value_columns {
-                        if let Some(cell) = item.cell(name) {
-                            row.insert(name.clone(), cell);
-                        }
-                    }
-                }
-                Some(row)
-            })
-            .collect();
+        let rows = shape_dictionary_rows(related, enrichment, via.schema())?;
         parent.set_payload(&enrichment.destination_property, rows)?;
     }
     Ok(())
+}
+
+pub(crate) fn shape_dictionary_rows<TRelated: Entity>(
+    related: Vec<TRelated>,
+    enrichment: &Enrichment,
+    schema: &Schema,
+) -> Result<Vec<Row>> {
+    let key_name = enrichment.map_key()?;
+    let value_columns = enrichment.value_columns(schema)?;
+    Ok(related
+        .into_iter()
+        .filter_map(|item| {
+            let key = item.cell(key_name)?;
+            let mut row = Row::new();
+            row.insert("key".to_string(), key.clone());
+            row.insert(key_name.to_string(), key);
+            if let Some(select) = enrichment.related_property.as_deref() {
+                row.insert(select.to_string(), item.cell(select)?);
+            } else {
+                for name in &value_columns {
+                    if let Some(cell) = item.cell(name) {
+                        row.insert(name.clone(), cell);
+                    }
+                }
+            }
+            Some(row)
+        })
+        .collect())
 }
 
 pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(

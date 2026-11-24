@@ -200,6 +200,10 @@ pages:
     title: HashsetOptimizedReadonlyEnrichmentStrategy
     group: Code Reference
     parent: Enrichment
+  - path: sections/load-level-order-readonly-enrichment-strategy.md
+    title: LoadLevelOrderReadonlyEnrichmentStrategy
+    group: Code Reference
+    parent: Enrichment
   - path: sections/nested-to-object-enrichment-strategy.md
     title: NestedToObjectEnrichmentStrategy
     group: Code Reference

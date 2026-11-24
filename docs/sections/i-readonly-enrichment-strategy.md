@@ -96,7 +96,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync
 
 ##### apply(via, enrichment, parents, sources)
 
-Fills each parent from the related repository. The default dispatches to `apply_object` or `apply_list`.
+Fills each parent from the related repository. The default dispatches to `apply_object`, `apply_list`, or `apply_dictionary`.
 
 ```rust
 async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
@@ -139,26 +139,35 @@ async fn apply_list(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enric
 
 **Returns** `Result<()>`
 
-##### apply_linked(via, link, enrichment, parents, sources)
+##### apply_dictionary(via, enrichment, parents, sources)
 
-Fills each parent by reading the link table, then the related repository.
+Fills a dictionary. The default reads the related rows for each parent key.
 
 ```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_dictionary(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — junction [IReadonlyRepository](./readonly-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parents` — parents to fill
 - `sources` — optional source rows aligned with `parents`
 
 **Returns** `Result<()>`
+
+##### linked_batch_size()
+
+When set, linked fills use that key batch size for two `IN` reads. Omitted keeps the per-parent default. The trait stays dyn-compatible; C# and TypeScript override {{ApplyLinked|applyLinked|apply_linked}} instead.
+
+```rust
+fn linked_batch_size(&self) -> Option<usize>
+```
+
+**Returns** `Option<usize>`
 :::
 
 ## Remarks
 
-Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the object and list fills on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Rust overrides `apply_object` and `apply_list` on this trait.
+Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the object, list, dictionary, and linked fills on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Rust overrides `apply_object`, `apply_list`, and `apply_dictionary` on this trait. Linked batching uses `linked_batch_size`.
 
 ## Examples
 

@@ -104,7 +104,7 @@ async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment
 
 ## Remarks
 
-Pass it as the strategy on [IEnriched](./i-enriched.md). Linked fills stay on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). A parent with no key is skipped. A key with no related row leaves a lookup unset and a list empty.
+Pass it as the strategy on [IEnriched](./i-enriched.md). It batches lookups and lists in one `IN` query and does not chunk that list. Dictionary and linked fills stay on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Use [LoadLevelOrderReadonlyEnrichmentStrategy](./load-level-order-readonly-enrichment-strategy.md) to batch those and to chunk large key sets. A parent with no key is skipped. A key with no related row leaves a lookup unset and a list empty.
 
 ## Examples
 
