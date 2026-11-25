@@ -16,9 +16,12 @@ internal sealed class MysqlAlterTableStatementRenderer : AlterTableStatementText
 
     protected override string Identity(Column column) => column.Identity ? " AUTO_INCREMENT" : "";
 
+    protected override string Constraint(ITableConstraint constraint) => base.Constraint(MysqlIdentifier.Fit(constraint));
+
     protected override string ActionSql(AlterTableStatement.IAction action) => action switch
     {
         AlterTableStatement.AlterColumn alter => $"MODIFY COLUMN {Column(alter.Column)}",
+        AlterTableStatement.DropConstraint drop => $"DROP CONSTRAINT {Quote(MysqlIdentifier.Fit(drop.Name))}",
         _ => base.ActionSql(action)
     };
 }

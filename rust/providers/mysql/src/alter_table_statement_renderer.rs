@@ -1,11 +1,15 @@
 use datasources::{
     AlterAction, AlterTableStatement, AlterTableStatementTextRenderer, Column,
-    CreateTableStatementTextRenderer, NotNull,
+    CreateTableStatementTextRenderer, NotNull, TableConstraint,
 };
 
 pub struct MysqlAlterTableStatementRenderer;
 
 impl CreateTableStatementTextRenderer for MysqlAlterTableStatementRenderer {
+    fn constraint(&self, constraint: &TableConstraint) -> String {
+        crate::identifier::render_constraint(self, constraint)
+    }
+
     fn quote(&self, name: &str) -> String {
         crate::MysqlDriver::quote(name)
     }
@@ -41,6 +45,15 @@ impl AlterTableStatementTextRenderer for MysqlAlterTableStatementRenderer {
     fn action_sql(&self, action: &AlterAction) -> String {
         match action {
             AlterAction::AlterColumn(column) => format!("MODIFY COLUMN {}", self.column(column)),
+            AlterAction::AddConstraint(constraint) => {
+                format!("ADD {}", self.constraint(constraint))
+            }
+            AlterAction::DropConstraint { name } => {
+                format!(
+                    "DROP CONSTRAINT {}",
+                    self.quote(&crate::identifier::fit(name))
+                )
+            }
             other => {
                 struct DefaultAction;
                 impl CreateTableStatementTextRenderer for DefaultAction {}

@@ -11,6 +11,7 @@ import {
   CreateDeleteStoredProcedureStatement,
   CreateIndexStatement,
   CreateNestedReadStoredProcedureStatement,
+  DropTriggerStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
@@ -34,12 +35,14 @@ import {
   SelectStatement,
   SqlSeedStatement,
   StatementTextRenderer,
+  UniqueConstraint,
   UpdateStatement,
   Where,
 } from "@deterministic-code/datasources";
 import { describe, expect, it } from "vitest";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
 import { MysqlDriver } from "./MysqlDriver.ts";
+import { fitMysqlIdentifier } from "./MysqlIdentifier.ts";
 import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 
 describe("MysqlStatementRenderer", () => {
@@ -415,6 +418,62 @@ describe("MysqlStatementRenderer", () => {
     expect(indexAt).toBeLessThan(renameAt);
     expect(renameAt).toBeLessThan(dropAt);
     expect(rebuilt.endsWith("SET FOREIGN_KEY_CHECKS = 1")).toBe(true);
+  });
+
+  it("shortens index, foreign key, trigger, and constraint names the same way on drop", () => {
+    const index = "game_journey_settings_game_journey_setting_category_type_id_index";
+    const foreignKey = "game_journey_settings_game_journey_setting_category_type_id_foreign_key";
+    const trigger = "trg_game_journey_setting_category_preference_option_values_updated_at";
+    const unique = "game_journey_settings_external_reference_code_value_unique_constraint";
+    const same = (sql: string, name: string) => {
+      const fitted = fitMysqlIdentifier(name);
+      expect(fitted.length).toBeLessThanOrEqual(64);
+      expect(fitted).not.toBe(name);
+      expect(sql).toContain(fitted);
+      expect(sql).not.toContain(name);
+    };
+    same(renderer.render(new CreateIndexStatement(index, "game_journey_settings", ["category_type_id"])), index);
+    const uniqueIndex = renderer.render(
+      new CreateIndexStatement(index, "game_journey_settings", ["category_type_id"], true),
+    );
+    same(uniqueIndex, index);
+    expect(uniqueIndex.startsWith("CREATE UNIQUE INDEX ")).toBe(true);
+    same(renderer.render(new DropIndexStatement(index, "game_journey_settings")), index);
+    same(
+      renderer.render(new ForeignKeyStatement("orders", foreignKey, ["category_type_id"], "categories", ["id"])),
+      foreignKey,
+    );
+    same(
+      renderer.render(new ForeignKeyStatement("orders", foreignKey, ["category_type_id"], "categories", ["id"], "drop")),
+      foreignKey,
+    );
+    same(renderer.render(new CreateTriggerStatement("game_journey_settings", trigger, "updated", "id")), trigger);
+    same(renderer.render(new DropTriggerStatement(trigger, "game_journey_settings")), trigger);
+    same(
+      renderer.render(
+        new CreateTableStatement("orders", [{ name: "category_type_id", type: "INT" }], [
+          new ForeignKey(foreignKey, ["category_type_id"], "categories", ["id"]),
+          new UniqueConstraint(unique, ["category_type_id"]),
+        ]),
+      ),
+      foreignKey,
+    );
+    same(
+      renderer.render(
+        new CreateTableStatement("orders", [{ name: "category_type_id", type: "INT" }], [
+          new UniqueConstraint(unique, ["category_type_id"]),
+        ]),
+      ),
+      unique,
+    );
+    same(
+      renderer.render(new AlterTableStatement("orders", { kind: "addConstraint", constraint: new UniqueConstraint(unique, ["category_type_id"]) })),
+      unique,
+    );
+    same(
+      renderer.render(new AlterTableStatement("orders", { kind: "dropConstraint", name: unique })),
+      unique,
+    );
   });
 
   it("rejects a rebuild recreate that is not an index or trigger", () => {

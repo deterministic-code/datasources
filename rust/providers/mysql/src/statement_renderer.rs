@@ -18,6 +18,7 @@ use datasources::{
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, CreateUpdateStoredProcedureStatement,
     CreateIndexStatement, DropIndexStatement, DropRoutineStatement, DropTableStatement,
+    DropTriggerStatement,
     ForeignKeyStatement, ProcedureSource, RebuildTableStatement, SelectInsertedIdStatement, SqlSeedStatement,
     sql_procedure_statements_of, Statement, StatementTextRenderer, StatementVisitor,
 };
@@ -107,7 +108,7 @@ impl StatementVisitor for MysqlStatementRenderer {
     ) -> String {
         format!(
             "DROP INDEX {} ON {}",
-            crate::MysqlDriver::quote(statement.name()),
+            crate::MysqlDriver::quote(&crate::identifier::fit(statement.name())),
             crate::MysqlDriver::quote(statement.table())
         )
     }
@@ -126,6 +127,17 @@ impl StatementVisitor for MysqlStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         MysqlCreateTriggerStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_trigger(
+        &self,
+        statement: &DropTriggerStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        format!(
+            "DROP TRIGGER IF EXISTS {}",
+            crate::MysqlDriver::quote(&crate::identifier::fit(statement.name()))
+        )
     }
 
     fn visit_drop_routine(
@@ -220,7 +232,7 @@ impl StatementVisitor for MysqlStatementRenderer {
         format!(
             "CREATE {}INDEX {} ON {} ({})",
             if statement.unique() { "UNIQUE " } else { "" },
-            crate::MysqlDriver::quote(statement.name()),
+            crate::MysqlDriver::quote(&crate::identifier::fit(statement.name())),
             crate::MysqlDriver::quote(statement.table()),
             statement
                 .columns()
@@ -237,7 +249,7 @@ impl StatementVisitor for MysqlStatementRenderer {
 
     fn visit_foreign_key(&self, statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
         let table = crate::MysqlDriver::quote(statement.table());
-        let name = crate::MysqlDriver::quote(statement.name());
+        let name = crate::MysqlDriver::quote(&crate::identifier::fit(statement.name()));
         if statement.kind() == "drop" {
             return format!("ALTER TABLE {table} DROP FOREIGN KEY {name}");
         }
@@ -400,5 +412,115 @@ mod tests {
         let drop_at = rebuilt.find("users__old").unwrap();
         assert!(index_at < rename_at && rename_at < drop_at);
         assert!(rebuilt.ends_with("SET FOREIGN_KEY_CHECKS = 1"));
+    }
+
+    #[test]
+    fn shortens_long_names_the_same_way_on_drop() {
+        use datasources::{
+            AlterAction, AlterTableStatement, CreateIndexStatement, CreateTriggerStatement,
+            DropIndexStatement, DropTriggerStatement, ForeignKey, ForeignKeyStatement,
+            UniqueConstraint,
+        };
+        let index = "game_journey_settings_game_journey_setting_category_type_id_index";
+        let foreign_key = "game_journey_settings_game_journey_setting_category_type_id_foreign_key";
+        let trigger = "trg_game_journey_setting_category_preference_option_values_updated_at";
+        let unique = "game_journey_settings_external_reference_code_value_unique_constraint";
+        let same = |sql: String, name: &str| {
+            let fitted = crate::identifier::fit(name);
+            assert!(fitted.chars().count() <= 64, "{fitted}");
+            assert_ne!(fitted, name);
+            assert!(sql.contains(&fitted), "{sql}");
+            assert!(!sql.contains(name), "{sql}");
+        };
+        same(
+            renderer().render(&CreateIndexStatement::new(
+                index,
+                "game_journey_settings",
+                &["category_type_id"],
+                false,
+            )),
+            index,
+        );
+        let unique_index = renderer().render(&CreateIndexStatement::new(
+            index,
+            "game_journey_settings",
+            &["category_type_id"],
+            true,
+        ));
+        same(unique_index.clone(), index);
+        assert!(unique_index.starts_with("CREATE UNIQUE INDEX "));
+        same(
+            renderer().render(&DropIndexStatement::new(index, "game_journey_settings")),
+            index,
+        );
+        same(
+            renderer().render(&ForeignKeyStatement::new(
+                "orders",
+                foreign_key,
+                vec!["category_type_id".into()],
+                "categories",
+                vec!["id".into()],
+                "add",
+            )),
+            foreign_key,
+        );
+        same(
+            renderer().render(&ForeignKeyStatement::new(
+                "orders",
+                foreign_key,
+                vec![],
+                "",
+                vec![],
+                "drop",
+            )),
+            foreign_key,
+        );
+        same(
+            renderer().render(&CreateTriggerStatement::new(
+                "game_journey_settings",
+                trigger,
+                "updated",
+                "id",
+            )),
+            trigger,
+        );
+        same(
+            renderer().render(&DropTriggerStatement::new(trigger, "game_journey_settings")),
+            trigger,
+        );
+        same(
+            renderer().render(&CreateTableStatement::new(
+                "orders",
+                &[Column::new("category_type_id", "INT")],
+                &[
+                    ForeignKey::new(
+                        foreign_key,
+                        &["category_type_id"],
+                        "categories",
+                        &["id"],
+                        None,
+                        None,
+                    ),
+                    UniqueConstraint::new(unique, &["category_type_id"]),
+                ],
+            )),
+            foreign_key,
+        );
+        same(
+            renderer().render(&AlterTableStatement::new(
+                "orders",
+                AlterAction::AddConstraint(UniqueConstraint::new(unique, &["category_type_id"])),
+            )),
+            unique,
+        );
+        same(
+            renderer().render(&AlterTableStatement::new(
+                "orders",
+                AlterAction::DropConstraint {
+                    name: unique.into(),
+                },
+            )),
+            unique,
+        );
     }
 }

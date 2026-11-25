@@ -136,4 +136,57 @@ public class MysqlStatementRendererTests
         Assert.True(indexAt >= 0 && indexAt < renameAt && renameAt < dropAt);
         Assert.EndsWith("SET FOREIGN_KEY_CHECKS = 1", rebuilt);
     }
+
+    [Fact]
+    public void ShortensIndexForeignKeyTriggerAndConstraintNamesTheSameWayOnDrop()
+    {
+        const string index = "game_journey_settings_game_journey_setting_category_type_id_index";
+        const string foreignKey = "game_journey_settings_game_journey_setting_category_type_id_foreign_key";
+        const string trigger = "trg_game_journey_setting_category_preference_option_values_updated_at";
+        const string unique = "game_journey_settings_external_reference_code_value_unique_constraint";
+        Same(Renderer.Render(new CreateIndexStatement(index, "game_journey_settings", ["category_type_id"])), index);
+        var uniqueIndex = Renderer.Render(new CreateIndexStatement(index, "game_journey_settings", ["category_type_id"], true));
+        Same(uniqueIndex, index);
+        Assert.StartsWith("CREATE UNIQUE INDEX ", uniqueIndex);
+        Same(Renderer.Render(new DropIndexStatement(index, "game_journey_settings")), index);
+        Same(Renderer.Render(new ForeignKeyStatement("orders", foreignKey, ["category_type_id"], "categories", ["id"])), foreignKey);
+        Same(Renderer.Render(new ForeignKeyStatement("orders", foreignKey, ["category_type_id"], "categories", ["id"], "drop")), foreignKey);
+        Same(Renderer.Render(new CreateTriggerStatement("game_journey_settings", trigger, "updated", "id")), trigger);
+        Same(Renderer.Render(new DropTriggerStatement(trigger, "game_journey_settings")), trigger);
+        Same(Renderer.Render(new CreateTableStatement("orders", [new Column("category_type_id", "INT")], [
+            new ForeignKey(foreignKey, ["category_type_id"], "categories", ["id"]),
+            new UniqueConstraint(unique, ["category_type_id"]),
+        ])), foreignKey);
+        Same(Renderer.Render(new AlterTableStatement("orders", new AlterTableStatement.DropConstraint(unique))), unique);
+        Same(Renderer.Render(new AlterTableStatement("orders", new AlterTableStatement.AddConstraint(new UniqueConstraint(unique, ["category_type_id"])))), unique);
+        Assert.Equal(new string('a', 64), MysqlIdentifier.Fit(new string('a', 64)));
+        Assert.Equal(new string('a', 57) + "_2dd603", MysqlIdentifier.Fit(new string('a', 65)));
+        Assert.Equal(
+            "game_journey_settings_game_journey_setting_category_d88931_index",
+            MysqlIdentifier.Fit(index));
+        Assert.Equal(
+            "trg_game_journey_setting_category_preference_o_8e15ab_updated_at",
+            MysqlIdentifier.Fit(trigger));
+        Assert.Equal(
+            "notification-types-channel-name-and-something-61b8c2-foreign-key",
+            MysqlIdentifier.Fit("notification-types-channel-name-and-something-very-long-foreign-key"));
+        Assert.Equal(
+            new string('a', 56) + "_a955d9",
+            MysqlIdentifier.Fit(new string('a', 56) + "_" + new string('b', 9)));
+        Assert.Equal(
+            "GameJourneySettingsGameJourneySettingCategoryTy_aa3be2ForeignKey",
+            MysqlIdentifier.Fit("GameJourneySettingsGameJourneySettingCategoryTypeIdentifierForeignKey"));
+        Assert.Equal(
+            "GAME_JOURNEY_SETTINGS_GAME_JOURNEY_SETTING_CATEGORY_3bfc58_INDEX",
+            MysqlIdentifier.Fit("GAME_JOURNEY_SETTINGS_GAME_JOURNEY_SETTING_CATEGORY_TYPE_ID_INDEX"));
+    }
+
+    static void Same(string sql, string name)
+    {
+        var fitted = MysqlIdentifier.Fit(name);
+        Assert.True(fitted.Length <= 64);
+        Assert.NotEqual(name, fitted);
+        Assert.Contains(fitted, sql);
+        Assert.DoesNotContain(name, sql);
+    }
 }

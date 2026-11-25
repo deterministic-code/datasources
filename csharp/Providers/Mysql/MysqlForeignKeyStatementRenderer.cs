@@ -7,7 +7,7 @@ internal sealed class MysqlForeignKeyStatementRenderer
     public string Render(ForeignKeyStatement statement)
     {
         var table = MysqlDriver.Quote(statement.Table);
-        var name = MysqlDriver.Quote(statement.Name);
+        var name = MysqlDriver.Quote(MysqlIdentifier.Fit(statement.Name));
         if (statement.Kind == "drop")
             return $"ALTER TABLE {table} DROP FOREIGN KEY {name}";
         var cols = string.Join(", ", statement.Columns.Select(MysqlDriver.Quote));

@@ -1,8 +1,12 @@
-use datasources::{Column, CreateTableStatementTextRenderer, NotNull};
+use datasources::{Column, CreateTableStatementTextRenderer, NotNull, TableConstraint};
 
 pub struct MysqlCreateTableStatementRenderer;
 
 impl CreateTableStatementTextRenderer for MysqlCreateTableStatementRenderer {
+    fn constraint(&self, constraint: &TableConstraint) -> String {
+        crate::identifier::render_constraint(self, constraint)
+    }
+
     fn quote(&self, name: &str) -> String {
         crate::MysqlDriver::quote(name)
     }
