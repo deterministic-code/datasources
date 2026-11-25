@@ -30,12 +30,12 @@ export const forgetDialects = (): void => {
   loaded.clear();
 };
 
-export const dialectDriver = (dialect: string): IDriver => {
+export const dialectDriver = (dialect: string, cwd = process.cwd()): IDriver => {
   const key = named(dialect);
   const hit = loaded.get(key);
   if (hit !== undefined) return hit;
   const catalog = ProviderCatalog.default[key];
-  const driver = DriverLoader.load(catalog);
+  const driver = DriverLoader.load(catalog, cwd);
   if (driver.statementRenderer == null) throw new Error(`"${dialect}" is not a SQL dialect.`);
   loaded.set(key, driver);
   return driver;
@@ -57,21 +57,21 @@ const entryOf = (manifest: {
     : (exp?.import ?? exp?.default ?? exp?.require ?? manifest.main ?? manifest.module ?? "index.js");
 };
 
-const consumerPackage = (location: string): string =>
-  join(process.cwd(), "node_modules", location, "package.json");
+const consumerPackage = (location: string, cwd: string): string =>
+  join(cwd, "node_modules", location, "package.json");
 
-export const ensureDialect = async (language: string): Promise<SqlDialect> => {
+export const ensureDialect = async (language: string, cwd = process.cwd()): Promise<SqlDialect> => {
   const dialect = named(language);
   if (loaded.has(dialect)) return dialect;
   try {
-    dialectDriver(dialect);
+    dialectDriver(dialect, cwd);
     return dialect;
   } catch {
     const catalog = ProviderCatalog.default[dialect];
-    const pkg = consumerPackage(catalog.location);
+    const pkg = consumerPackage(catalog.location, cwd);
     if (!existsSync(pkg)) throw new ProviderNotInstalledError(dialect);
     const entry = entryOf(JSON.parse(readFileSync(pkg, "utf8")) as Parameters<typeof entryOf>[0]);
-    const loadedModule = (await import(pathToFileURL(join(process.cwd(), "node_modules", catalog.location, entry)).href)) as Record<
+    const loadedModule = (await import(pathToFileURL(join(cwd, "node_modules", catalog.location, entry)).href)) as Record<
       string,
       new () => IDriver
     >;

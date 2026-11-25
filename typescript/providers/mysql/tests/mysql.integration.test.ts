@@ -16,10 +16,13 @@ import {
   runSpec,
   specFiles,
 } from "../../sql-spec-runner.ts";
+import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
+import { generate as generateSql } from "@deterministic-code/datasources-code-generators/sql/generate-sql";
 import { MysqlCommand } from "../src/command.ts";
 import { MysqlConnection } from "../src/connection.ts";
 import { MysqlStatementRenderer } from "../src/MysqlStatementRenderer.ts";
 import type { Mysql2Module } from "../src/i-mysql-engine.ts";
+import "../src/register-sql-generate.ts";
 
 const dialect = loadDialect(
   "mysql",
@@ -215,6 +218,90 @@ describe("insert returning", () => {
       await using reader = await command.executeReaderNative(new Native("SELECT contact_id FROM addresses"));
       expect(await reader.next()).toBe(true);
       expect(reader.current?.contact_id).toBe(created.id);
+    } finally {
+      await isolated.cleanup();
+    }
+  });
+});
+
+const runBatches = async (command: MysqlCommand, sql: string) => {
+  for (const batch of sql.split(/\nGO\n/)) {
+    const text = batch.trim();
+    if (text !== "") await command.executeNative(new Native(text));
+  }
+};
+
+describe("generateSql identifier length", () => {
+  it("applies fitted names from generated migrations", async () => {
+    const entity = "game_journey_setting_category_preference_option_value";
+    const files = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": `types:
+  - category_type:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - ${entity}:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+        - category_type_id:
+            type: integer
+            references: category_type.id
+        - external_reference_code:
+            type: string
+`,
+          "datasource.yaml": `includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - ${entity}:
+      indexes:
+        - category_type_id:
+            fields:
+              - category_type_id
+`,
+        }),
+        settings: {},
+      },
+      ["mysql"],
+    );
+    const sqlOf = (suffix: string) => {
+      const entry = files.find((item) => item.filename.endsWith(suffix));
+      expect(entry).toBeDefined();
+      return "contents" in entry! ? String(entry.contents) : entry!.content;
+    };
+    const up = sqlOf("mysql/migrations/0001_initial_up.sql");
+    const down = sqlOf("mysql/migrations/0001_initial_down.sql");
+    const isolated = await isolate(url);
+    try {
+      const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
+      await connection.open();
+      const command = new MysqlCommand(connection);
+      await runBatches(command, up);
+      await using reader = await command.executeReaderNative(
+        new Native(`
+          SELECT CHAR_LENGTH(INDEX_NAME) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()
+          UNION ALL
+          SELECT CHAR_LENGTH(CONSTRAINT_NAME) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE()
+          UNION ALL
+          SELECT CHAR_LENGTH(TRIGGER_NAME) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE()
+        `),
+      );
+      while (await reader.next()) {
+        const n = Number((reader.current as { n: number }).n);
+        expect(n).toBeLessThanOrEqual(64);
+      }
+      await runBatches(command, down);
     } finally {
       await isolated.cleanup();
     }

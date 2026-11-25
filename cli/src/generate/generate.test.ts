@@ -27,8 +27,17 @@ import { nodeFs } from "../io.ts";
 import { DictionaryMapper } from "@deterministic-code/datasources";
 import { register } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
+import { MysqlDriver } from "@deterministic-code/datasources-mysql";
+import {
+  CreateIndexStatement,
+  CreateTriggerStatement,
+  ForeignKey,
+  PrimaryKey,
+} from "@deterministic-code/datasources";
+import { createCasing } from "@deterministic-code/datasources-code-generators/sql/common/default-casing";
 
 register("sqlite", new SqliteDriver());
+register("mysql", new MysqlDriver());
 
 const specDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/contacts-crud-enriched-medium-rest-shared/deterministic");
 const userRolesDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/user-roles-simple-cli-shared/deterministic");
@@ -390,6 +399,97 @@ types:
     expect(() => planRepositories(spec, "rust", {})).toThrow(
       "seat_view.marks composite reference mark.user_id has no column on seat_view",
     );
+  });
+
+  it("joins a child parent column to the referenced parent id", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - ward:
+      tags: [datasource_type]
+      fields:
+        - region_id:
+            type: integer
+            is_id: true
+        - ward_id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - ward_alias:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_region_id:
+            references: ward.region_id
+        - parent_ward_id:
+            references: ward.ward_id
+        - name:
+            type: string
+  - ward_setting:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_region_id:
+            references: ward.region_id
+        - parent_ward_id:
+            references: ward.ward_id
+        - name:
+            type: string
+        - value:
+            type: string
+  - ward_setting_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: ward_setting.name
+        - value:
+            type: string
+            references: ward_setting.value
+  - ward_node:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_region_id:
+            references: ward.region_id
+        - parent_ward_id:
+            references: ward.ward_id
+        - name:
+            type: string
+  - ward_view:
+      tags: [view_type]
+      inherits: ward
+      fields:
+        - aliases:
+            type: ward_alias[]
+            references: [ward_alias.parent_region_id, ward_alias.parent_ward_id]
+        - settings:
+            type: ward_setting_map{}
+            references: [ward_setting.parent_region_id, ward_setting.parent_ward_id]
+        - nodes:
+            type: ward_node[]
+            references: [ward_node.parent_region_id, ward_node.parent_ward_id]
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({});
+    const keys = [
+      { source: "region_id", relatedKey: "parent_region_id" },
+      { source: "ward_id", relatedKey: "parent_ward_id" },
+    ];
+    const model = planRepositories(spec, "rust", {}).find((item) => item.specName === "ward_view");
+    expect(model?.enrichments.find((item) => item.destination === "aliases")?.keys).toEqual(keys);
+    expect(model?.enrichments.find((item) => item.destination === "settings")?.keys).toEqual(keys);
+    expect(model?.enrichments.find((item) => item.destination === "nodes")?.keys).toEqual(keys);
   });
 
   it("emits tree and graph enrichers with a flat via and a junction child", async () => {
@@ -3029,6 +3129,70 @@ types:
       if (previous.INSTALLED_PROVIDERS === undefined) delete process.env.INSTALLED_PROVIDERS;
       else process.env.INSTALLED_PROVIDERS = previous.INSTALLED_PROVIDERS;
     }
+  });
+
+  it("fits mysql index and foreign key names over 64 characters in migrations create", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const entity = "game_journey_setting_category_preference_option_value";
+    const naming = createCasing({}).naming;
+    const index = CreateIndexStatement.nameOf(entity, naming, "category_type_id", "index");
+    const foreignKey = ForeignKey.nameOf(entity, naming, "category_type_id", "foreign_key");
+    const trigger = CreateTriggerStatement.nameOf(entity, naming);
+    const primaryKey = PrimaryKey.nameOf(entity, naming, "primary_key");
+    for (const name of [index, foreignKey, trigger, primaryKey]) expect(name.length).toBeGreaterThan(64);
+    const store = mem({
+      [join(input, "types.yaml")]: `types:
+  - category_type:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - ${entity}:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+        - category_type_id:
+            type: integer
+            references: category_type.id
+        - external_reference_code:
+            type: string
+`,
+      [join(input, "datasource.yaml")]: `includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - ${entity}:
+      indexes:
+        - category_type_id:
+            fields:
+              - category_type_id
+`,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=mysql\n",
+    });
+    const io = deps(store.fs);
+    expect(await exec(["migrations", "create", "--cwd", cwd], io, cwd)).toBe(0);
+    const up = store.files[join(cwd, "sql/mysql/migrations/0001_initial_up.sql")];
+    const down = store.files[join(cwd, "sql/mysql/migrations/0001_initial_down.sql")];
+    expect(up).toBeDefined();
+    expect(down).toBeDefined();
+    for (const name of [index, foreignKey, trigger, primaryKey]) {
+      expect(up).not.toContain(name);
+      expect(down).not.toContain(name);
+    }
+    expect(up).toMatch(/CREATE INDEX [`]?[a-z0-9_]+[`]? ON/);
+    const created = [...up.matchAll(/CREATE INDEX [`]?([a-z0-9_]+)[`]? ON/g)].map((match) => match[1]!);
+    const foreign = [...up.matchAll(/CONSTRAINT [`]?([a-z0-9_]+)[`]? FOREIGN KEY/g)].map((match) => match[1]!);
+    const triggers = [...up.matchAll(/CREATE TRIGGER [`]?([a-z0-9_]+)[`]?/g)].map((match) => match[1]!);
+    for (const name of [...created, ...foreign, ...triggers]) expect(name.length).toBeLessThanOrEqual(64);
+    expect(created.some((name) => name.endsWith("_index") && name !== index)).toBe(true);
   });
 
   it("writes migrations create into the migraters layout", async () => {

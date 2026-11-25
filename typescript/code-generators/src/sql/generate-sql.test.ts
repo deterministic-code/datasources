@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ProviderNotInstalledError } from "@deterministic-code/datasources";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { generate } from "./generate-sql.ts";
-import { ensureDialect, forgetDialects } from "./common/sql-dialect.ts";
+import { dialectDriver, ensureDialect, forgetDialects } from "./common/sql-dialect.ts";
 
 const cwd = process.cwd();
 const temps: string[] = [];
@@ -60,6 +60,33 @@ describe("generate-sql", () => {
     );
     process.chdir(root);
     await expect(ensureDialect("sqlite")).resolves.toBe("sqlite");
+  });
+
+  it("loads sqlite from generate cwd without changing process.cwd", async () => {
+    const root = mkdtempSync(join(tmpdir(), "generate-sql-explicit-"));
+    temps.push(root);
+    writeFileSync(join(root, "package.json"), "{}");
+    const dir = join(root, "node_modules/@deterministic-code/datasources-sqlite");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({
+        name: "@deterministic-code/datasources-sqlite",
+        type: "commonjs",
+        main: "index.cjs",
+      }),
+    );
+    writeFileSync(
+      join(dir, "index.cjs"),
+      `exports.SqliteDriver = class SqliteDriver {
+  get statementRenderer() {
+    return { withNaming() { return this; }, render() { return "FAKE_SQL"; } };
+  }
+};
+`,
+    );
+    await expect(ensureDialect("sqlite", root)).resolves.toBe("sqlite");
+    expect(dialectDriver("sqlite").statementRenderer!.render({} as never)).toBe("FAKE_SQL");
   });
 
   it("throws when the dialect is not installed", async () => {

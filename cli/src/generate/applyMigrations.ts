@@ -89,6 +89,7 @@ export const applyMigrations = async (
       settings,
     },
     sqlDialectsFromEnv(await destEnv(deps.fs, flags.cwd)),
+    flags.cwd,
   );
   const root = at(flags.cwd, command.migrationsRoot);
   const entries = await preserveBaselineNames(deps.fs, root, generated);
