@@ -17,6 +17,7 @@ public static partial class Program
         var regionTrees = new RegionCategoryTreesRepository(connection);
         var graphs = new NodeGraphsRepository(connection);
         var wards = new WardViewsRepository(connection);
+        var badges = new BadgeViewsRepository(connection);
         await trees.Create(new CategoryTree
         {
             Name = "food",
@@ -66,6 +67,34 @@ public static partial class Program
         north.Nodes = [new WardNode { Name = "quay" }];
         await wards.Update(north);
         var updated = (await List(wards)).Single(row => row.WardId == 1);
+        await badges.Create(new BadgeView
+        {
+            BadgeId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Code = "alpha",
+            Name = "north",
+            Aliases = [new BadgeAlias { Name = "uptown" }],
+            Settings = { ["color"] = "blue" },
+            Nodes = [new BadgeNode { Name = "dock" }],
+        });
+        await badges.Create(new BadgeView
+        {
+            BadgeId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Code = "beta",
+            Name = "south",
+            Aliases = [new BadgeAlias { Name = "midtown" }],
+            Settings = { ["color"] = "red" },
+            Nodes = [new BadgeNode { Name = "pier" }],
+        });
+        var createdBadges = await List(badges);
+        var alpha = createdBadges.Single(row => row.Code == "alpha");
+        var beta = createdBadges.Single(row => row.Code == "beta");
+        var createAlpha = $"badge create {alpha.BadgeId}/{alpha.Code}/{alpha.Name} alias {alpha.Aliases[0].ParentBadgeId}/{alpha.Aliases[0].ParentCode}/{alpha.Aliases[0].Name} node {alpha.Nodes[0].ParentBadgeId}/{alpha.Nodes[0].ParentCode}/{alpha.Nodes[0].Name} setting {alpha.Settings["color"]}";
+        var createBeta = $"badge create {beta.BadgeId}/{beta.Code}/{beta.Name} alias {beta.Aliases[0].ParentBadgeId}/{beta.Aliases[0].ParentCode}/{beta.Aliases[0].Name} node {beta.Nodes[0].ParentBadgeId}/{beta.Nodes[0].ParentCode}/{beta.Nodes[0].Name} setting {beta.Settings["color"]}";
+        alpha.Aliases = [new BadgeAlias { Name = "downtown" }];
+        alpha.Settings["color"] = "green";
+        alpha.Nodes = [new BadgeNode { Name = "quay" }];
+        await badges.Update(alpha);
+        var updatedBadge = (await List(badges)).Single(row => row.Code == "alpha");
         var maps = await Mapping.Run(connection);
         return Format.Transcript(
             await List(trees),
@@ -76,6 +105,9 @@ public static partial class Program
                 createNorth,
                 createSouth,
                 $"ward update {updated.RegionId}-{updated.WardId}/{updated.Name} alias {updated.Aliases[0].ParentRegionId}-{updated.Aliases[0].ParentWardId}/{updated.Aliases[0].Name} node {updated.Nodes[0].ParentRegionId}-{updated.Nodes[0].ParentWardId}/{updated.Nodes[0].Name} setting {updated.Settings["color"]}",
+                createAlpha,
+                createBeta,
+                $"badge update {updatedBadge.BadgeId}/{updatedBadge.Code}/{updatedBadge.Name} alias {updatedBadge.Aliases[0].ParentBadgeId}/{updatedBadge.Aliases[0].ParentCode}/{updatedBadge.Aliases[0].Name} node {updatedBadge.Nodes[0].ParentBadgeId}/{updatedBadge.Nodes[0].ParentCode}/{updatedBadge.Nodes[0].Name} setting {updatedBadge.Settings["color"]}",
             ]));
     }
 

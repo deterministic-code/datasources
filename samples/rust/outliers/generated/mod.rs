@@ -15,6 +15,14 @@ pub mod wardAlias;
 pub mod wardSetting;
 #[path = "types/datasource/wardNode.rs"]
 pub mod wardNode;
+#[path = "types/datasource/badge.rs"]
+pub mod badge;
+#[path = "types/datasource/badgeAlias.rs"]
+pub mod badgeAlias;
+#[path = "types/datasource/badgeSetting.rs"]
+pub mod badgeSetting;
+#[path = "types/datasource/badgeNode.rs"]
+pub mod badgeNode;
 #[path = "types/view/categoryTree.rs"]
 pub mod categoryTree;
 #[path = "types/view/regionCategoryTree.rs"]
@@ -25,6 +33,10 @@ pub mod nodeGraph;
 pub mod wardSettingMap;
 #[path = "types/view/wardView.rs"]
 pub mod wardView;
+#[path = "types/view/badgeSettingMap.rs"]
+pub mod badgeSettingMap;
+#[path = "types/view/badgeView.rs"]
+pub mod badgeView;
 pub use category::*;
 pub use regionCategory::*;
 pub use node::*;
@@ -33,11 +45,17 @@ pub use ward::*;
 pub use wardAlias::*;
 pub use wardSetting::*;
 pub use wardNode::*;
+pub use badge::*;
+pub use badgeAlias::*;
+pub use badgeSetting::*;
+pub use badgeNode::*;
 pub use categoryTree::*;
 pub use regionCategoryTree::*;
 pub use nodeGraph::*;
 pub use wardSettingMap::*;
 pub use wardView::*;
+pub use badgeSettingMap::*;
+pub use badgeView::*;
 mod schema_objects;
 pub mod repositories;
 pub use repositories::repositoryRegistry::Repositories;

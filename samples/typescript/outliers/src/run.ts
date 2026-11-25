@@ -1,6 +1,9 @@
 import "../generated/repositories/repositoryRegistry.ts";
 import { Datasource } from "@deterministic-code/datasources";
 import {
+  badgeAlias,
+  badgeNode,
+  badgeView,
   categoryTree,
   nodeGraph,
   regionCategoryTree,
@@ -74,6 +77,36 @@ export const run = async (): Promise<string[]> => {
   const updated = (await collect(ds.wardViews.read())).find((row) => row.wardId === 1)!;
   const connection = await ds.createConnection();
   if (!connection.isOpen) await connection.open();
+  await ds.badgeViews.create(
+    badgeView({
+      badgeId: "11111111-1111-1111-1111-111111111111",
+      code: "alpha",
+      name: "north",
+      aliases: [badgeAlias({ name: "uptown" })],
+      settings: { color: "blue" },
+      nodes: [badgeNode({ name: "dock" })],
+    }),
+  );
+  await ds.badgeViews.create(
+    badgeView({
+      badgeId: "22222222-2222-2222-2222-222222222222",
+      code: "beta",
+      name: "south",
+      aliases: [badgeAlias({ name: "midtown" })],
+      settings: { color: "red" },
+      nodes: [badgeNode({ name: "pier" })],
+    }),
+  );
+  const createdBadges = await collect(ds.badgeViews.read());
+  const alpha = createdBadges.find((row) => row.code === "alpha")!;
+  const beta = createdBadges.find((row) => row.code === "beta")!;
+  const createAlpha = `badge create ${alpha.badgeId}/${alpha.code}/${alpha.name} alias ${alpha.aliases[0]!.parentBadgeId}/${alpha.aliases[0]!.parentCode}/${alpha.aliases[0]!.name} node ${alpha.nodes[0]!.parentBadgeId}/${alpha.nodes[0]!.parentCode}/${alpha.nodes[0]!.name} setting ${alpha.settings.color}`;
+  const createBeta = `badge create ${beta.badgeId}/${beta.code}/${beta.name} alias ${beta.aliases[0]!.parentBadgeId}/${beta.aliases[0]!.parentCode}/${beta.aliases[0]!.name} node ${beta.nodes[0]!.parentBadgeId}/${beta.nodes[0]!.parentCode}/${beta.nodes[0]!.name} setting ${beta.settings.color}`;
+  alpha.aliases = [badgeAlias({ name: "downtown" })];
+  alpha.settings.color = "green";
+  alpha.nodes = [badgeNode({ name: "quay" })];
+  await ds.badgeViews.update(alpha);
+  const updatedBadge = (await collect(ds.badgeViews.read())).find((row) => row.code === "alpha")!;
   const maps = await runMapping(connection);
   return transcript(
     await collect(ds.categoryTrees.read()),
@@ -84,6 +117,9 @@ export const run = async (): Promise<string[]> => {
       createNorth,
       createSouth,
       `ward update ${updated.regionId}-${updated.wardId}/${updated.name} alias ${updated.aliases[0]!.parentRegionId}-${updated.aliases[0]!.parentWardId}/${updated.aliases[0]!.name} node ${updated.nodes[0]!.parentRegionId}-${updated.nodes[0]!.parentWardId}/${updated.nodes[0]!.name} setting ${updated.settings.color}`,
+      createAlpha,
+      createBeta,
+      `badge update ${updatedBadge.badgeId}/${updatedBadge.code}/${updatedBadge.name} alias ${updatedBadge.aliases[0]!.parentBadgeId}/${updatedBadge.aliases[0]!.parentCode}/${updatedBadge.aliases[0]!.name} node ${updatedBadge.nodes[0]!.parentBadgeId}/${updatedBadge.nodes[0]!.parentCode}/${updatedBadge.nodes[0]!.name} setting ${updatedBadge.settings.color}`,
     ],
   );
 };

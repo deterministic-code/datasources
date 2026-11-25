@@ -1,4 +1,8 @@
 import { RepositoryFactory } from "@deterministic-code/datasources";
+import { BadgeAliasesRepository } from "./badgeAliasesRepository";
+import { BadgeNodesRepository } from "./badgeNodesRepository";
+import { BadgeSettingsRepository } from "./badgeSettingsRepository";
+import { BadgeViewsRepository } from "./badgeViewsRepository";
 import { CategoriesRepository } from "./categoriesRepository";
 import { CategoryTreesRepository } from "./categoryTreesRepository";
 import { NodesRepository } from "./nodesRepository";
@@ -10,6 +14,10 @@ import { WardAliasesRepository } from "./wardAliasesRepository";
 import { WardNodesRepository } from "./wardNodesRepository";
 import { WardSettingsRepository } from "./wardSettingsRepository";
 import { WardViewsRepository } from "./wardViewsRepository";
+export { badgeAlias } from "../types/datasource/badgeAlias";
+export { badgeNode } from "../types/datasource/badgeNode";
+export { badgeSetting } from "../types/datasource/badgeSetting";
+export { badgeView } from "../types/view/badgeView";
 export { category } from "../types/datasource/category";
 export { categoryTree } from "../types/view/categoryTree";
 export { node } from "../types/datasource/node";
@@ -23,6 +31,10 @@ export { wardSetting } from "../types/datasource/wardSetting";
 export { wardView } from "../types/view/wardView";
 
 export const register = (factory: RepositoryFactory): void => {
+  factory.register("BadgeAlias", "badgeAliases", (connection) => new BadgeAliasesRepository(connection), (connection) => BadgeAliasesRepository.createReadonly(connection));
+  factory.register("BadgeNode", "badgeNodes", (connection) => new BadgeNodesRepository(connection), (connection) => BadgeNodesRepository.createReadonly(connection));
+  factory.register("BadgeSetting", "badgeSettings", (connection) => new BadgeSettingsRepository(connection), (connection) => BadgeSettingsRepository.createReadonly(connection));
+  factory.register("BadgeView", "badgeViews", (connection) => new BadgeViewsRepository(connection), (connection) => BadgeViewsRepository.createReadonly(connection));
   factory.register("Category", "categories", (connection) => new CategoriesRepository(connection), (connection) => CategoriesRepository.createReadonly(connection));
   factory.register("CategoryTree", "categoryTrees", (connection) => new CategoryTreesRepository(connection), (connection) => CategoryTreesRepository.createReadonly(connection));
   factory.register("Node", "nodes", (connection) => new NodesRepository(connection), (connection) => NodesRepository.createReadonly(connection));
@@ -39,6 +51,10 @@ RepositoryFactory.bind(register);
 
 declare module "@deterministic-code/datasources" {
   interface Datasource {
+    readonly badgeAliases: BadgeAliasesRepository;
+    readonly badgeNodes: BadgeNodesRepository;
+    readonly badgeSettings: BadgeSettingsRepository;
+    readonly badgeViews: BadgeViewsRepository;
     readonly categories: CategoriesRepository;
     readonly categoryTrees: CategoryTreesRepository;
     readonly nodes: NodesRepository;
