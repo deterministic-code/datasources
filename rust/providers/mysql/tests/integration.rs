@@ -4,6 +4,7 @@ use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Native,
     IsolationLevel, Parameter, Reader, Transaction, Value,
 };
+use datasources_code_generators::generate_sql;
 use mysql_async::prelude::Queryable;
 use mysql_async::Conn;
 use serde::Deserialize;
@@ -477,6 +478,129 @@ async fn return_statement_selects_scalar() {
         .await
         .unwrap();
     assert_eq!(response.result, Value::Int(5));
+    let mut admin = Conn::from_url(base).await.unwrap();
+    admin
+        .query_drop(format!("DROP DATABASE `{name}`"))
+        .await
+        .ok();
+}
+
+#[tokio::test]
+async fn applies_fitted_names_from_generated_migrations() {
+    let _ = datasources_code_generators::register_dialect("mysql", Arc::new(crate::MysqlDriver));
+    let base = std::env::var("MYSQL_URL").expect("MYSQL_URL");
+    let entity = "game_journey_setting_category_preference_option_value";
+    let files = HashMap::from([
+        (
+            "types.yaml".into(),
+            format!(
+                r#"
+types:
+  - category_type:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - {entity}:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+        - category_type_id:
+            type: integer
+            references: category_type.id
+        - external_reference_code:
+            type: string
+"#
+            ),
+        ),
+        (
+            "datasource.yaml".into(),
+            format!(
+                r#"
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - {entity}:
+      indexes:
+        - category_type_id:
+            fields:
+              - category_type_id
+"#
+            ),
+        ),
+    ]);
+    let entries = generate_sql(&files, &HashMap::new(), &["mysql".into()]).unwrap();
+    let up = entries
+        .iter()
+        .find(|e| e.filename.ends_with("mysql/migrations/0001_initial_up.sql"))
+        .unwrap()
+        .content
+        .clone();
+    let down = entries
+        .iter()
+        .find(|e| e.filename.ends_with("mysql/migrations/0001_initial_down.sql"))
+        .unwrap()
+        .content
+        .clone();
+    let name = format!("ds_{}", uuid_name());
+    let mut admin = Conn::from_url(base.clone()).await.unwrap();
+    admin
+        .query_drop(format!("CREATE DATABASE `{name}`"))
+        .await
+        .unwrap();
+    drop(admin);
+    let url = replace_db(&base, &name);
+    let conn = Arc::new(MysqlConnection::new(Some(url)));
+    conn.open().await.unwrap();
+    let command = MysqlCommand::new(conn);
+    for batch in up.split("\nGO\n") {
+        let text = batch.trim();
+        if !text.is_empty() {
+            command
+                .execute_native(&Native::new(text), None)
+                .await
+                .unwrap();
+        }
+    }
+    let reader = command
+        .execute_reader_native(
+            &Native::new(
+                "SELECT CHAR_LENGTH(INDEX_NAME) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()
+UNION ALL
+SELECT CHAR_LENGTH(CONSTRAINT_NAME) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE()
+UNION ALL
+SELECT CHAR_LENGTH(TRIGGER_NAME) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE()",
+            ),
+            None,
+        )
+        .await
+        .unwrap();
+    for row in collect(reader.as_ref()).await {
+        match row.get("n").expect("n") {
+            Value::Int(v) => assert!(*v <= 64, "{v}"),
+            other => {
+                let parsed: i64 = other.wire_text().parse().expect("n");
+                assert!(parsed <= 64, "{other:?}");
+            }
+        }
+    }
+    for batch in down.split("\nGO\n") {
+        let text = batch.trim();
+        if !text.is_empty() {
+            command
+                .execute_native(&Native::new(text), None)
+                .await
+                .unwrap();
+        }
+    }
     let mut admin = Conn::from_url(base).await.unwrap();
     admin
         .query_drop(format!("DROP DATABASE `{name}`"))

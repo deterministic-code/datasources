@@ -29,6 +29,7 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
     reader,
     settings,
     env: await destEnv(deps.fs, flags.cwd),
+    cwd: flags.cwd,
   };
   const entries = await {
     all: async () => [

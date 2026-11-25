@@ -8,9 +8,9 @@ type DriverCtor = new () => IDriver;
 type DriverModule = Record<string, DriverCtor>;
 
 export class DriverLoader {
-  static load(catalog: ProviderCatalog): IDriver {
+  static load(catalog: ProviderCatalog, cwd = process.cwd()): IDriver {
     try {
-      const loaded = createRequire(join(process.cwd(), "package.json"))(catalog.location) as DriverModule;
+      const loaded = createRequire(join(cwd, "package.json"))(catalog.location) as DriverModule;
       const Type = loaded[catalog.module];
       return typeof Type === "function" ? new Type() : (() => { throw new ProviderNotInstalledError(catalog.name); })();
     } catch (error) {

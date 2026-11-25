@@ -37,6 +37,16 @@ describe("DriverLoader", () => {
     expect(driver.constructor.name).toBe("FixtureDriver");
   });
 
+  it("constructs the exported driver from an explicit project directory", () => {
+    const root = project({
+      "node_modules/fixture-driver/package.json": JSON.stringify({ name: "fixture-driver", main: "index.cjs" }),
+      "node_modules/fixture-driver/index.cjs": "exports.FixtureDriver = class FixtureDriver {};\n",
+    });
+    process.chdir(cwd);
+    const driver = DriverLoader.load(new ProviderCatalog("fixture", "fixture-driver", "FixtureDriver"), root);
+    expect(driver.constructor.name).toBe("FixtureDriver");
+  });
+
   it("throws when the export is missing", () => {
     project({
       "node_modules/fixture-driver/package.json": JSON.stringify({ name: "fixture-driver", main: "index.cjs" }),

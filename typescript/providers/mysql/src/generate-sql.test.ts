@@ -1,9 +1,56 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
+import {
+  CreateIndexStatement,
+  CreateTriggerStatement,
+  ForeignKey,
+  PrimaryKey,
+} from "@deterministic-code/datasources";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { generate as generateSql } from "@deterministic-code/datasources-code-generators/sql/generate-sql";
 import { generate as generateStoredProcedures } from "@deterministic-code/datasources-code-generators/sql/generate-stored-procedures";
+import { createCasing } from "../../../code-generators/src/sql/common/default-casing.ts";
+import { fitMysqlIdentifier } from "./MysqlIdentifier.ts";
 import "./register-sql-generate.ts";
+
+const longEntity = "game_journey_setting_category_preference_option_value";
+const longTypesYaml = `types:
+  - category_type:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - ${longEntity}:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+        - category_type_id:
+            type: integer
+            references: category_type.id
+        - external_reference_code:
+            type: string
+`;
+const longDatasourceYaml = `includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - ${longEntity}:
+      indexes:
+        - category_type_id:
+            fields:
+              - category_type_id
+`;
+const sqlOf = (entry: { contents?: string; content?: string } | undefined): string => {
+  assert.ok(entry, "expected migration file");
+  return "contents" in entry && entry.contents !== undefined ? String(entry.contents) : String(entry.content);
+};
 
 const typesYaml = `types:
   - gender:
@@ -179,5 +226,52 @@ seeds:
     assert.ok(contacts, "expected contacts table body");
     assert.match(contacts, /gender_type_id INT/);
     assert.doesNotMatch(contacts, /gender_type_id TEXT/);
+  });
+
+  it("shortens index, foreign key, and trigger names over 64 characters in migrations", async () => {
+    const naming = createCasing({}).naming;
+    const index = CreateIndexStatement.nameOf(longEntity, naming, "category_type_id", "index");
+    const foreignKey = ForeignKey.nameOf(longEntity, naming, "category_type_id", "foreign_key");
+    const trigger = CreateTriggerStatement.nameOf(longEntity, naming);
+    const primaryKey = PrimaryKey.nameOf(longEntity, naming, "primary_key");
+    for (const name of [index, foreignKey, trigger, primaryKey]) assert.ok(name.length > 64, name);
+    const files = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": longTypesYaml,
+          "datasource.yaml": longDatasourceYaml,
+        }),
+        settings: {},
+      },
+      ["mysql"],
+    );
+    const up = sqlOf(files.find((entry) => entry.filename.endsWith("mysql/migrations/0001_initial_up.sql")));
+    const down = sqlOf(files.find((entry) => entry.filename.endsWith("mysql/migrations/0001_initial_down.sql")));
+    const fitted = (name: string) => {
+      const short = fitMysqlIdentifier(name);
+      assert.ok(short.length <= 64, short);
+      assert.notEqual(short, name);
+      return short;
+    };
+    const ident = (name: string) => `(?:\\\`${name}\\\`|${name})`;
+    const indexName = fitted(index);
+    const foreignName = fitted(foreignKey);
+    const triggerName = fitted(trigger);
+    const primaryName = fitted(primaryKey);
+    assert.match(up, new RegExp(`CREATE INDEX ${ident(indexName)} ON`));
+    assert.match(up, new RegExp(`CONSTRAINT ${ident(foreignName)} FOREIGN KEY`));
+    assert.match(up, new RegExp(`CONSTRAINT ${ident(primaryName)} PRIMARY KEY`));
+    assert.match(up, new RegExp(`CREATE TRIGGER ${ident(triggerName)}`));
+    for (const name of [index, foreignKey, trigger, primaryKey]) {
+      assert.equal(up.includes(name), false, name);
+      assert.equal(down.includes(name), false, name);
+    }
+    assert.equal(up.includes(indexName), true);
+    assert.equal(up.includes(foreignName), true);
+    assert.equal(up.includes(triggerName), true);
+    assert.equal(up.includes(primaryName), true);
+    for (const name of [indexName, foreignName, triggerName, primaryName]) {
+      assert.ok(name.length <= 64, name);
+    }
   });
 });

@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.CodeGenerators;
 using Datasources.Mysql;
 using Datasources.SqlSpecs;
 using MySqlConnector;
@@ -156,6 +157,95 @@ public class MysqlCommandIntegrationTests
         finally
         {
             await isolated.Cleanup();
+        }
+    }
+
+    [Fact]
+    public async Task AppliesFittedNamesFromGeneratedMigrations()
+    {
+        var url = Environment.GetEnvironmentVariable("MYSQL_URL");
+        if (string.IsNullOrEmpty(url)) return;
+        RegisterSqlGenerate.Register();
+        const string entity = "game_journey_setting_category_preference_option_value";
+        var entries = GenerateSql.Of(new Dictionary<string, string>
+        {
+            ["types.yaml"] = $$"""
+                types:
+                  - category_type:
+                      tags: [datasource_type]
+                      fields:
+                        - id:
+                            type: integer
+                            is_id: true
+                  - {{entity}}:
+                      tags: [datasource_type]
+                      fields:
+                        - id:
+                            type: integer
+                            is_id: true
+                        - created:
+                            type: datetime
+                        - updated:
+                            type: datetime
+                        - category_type_id:
+                            type: integer
+                            references: category_type.id
+                        - external_reference_code:
+                            type: string
+                """,
+            ["datasource.yaml"] = $$"""
+                includes:
+                  - types:
+                      filter: tag == "datasource_type"
+                types:
+                  - {{entity}}:
+                      indexes:
+                        - category_type_id:
+                            fields:
+                              - category_type_id
+                """,
+        }, new Dictionary<string, string>(), ["mysql"]);
+        var up = entries.Single(e => e.Filename.EndsWith("mysql/migrations/0001_initial_up.sql")).Content;
+        var down = entries.Single(e => e.Filename.EndsWith("mysql/migrations/0001_initial_down.sql")).Content;
+        var isolated = await Isolate(url);
+        try
+        {
+            var conn = new MysqlConnection(new MysqlConnectionOptions { Url = isolated.Url });
+            await conn.Open();
+            var command = new MysqlCommand(conn);
+            await RunBatches(command, up);
+            await using var reader = await command.ExecuteReader(Native.N("""
+                SELECT CHAR_LENGTH(INDEX_NAME) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()
+                UNION ALL
+                SELECT CHAR_LENGTH(CONSTRAINT_NAME) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE()
+                UNION ALL
+                SELECT CHAR_LENGTH(TRIGGER_NAME) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE()
+                """));
+            while (await reader.Next())
+            {
+                var n = reader.Current!["n"];
+                var length = n switch
+                {
+                    Value.Int i => i.Item,
+                    Value.Decimal d => (long)d.Item,
+                    _ => throw new InvalidOperationException(n.ToString()),
+                };
+                Assert.True(length <= 64, n.ToString());
+            }
+            await RunBatches(command, down);
+        }
+        finally
+        {
+            await isolated.Cleanup();
+        }
+    }
+
+    static async Task RunBatches(ICommand command, string sql)
+    {
+        foreach (var batch in sql.Split("\nGO\n", StringSplitOptions.None))
+        {
+            var text = batch.Trim();
+            if (text.Length > 0) await command.Execute(Native.N(text));
         }
     }
 

@@ -78,5 +78,5 @@ export const deterministic: CodeGenerationProvider = {
     );
   },
   generateDatasource: async (request) =>
-    place("sql", await generateSql(context(request), sqlDialectsFromEnv(request.env ?? {}))),
+    place("sql", await generateSql(context(request), sqlDialectsFromEnv(request.env ?? {}), request.cwd)),
 };

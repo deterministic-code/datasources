@@ -10,6 +10,7 @@ export type GenerateRequest = {
   reader: IDeterministicReader;
   settings: Record<string, string>;
   env?: EnvMap;
+  cwd?: string;
 };
 
 export const isDialect = (value: string): value is Dialect =>

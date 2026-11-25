@@ -7,10 +7,11 @@ import { ensureDialect } from "./common/sql-dialect.ts";
 export const generate = async (
   ctx: GenerateContext,
   dialects: readonly string[],
+  cwd = process.cwd(),
 ): Promise<GenerateEntry[]> => {
   const entries: GenerateEntry[] = [];
   for (const dialect of dialects) {
-    entries.push(...(await generateSqlFor(await ensureDialect(dialect), ctx)));
+    entries.push(...(await generateSqlFor(await ensureDialect(dialect, cwd), ctx)));
   }
   return entries;
 };
