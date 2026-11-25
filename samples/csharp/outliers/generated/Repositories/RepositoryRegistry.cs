@@ -8,6 +8,10 @@ public static class RepositoryRegistry
 
     public static void Register(RepositoryFactory factory)
     {
+        factory.Register("BadgeAlias", "BadgeAliases", connection => new BadgeAliasesRepository(connection), connection => BadgeAliasesRepository.CreateReadonly(connection));
+        factory.Register("BadgeNode", "BadgeNodes", connection => new BadgeNodesRepository(connection), connection => BadgeNodesRepository.CreateReadonly(connection));
+        factory.Register("BadgeSetting", "BadgeSettings", connection => new BadgeSettingsRepository(connection), connection => BadgeSettingsRepository.CreateReadonly(connection));
+        factory.Register("BadgeView", "BadgeViews", connection => new BadgeViewsRepository(connection), connection => BadgeViewsRepository.CreateReadonly(connection));
         factory.Register("Category", "Categories", connection => new CategoriesRepository(connection), connection => CategoriesRepository.CreateReadonly(connection));
         factory.Register("CategoryTree", "CategoryTrees", connection => new CategoryTreesRepository(connection), connection => CategoryTreesRepository.CreateReadonly(connection));
         factory.Register("Node", "Nodes", connection => new NodesRepository(connection), connection => NodesRepository.CreateReadonly(connection));

@@ -1,6 +1,14 @@
 use datasources::SchemaObject;
 use super::*;
 
+impl SchemaObject for BadgeAlias {}
+
+impl SchemaObject for BadgeNode {}
+
+impl SchemaObject for BadgeSetting {}
+
+impl SchemaObject for BadgeView {}
+
 impl SchemaObject for Category {}
 
 impl SchemaObject for CategoryTree {}

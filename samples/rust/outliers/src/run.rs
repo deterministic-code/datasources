@@ -1,5 +1,9 @@
-use crate::generated::{CategoryTree, NodeGraph, RegionCategoryTree, Repositories, WardAlias, WardNode, WardView};
+use crate::generated::{
+    BadgeAlias, BadgeNode, BadgeView, CategoryTree, NodeGraph, RegionCategoryTree, Repositories, WardAlias, WardNode,
+    WardView,
+};
 use crate::{transcript, GraphNode, RegionNode, TreeNode};
+use datasources::uuid::Uuid;
 use datasources::{default, Result};
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
@@ -164,9 +168,106 @@ pub async fn run() -> Result<Vec<String>> {
     if !connection.is_open() {
         connection.open().await?;
     }
+    ds.badge_views()
+        .create(BadgeView {
+            badge_id: Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap(),
+            code: "alpha".into(),
+            name: "north".into(),
+            aliases: vec![BadgeAlias {
+                name: "uptown".into(),
+                ..Default::default()
+            }],
+            settings: HashMap::from([("color".into(), "blue".into())]),
+            nodes: vec![BadgeNode {
+                name: "dock".into(),
+                ..Default::default()
+            }],
+        })
+        .await?;
+    ds.badge_views()
+        .create(BadgeView {
+            badge_id: Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap(),
+            code: "beta".into(),
+            name: "south".into(),
+            aliases: vec![BadgeAlias {
+                name: "midtown".into(),
+                ..Default::default()
+            }],
+            settings: HashMap::from([("color".into(), "red".into())]),
+            nodes: vec![BadgeNode {
+                name: "pier".into(),
+                ..Default::default()
+            }],
+        })
+        .await?;
+    let created_badges: Vec<BadgeView> = ds.badge_views().read(None, None).try_collect().await?;
+    let mut alpha = created_badges
+        .iter()
+        .find(|row| row.code == "alpha")
+        .cloned()
+        .expect("alpha");
+    let beta = created_badges
+        .iter()
+        .find(|row| row.code == "beta")
+        .cloned()
+        .expect("beta");
+    let create_alpha = format!(
+        "badge create {}/{}/{} alias {}/{}/{} node {}/{}/{} setting {}",
+        alpha.badge_id,
+        alpha.code,
+        alpha.name,
+        alpha.aliases[0].parent_badge_id,
+        alpha.aliases[0].parent_code,
+        alpha.aliases[0].name,
+        alpha.nodes[0].parent_badge_id,
+        alpha.nodes[0].parent_code,
+        alpha.nodes[0].name,
+        alpha.settings["color"]
+    );
+    let create_beta = format!(
+        "badge create {}/{}/{} alias {}/{}/{} node {}/{}/{} setting {}",
+        beta.badge_id,
+        beta.code,
+        beta.name,
+        beta.aliases[0].parent_badge_id,
+        beta.aliases[0].parent_code,
+        beta.aliases[0].name,
+        beta.nodes[0].parent_badge_id,
+        beta.nodes[0].parent_code,
+        beta.nodes[0].name,
+        beta.settings["color"]
+    );
+    alpha.aliases = vec![BadgeAlias {
+        name: "downtown".into(),
+        ..Default::default()
+    }];
+    alpha.settings.insert("color".into(), "green".into());
+    alpha.nodes = vec![BadgeNode {
+        name: "quay".into(),
+        ..Default::default()
+    }];
+    ds.badge_views().update(alpha, None).await?;
+    let updated_badges: Vec<BadgeView> = ds.badge_views().read(None, None).try_collect().await?;
+    let updated_badge = updated_badges
+        .into_iter()
+        .find(|row| row.code == "alpha")
+        .expect("updated badge");
+    let badge_update = format!(
+        "badge update {}/{}/{} alias {}/{}/{} node {}/{}/{} setting {}",
+        updated_badge.badge_id,
+        updated_badge.code,
+        updated_badge.name,
+        updated_badge.aliases[0].parent_badge_id,
+        updated_badge.aliases[0].parent_code,
+        updated_badge.aliases[0].name,
+        updated_badge.nodes[0].parent_badge_id,
+        updated_badge.nodes[0].parent_code,
+        updated_badge.nodes[0].name,
+        updated_badge.settings["color"]
+    );
     let maps = crate::mapping::run(connection).await;
     let mut lines = maps;
-    lines.extend([create_north, create_south, update]);
+    lines.extend([create_north, create_south, update, create_alpha, create_beta, badge_update]);
     Ok(transcript(&trees, &regions, &graphs, &lines))
 }
 

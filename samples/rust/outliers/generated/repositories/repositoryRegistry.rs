@@ -1,4 +1,8 @@
 use datasources::{Datasource, DatasourceError, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
+use super::super::BadgeAlias;
+use super::super::BadgeNode;
+use super::super::BadgeSetting;
+use super::super::BadgeView;
 use super::super::Category;
 use super::super::CategoryTree;
 use super::super::Node;
@@ -13,6 +17,30 @@ use super::super::WardView;
 use std::sync::Arc;
 
 pub fn register(factory: &RepositoryFactory) {
+    factory.register_named(
+        "BadgeAlias",
+        "badge_aliases",
+        |connection| Ok(Arc::new(super::badgeAliasesRepository::BadgeAliasesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<BadgeAlias>>),
+        |connection| Arc::new(super::badgeAliasesRepository::BadgeAliasesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<BadgeAlias>>,
+    );
+    factory.register_named(
+        "BadgeNode",
+        "badge_nodes",
+        |connection| Ok(Arc::new(super::badgeNodesRepository::BadgeNodesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<BadgeNode>>),
+        |connection| Arc::new(super::badgeNodesRepository::BadgeNodesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<BadgeNode>>,
+    );
+    factory.register_named(
+        "BadgeSetting",
+        "badge_settings",
+        |connection| Ok(Arc::new(super::badgeSettingsRepository::BadgeSettingsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<BadgeSetting>>),
+        |connection| Arc::new(super::badgeSettingsRepository::BadgeSettingsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<BadgeSetting>>,
+    );
+    factory.register_named(
+        "BadgeView",
+        "badge_views",
+        |connection| Ok(Arc::new(super::badgeViewsRepository::BadgeViewsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<BadgeView>>),
+        |connection| Arc::new(super::badgeViewsRepository::BadgeViewsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<BadgeView>>,
+    );
     factory.register_named(
         "Category",
         "categories",
@@ -84,6 +112,10 @@ pub fn register(factory: &RepositoryFactory) {
 datasources::bind_repositories!(register);
 
 pub trait Repositories {
+    fn badge_aliases(&self) -> Arc<super::badgeAliasesRepository::BadgeAliasesRepository>;
+    fn badge_nodes(&self) -> Arc<super::badgeNodesRepository::BadgeNodesRepository>;
+    fn badge_settings(&self) -> Arc<super::badgeSettingsRepository::BadgeSettingsRepository>;
+    fn badge_views(&self) -> Arc<super::badgeViewsRepository::BadgeViewsRepository>;
     fn categories(&self) -> Arc<super::categoriesRepository::CategoriesRepository>;
     fn category_trees(&self) -> Arc<super::categoryTreesRepository::CategoryTreesRepository>;
     fn nodes(&self) -> Arc<super::nodesRepository::NodesRepository>;
@@ -98,6 +130,18 @@ pub trait Repositories {
 }
 
 impl Repositories for Arc<dyn Datasource> {
+    fn badge_aliases(&self) -> Arc<super::badgeAliasesRepository::BadgeAliasesRepository> {
+        Arc::new(super::badgeAliasesRepository::BadgeAliasesRepository::new(self.bind_connection(None)).expect("badge_aliases"))
+    }
+    fn badge_nodes(&self) -> Arc<super::badgeNodesRepository::BadgeNodesRepository> {
+        Arc::new(super::badgeNodesRepository::BadgeNodesRepository::new(self.bind_connection(None)).expect("badge_nodes"))
+    }
+    fn badge_settings(&self) -> Arc<super::badgeSettingsRepository::BadgeSettingsRepository> {
+        Arc::new(super::badgeSettingsRepository::BadgeSettingsRepository::new(self.bind_connection(None)).expect("badge_settings"))
+    }
+    fn badge_views(&self) -> Arc<super::badgeViewsRepository::BadgeViewsRepository> {
+        Arc::new(super::badgeViewsRepository::BadgeViewsRepository::new(self.bind_connection(None)).expect("badge_views"))
+    }
     fn categories(&self) -> Arc<super::categoriesRepository::CategoriesRepository> {
         Arc::new(super::categoriesRepository::CategoriesRepository::new(self.bind_connection(None)).expect("categories"))
     }

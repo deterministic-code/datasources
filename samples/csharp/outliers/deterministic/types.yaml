@@ -110,3 +110,62 @@ types:
         - nodes:
             type: ward_node[]
             references: [ward_node.parent_region_id, ward_node.parent_ward_id]
+  - badge:
+      tags: [datasource_type]
+      fields:
+        - badge_id: { type: uuid, is_id: true }
+        - code: { type: string, size: 64, is_id: true }
+        - name: { type: string, size: 128 }
+  - badge_alias:
+      tags: [datasource_type]
+      fields:
+        - id: { type: integer, is_id: true }
+        - parent_badge_id:
+            references: badge.badge_id
+        - parent_code:
+            references: badge.code
+        - name: { type: string, size: 128 }
+  - badge_setting:
+      tags: [datasource_type]
+      fields:
+        - id: { type: integer, is_id: true }
+        - parent_badge_id:
+            references: badge.badge_id
+        - parent_code:
+            references: badge.code
+        - name: { type: string, size: 64 }
+        - value: { type: string, size: 256 }
+  - badge_setting_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            size: 64
+            references: badge_setting.name
+        - value:
+            type: string
+            size: 256
+            references: badge_setting.value
+  - badge_node:
+      tags: [datasource_type]
+      fields:
+        - id: { type: integer, is_id: true }
+        - parent_badge_id:
+            references: badge.badge_id
+        - parent_code:
+            references: badge.code
+        - name: { type: string, size: 128 }
+  - badge_view:
+      tags: [view_type]
+      inherits: badge
+      fields:
+        - aliases:
+            type: badge_alias[]
+            references: [badge_alias.parent_badge_id, badge_alias.parent_code]
+        - settings:
+            type: badge_setting_map{}
+            references: [badge_setting.parent_badge_id, badge_setting.parent_code]
+        - nodes:
+            type: badge_node[]
+            references: [badge_node.parent_badge_id, badge_node.parent_code]

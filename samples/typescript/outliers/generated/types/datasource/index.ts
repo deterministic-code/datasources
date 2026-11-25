@@ -6,3 +6,7 @@ export { ward, Ward } from "./ward";
 export { wardAlias, WardAlias } from "./wardAlias";
 export { wardSetting, WardSetting } from "./wardSetting";
 export { wardNode, WardNode } from "./wardNode";
+export { badge, Badge } from "./badge";
+export { badgeAlias, BadgeAlias } from "./badgeAlias";
+export { badgeSetting, BadgeSetting } from "./badgeSetting";
+export { badgeNode, BadgeNode } from "./badgeNode";

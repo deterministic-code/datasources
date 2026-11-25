@@ -1,0 +1,8 @@
+import { BadgeAlias } from "../types/datasource/badgeAlias";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, Schema, type IConnection } from "@deterministic-code/datasources";
+export class BadgeAliasesRepository extends CRUDRepository<BadgeAlias> {
+  constructor(connection: IConnection) {
+    super(connection, { type: BadgeAlias, entity: "BadgeAlias", entityMapper: new DictionaryMapper([["BadgeAlias", "badge_aliases"]]), propertyMappings: new DictionaryMapper([["parentBadgeId", "parent_badge_id"], ["parentCode", "parent_code"]]), ids: ["id"], createProperties: ["parentBadgeId", "parentCode", "name"], updateProperties: ["parentBadgeId", "parentCode", "name"], readProperties: ["id", "parentBadgeId", "parentCode", "name"], schema: new Schema({ id: { type: "integer", nullable: false, hasDefault: false, isId: true }, parentBadgeId: { type: "uuid", nullable: false, hasDefault: false }, parentCode: { type: "string", nullable: false, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) });
+  }
+  static createReadonly = (connection: IConnection) => new ReadonlyRepository<BadgeAlias>(connection, { type: BadgeAlias, entity: "BadgeAlias", entityMapper: new DictionaryMapper([["BadgeAlias", "badge_aliases"]]), propertyMappings: new DictionaryMapper([["parentBadgeId", "parent_badge_id"], ["parentCode", "parent_code"]]), readProperties: ["id", "parentBadgeId", "parentCode", "name"], schema: new Schema({ id: { type: "integer", nullable: false, hasDefault: false, isId: true }, parentBadgeId: { type: "uuid", nullable: false, hasDefault: false }, parentCode: { type: "string", nullable: false, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) });
+}

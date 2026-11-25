@@ -1,0 +1,11 @@
+// schema-version: 1.0
+/// Type BadgeSetting.
+#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
+#[facet(crate = ::datasources::facet)]
+pub struct BadgeSetting {
+    pub id: i32,
+    pub parent_badge_id: datasources::uuid::Uuid,
+    pub parent_code: String,
+    pub name: String,
+    pub value: String,
+}

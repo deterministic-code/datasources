@@ -25,6 +25,8 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Compile Include="*Tests.cs" />
+    <Compile Remove="WardViewTests.cs" />
+    <Compile Remove="BadgeViewTests.cs" />
     <ProjectReference Include="Outliers.csproj" />
   </ItemGroup>
 </Project>

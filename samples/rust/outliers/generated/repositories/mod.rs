@@ -1,4 +1,8 @@
 #![allow(non_snake_case)]
+pub mod badgeAliasesRepository;
+pub mod badgeNodesRepository;
+pub mod badgeSettingsRepository;
+pub mod badgeViewsRepository;
 pub mod categoriesRepository;
 pub mod categoryTreesRepository;
 pub mod nodesRepository;
