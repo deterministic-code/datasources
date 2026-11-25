@@ -92,7 +92,7 @@ fn index_sql(index: &CreateIndexStatement, table: &str) -> String {
     format!(
         "CREATE {}INDEX {} ON {} ({})",
         if retargeted.unique() { "UNIQUE " } else { "" },
-        MysqlDriver::quote(retargeted.name()),
+        MysqlDriver::quote(&crate::identifier::fit(retargeted.name())),
         MysqlDriver::quote(retargeted.table()),
         retargeted
             .columns()

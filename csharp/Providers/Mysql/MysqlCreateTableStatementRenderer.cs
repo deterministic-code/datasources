@@ -2,6 +2,8 @@ namespace Datasources.Mysql;
 
 internal sealed class MysqlCreateTableStatementRenderer : CreateTableStatementTextRenderer
 {
+    protected override string Constraint(ITableConstraint constraint) => base.Constraint(MysqlIdentifier.Fit(constraint));
+
     protected override string Quote(string name) => MysqlDriver.Quote(name);
 
     protected override string Type(Column column) => MysqlDriver.NativeType(column);

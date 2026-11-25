@@ -9,6 +9,9 @@ internal sealed class MysqlDropTableStatementRenderer : DropTableStatementTextRe
 
 internal sealed class MysqlCreateIndexStatementRenderer : CreateIndexStatementTextRenderer
 {
+    public override string Render(CreateIndexStatement statement) =>
+        $"CREATE {(statement.Unique ? "UNIQUE " : "")}INDEX {Quote(MysqlIdentifier.Fit(statement.Name))} ON {Quote(statement.Table)} ({string.Join(", ", statement.Columns.Select(Quote))})";
+
     protected override string Quote(string name) => MysqlDriver.Quote(name);
 }
 

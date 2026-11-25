@@ -1,7 +1,17 @@
-import { CreateTableStatementTextRenderer, type Column, type NotNull } from "@deterministic-code/datasources";
+import {
+  CreateTableStatementTextRenderer,
+  type Column,
+  type ITableConstraint,
+  type NotNull,
+} from "@deterministic-code/datasources";
 import { MysqlDriver } from "./MysqlDriver.ts";
+import { fitMysqlConstraint } from "./MysqlIdentifier.ts";
 
 export class MysqlCreateTableStatementRenderer extends CreateTableStatementTextRenderer {
+  protected override constraint(constraint: ITableConstraint): string {
+    return super.constraint(fitMysqlConstraint(constraint));
+  }
+
   protected quote(name: string): string {
     return MysqlDriver.quote(name);
   }

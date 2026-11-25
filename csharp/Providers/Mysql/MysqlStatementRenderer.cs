@@ -50,6 +50,9 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
     public override string Visit(CreateTriggerStatement trigger) =>
         new MysqlCreateTriggerStatementRenderer().Render(trigger);
 
+    public override string Visit(DropTriggerStatement trigger) =>
+        $"DROP TRIGGER IF EXISTS {MysqlDriver.Quote(MysqlIdentifier.Fit(trigger.Name))}";
+
     public override string Visit(DropRoutineStatement routine) =>
         new MysqlDropRoutineStatementRenderer().Render(routine);
 

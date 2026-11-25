@@ -2,9 +2,11 @@ import {
   AlterTableStatementTextRenderer,
   type AlterAction,
   type Column,
+  type ITableConstraint,
   type NotNull,
 } from "@deterministic-code/datasources";
 import { MysqlDriver } from "./MysqlDriver.ts";
+import { fitMysqlConstraint, fitMysqlIdentifier } from "./MysqlIdentifier.ts";
 
 export class MysqlAlterTableStatementRenderer extends AlterTableStatementTextRenderer {
   protected quote(name: string): string {
@@ -27,7 +29,13 @@ export class MysqlAlterTableStatementRenderer extends AlterTableStatementTextRen
     return column.identity ? " AUTO_INCREMENT" : "";
   }
 
+  protected override constraint(constraint: ITableConstraint): string {
+    return super.constraint(fitMysqlConstraint(constraint));
+  }
+
   protected override actionSql(action: AlterAction): string {
-    return action.kind === "alterColumn" ? `MODIFY COLUMN ${this.column(action.column)}` : super.actionSql(action);
+    if (action.kind === "alterColumn") return `MODIFY COLUMN ${this.column(action.column)}`;
+    if (action.kind === "dropConstraint") return `DROP CONSTRAINT ${this.quote(fitMysqlIdentifier(action.name))}`;
+    return super.actionSql(action);
   }
 }

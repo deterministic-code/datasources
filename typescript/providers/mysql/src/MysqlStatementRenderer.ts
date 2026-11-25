@@ -20,6 +20,7 @@ import {
   CreateIndexStatement,
   DropIndexStatement,
   DropRoutineStatement,
+  DropTriggerStatement,
   DropTableStatement,
   ForeignKeyStatement,
   RebuildTableStatement,
@@ -43,7 +44,7 @@ export { MysqlExpressionRenderer } from "./MysqlDmlRenderers.ts";
 import { MysqlAlterTableStatementRenderer } from "./MysqlAlterTableStatementRenderer.ts";
 import { MysqlBulkUpdateStatementTextRenderer } from "./MysqlBulkUpdateStatementTextRenderer.ts";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
-import { MysqlCreateTriggerStatementRenderer } from "./MysqlCreateTriggerStatementRenderer.ts";
+import { dropTriggerSql, MysqlCreateTriggerStatementRenderer } from "./MysqlCreateTriggerStatementRenderer.ts";
 import { MysqlDropIndexStatementRenderer } from "./MysqlDropIndexStatementRenderer.ts";
 import { MysqlDropRoutineStatementRenderer } from "./MysqlDropRoutineStatementRenderer.ts";
 import { MysqlStoredProcedureStatementRenderer } from "./MysqlStoredProcedureStatementRenderer.ts";
@@ -122,6 +123,10 @@ export class MysqlStatementRenderer extends StatementRenderer {
 
   protected override visitCreateTrigger(trigger: CreateTriggerStatement): string {
     return new MysqlCreateTriggerStatementRenderer().render(trigger);
+  }
+
+  protected override visitDropTrigger(trigger: DropTriggerStatement): string {
+    return dropTriggerSql(trigger.name);
   }
 
   protected override visitDropRoutine(routine: DropRoutineStatement): string {

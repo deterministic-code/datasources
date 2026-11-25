@@ -11,6 +11,7 @@ import {
   RebuildTableStatement,
 } from "@deterministic-code/datasources";
 import { MysqlDriver } from "./MysqlDriver.ts";
+import { fitMysqlIdentifier } from "./MysqlIdentifier.ts";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
 import { MysqlCreateTriggerStatementRenderer } from "./MysqlCreateTriggerStatementRenderer.ts";
 
@@ -21,6 +22,13 @@ export class MysqlDropTableStatementRenderer extends DropTableStatementTextRende
 }
 
 export class MysqlCreateIndexStatementRenderer extends CreateIndexStatementTextRenderer {
+  override render(statement: CreateIndexStatement): string {
+    const name = this.quote(fitMysqlIdentifier(statement.name));
+    const table = this.quote(statement.table);
+    const columns = statement.columns.map((column) => this.quote(column)).join(", ");
+    return `CREATE ${statement.unique ? "UNIQUE " : ""}INDEX ${name} ON ${table} (${columns})`;
+  }
+
   protected override quote(name: string): string {
     return MysqlDriver.quote(name);
   }
@@ -95,7 +103,7 @@ const recreate = (statement: IStatement, table: string): string => {
 export class MysqlForeignKeyStatementRenderer {
   render(statement: ForeignKeyStatement): string {
     const table = MysqlDriver.quote(statement.table);
-    const name = MysqlDriver.quote(statement.name);
+    const name = MysqlDriver.quote(fitMysqlIdentifier(statement.name));
     if (statement.kind === "drop") return `ALTER TABLE ${table} DROP FOREIGN KEY ${name}`;
     const cols = statement.columns.map(MysqlDriver.quote).join(", ");
     const refs = statement.referencesColumns.map(MysqlDriver.quote).join(", ");
