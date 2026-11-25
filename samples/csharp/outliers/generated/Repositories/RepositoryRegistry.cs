@@ -15,5 +15,9 @@ public static class RepositoryRegistry
         factory.Register("NodeGraph", "NodeGraphs", connection => new NodeGraphsRepository(connection), connection => NodeGraphsRepository.CreateReadonly(connection));
         factory.Register("RegionCategory", "RegionCategories", connection => new RegionCategoriesRepository(connection), connection => RegionCategoriesRepository.CreateReadonly(connection));
         factory.Register("RegionCategoryTree", "RegionCategoryTrees", connection => new RegionCategoryTreesRepository(connection), connection => RegionCategoryTreesRepository.CreateReadonly(connection));
+        factory.Register("WardAlias", "WardAliases", connection => new WardAliasesRepository(connection), connection => WardAliasesRepository.CreateReadonly(connection));
+        factory.Register("WardNode", "WardNodes", connection => new WardNodesRepository(connection), connection => WardNodesRepository.CreateReadonly(connection));
+        factory.Register("WardSetting", "WardSettings", connection => new WardSettingsRepository(connection), connection => WardSettingsRepository.CreateReadonly(connection));
+        factory.Register("WardView", "WardViews", connection => new WardViewsRepository(connection), connection => WardViewsRepository.CreateReadonly(connection));
     }
 }

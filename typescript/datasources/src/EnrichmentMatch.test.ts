@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { MemoryDriver } from "@deterministic-code/datasources-memory";
 import type { Scalar } from "./builders/Scalar.ts";
+import { CRUDRepository } from "./CRUDRepository.ts";
 import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IConnection } from "./IConnection.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { ChangeCasingMapper } from "./mappers/ChangeCasingMapper.ts";
+import { Schema } from "./Schema.ts";
 import { collectAsync } from "./collectAsync.ts";
 
 class Mark {
@@ -16,11 +18,20 @@ class Mark {
   Label = "";
 }
 
+class Setting {
+  Id = 0;
+  PlayId = 0;
+  UserId = 0;
+  Name = "";
+  Value = "";
+}
+
 class Seat {
   Id = 0;
   PlayId = 0;
   UserId = 0;
   Marks: Mark[] = [];
+  Settings: Record<string, string> = {};
 }
 
 const columns = new ChangeCasingMapper("pascalCase", "snakeCase");
@@ -51,6 +62,39 @@ const marks: Enrichment = {
     { sourceProperty: "UserId", relatedKey: "UserId" },
   ],
 };
+
+const settings: Enrichment = {
+  destinationProperty: "Settings",
+  sourceProperty: "PlayId",
+  relatedKey: "PlayId",
+  relatedProperty: "Value",
+  type: "dictionary",
+  dictionaryKey: "Name",
+  keys: [
+    { sourceProperty: "PlayId", relatedKey: "PlayId" },
+    { sourceProperty: "UserId", relatedKey: "UserId" },
+  ],
+};
+
+const settingSchema = new Schema({
+  Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+  PlayId: { type: "integer", nullable: false, hasDefault: false },
+  UserId: { type: "integer", nullable: false, hasDefault: false },
+  Name: { type: "string", nullable: false, hasDefault: false },
+  Value: { type: "string", nullable: false, hasDefault: false },
+});
+
+const write = <T extends object>(type: new () => T, connection: IConnection, schema?: Schema) =>
+  new CRUDRepository(connection, {
+    type,
+    propertyMappings: columns,
+    ids: ["Id"],
+    schema:
+      schema ??
+      new Schema({
+        Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+      }),
+  });
 
 describe("composite enrichment", () => {
   it("reads only the rows that match every column", async () => {
@@ -98,5 +142,39 @@ describe("composite enrichment", () => {
     expect(child?.PlayId).toBe(1);
     expect(child?.UserId).toBe(7);
     expect(child?.Label).toBe("mine");
+  });
+
+  it("create stamps every key and read does not mix a shared first key", async () => {
+    const connection = new MemoryDriver().connection();
+    await connection.open();
+    const seatsRepo = write(Seat, connection);
+    const marksRepo = write(Mark, connection);
+    seatsRepo.addEnriched(marks, marksRepo);
+    await seatsRepo.create(Object.assign(new Seat(), { PlayId: 1, UserId: 7, Marks: [Object.assign(new Mark(), { Label: "mine" })] }));
+    await seatsRepo.create(Object.assign(new Seat(), { PlayId: 1, UserId: 8, Marks: [Object.assign(new Mark(), { Label: "theirs" })] }));
+    const stored = await collectAsync(marksRepo.read());
+    expect(stored).toHaveLength(2);
+    expect(stored.find((row) => row.Label === "mine")).toMatchObject({ PlayId: 1, UserId: 7 });
+    expect(stored.find((row) => row.Label === "theirs")).toMatchObject({ PlayId: 1, UserId: 8 });
+    const rows = await collectAsync(seatsRepo.read());
+    expect(rows.find((row) => row.UserId === 7)?.Marks.map((mark) => mark.Label)).toEqual(["mine"]);
+    expect(rows.find((row) => row.UserId === 8)?.Marks.map((mark) => mark.Label)).toEqual(["theirs"]);
+  });
+
+  it("create stamps a dictionary on every key", async () => {
+    const connection = new MemoryDriver().connection();
+    await connection.open();
+    const seatsRepo = write(Seat, connection);
+    const settingsRepo = write(Setting, connection, settingSchema);
+    seatsRepo.addEnriched(settings, settingsRepo);
+    await seatsRepo.create(Object.assign(new Seat(), { PlayId: 1, UserId: 7, Settings: { color: "blue" } }));
+    await seatsRepo.create(Object.assign(new Seat(), { PlayId: 1, UserId: 8, Settings: { color: "red" } }));
+    const stored = await collectAsync(settingsRepo.read());
+    expect(stored).toHaveLength(2);
+    expect(stored.find((row) => row.UserId === 7)).toMatchObject({ PlayId: 1, Name: "color", Value: "blue" });
+    expect(stored.find((row) => row.UserId === 8)).toMatchObject({ PlayId: 1, Name: "color", Value: "red" });
+    const rows = await collectAsync(seatsRepo.read());
+    expect(rows.find((row) => row.UserId === 7)?.Settings.color).toBe("blue");
+    expect(rows.find((row) => row.UserId === 8)?.Settings.color).toBe("red");
   });
 });

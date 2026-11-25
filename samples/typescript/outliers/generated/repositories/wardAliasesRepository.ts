@@ -1,0 +1,8 @@
+import { WardAlias } from "../types/datasource/wardAlias";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, Schema, type IConnection } from "@deterministic-code/datasources";
+export class WardAliasesRepository extends CRUDRepository<WardAlias> {
+  constructor(connection: IConnection) {
+    super(connection, { type: WardAlias, entity: "WardAlias", entityMapper: new DictionaryMapper([["WardAlias", "ward_aliases"]]), propertyMappings: new DictionaryMapper([["parentRegionId", "parent_region_id"], ["parentWardId", "parent_ward_id"]]), ids: ["id"], createProperties: ["parentRegionId", "parentWardId", "name"], updateProperties: ["parentRegionId", "parentWardId", "name"], readProperties: ["id", "parentRegionId", "parentWardId", "name"], schema: new Schema({ id: { type: "integer", nullable: false, hasDefault: false, isId: true }, parentRegionId: { type: "integer", nullable: false, hasDefault: false }, parentWardId: { type: "integer", nullable: false, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) });
+  }
+  static createReadonly = (connection: IConnection) => new ReadonlyRepository<WardAlias>(connection, { type: WardAlias, entity: "WardAlias", entityMapper: new DictionaryMapper([["WardAlias", "ward_aliases"]]), propertyMappings: new DictionaryMapper([["parentRegionId", "parent_region_id"], ["parentWardId", "parent_ward_id"]]), readProperties: ["id", "parentRegionId", "parentWardId", "name"], schema: new Schema({ id: { type: "integer", nullable: false, hasDefault: false, isId: true }, parentRegionId: { type: "integer", nullable: false, hasDefault: false }, parentWardId: { type: "integer", nullable: false, hasDefault: false }, name: { type: "string", nullable: false, hasDefault: false } }) });
+}

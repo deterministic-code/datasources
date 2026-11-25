@@ -51,7 +51,7 @@ impl NodeGraphsRepository {
         ]));
         options.read_properties = vec!["id".into(), "value".into()];
         let node_edge = NodeEdgesRepository::new(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<NodeGraph>::new(Arc::clone(&connection), options)?;
+        let mut repo = ReadonlyRepository::<NodeGraph>::new(Arc::clone(&connection), options.clone())?;
         let via_edges = Arc::new(ReadonlyRepository::<NodeGraph>::new(Arc::clone(&connection), options.clone())?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_node_id", "to_node_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(&node_edge))));
         Ok(repo)
     }
@@ -158,6 +158,6 @@ pub fn node_graphs_row_repository(connection: Arc<dyn Connection>) -> Result<CRU
         let node_edge = Arc::new(super::nodeEdgesRepository::node_edges_row_repository(Arc::clone(&connection))?);
         let options = NodeGraphsRepository::options()?;
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?.with_write(Arc::new(DefaultWriteEnrichmentStrategy::new(None, None, Some(Arc::new(GraphCreateEnrichmentStrategy::new(Arc::clone(&node_edge) as Arc<dyn ICRUDRepository<_>>))), false)));
-        let via_edges = Arc::new(CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), NodeGraphsRepository::options()?)?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_node_id", "to_node_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(&node_edge))));
+        let via_edges = Arc::new(CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), NodeGraphsRepository::options()?)?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_node_id", "to_node_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(Arc::clone(&node_edge)))));
         Ok(repo)
 }

@@ -52,7 +52,7 @@ impl RegionCategoriesRepository {
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["region_id".into(), "category_id".into(), "parent_region_id".into(), "parent_category_id".into(), "name".into()];
-        let repo = ReadonlyRepository::<RegionCategory>::new(connection, options)?;
+        let repo = ReadonlyRepository::<RegionCategory>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

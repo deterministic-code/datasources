@@ -48,7 +48,7 @@ impl CategoriesRepository {
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "parent_category_id".into(), "name".into()];
-        let repo = ReadonlyRepository::<Category>::new(connection, options)?;
+        let repo = ReadonlyRepository::<Category>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

@@ -53,7 +53,7 @@ impl RegionCategoryTreesRepository {
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["region_id".into(), "category_id".into(), "parent_region_id".into(), "parent_category_id".into(), "name".into()];
-        let mut repo = ReadonlyRepository::<RegionCategoryTree>::new(Arc::clone(&connection), options)?;
+        let mut repo = ReadonlyRepository::<RegionCategoryTree>::new(Arc::clone(&connection), options.clone())?;
         let via_children = Arc::new(ReadonlyRepository::<RegionCategoryTree>::new(Arc::clone(&connection), options.clone())?); repo.add_enriched(Enrichment::new("children", "region_id", "parent_region_id", None, EnrichmentPropertyType::List).with_keys(&[("region_id", "parent_region_id"), ("category_id", "parent_category_id")]), via_children, Some(Arc::new(TreeReadonlyEnrichmentStrategy)));
         Ok(repo)
     }

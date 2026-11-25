@@ -49,7 +49,7 @@ impl CategoryTreesRepository {
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "parent_category_id".into(), "name".into()];
-        let mut repo = ReadonlyRepository::<CategoryTree>::new(Arc::clone(&connection), options)?;
+        let mut repo = ReadonlyRepository::<CategoryTree>::new(Arc::clone(&connection), options.clone())?;
         let via_children = Arc::new(ReadonlyRepository::<CategoryTree>::new(Arc::clone(&connection), options.clone())?); repo.add_enriched(Enrichment::new("children", "id", "parent_category_id", None, EnrichmentPropertyType::List), via_children, Some(Arc::new(TreeReadonlyEnrichmentStrategy)));
         Ok(repo)
     }

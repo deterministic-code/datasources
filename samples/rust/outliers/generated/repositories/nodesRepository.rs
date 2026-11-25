@@ -46,7 +46,7 @@ impl NodesRepository {
             ("value".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "value".into()];
-        let repo = ReadonlyRepository::<Node>::new(connection, options)?;
+        let repo = ReadonlyRepository::<Node>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

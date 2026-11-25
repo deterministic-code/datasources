@@ -249,6 +249,42 @@ public class MysqlCommandIntegrationTests
         }
     }
 
+    sealed class WardRow
+    {
+        public long region_id { get; set; }
+        public long ward_id { get; set; }
+        public string name { get; set; } = "";
+    }
+
+    [Fact]
+    public async Task UpdateBindsACompositeKeyOnce()
+    {
+        var url = Environment.GetEnvironmentVariable("MYSQL_URL");
+        if (string.IsNullOrEmpty(url)) return;
+        var isolated = await Isolate(url);
+        try
+        {
+            var conn = new MysqlConnection(new MysqlConnectionOptions { Url = isolated.Url });
+            await conn.Open();
+            var command = new MysqlCommand(conn);
+            await command.Execute(Native.N(
+                "CREATE TABLE wards (region_id INT NOT NULL, ward_id INT NOT NULL, name TEXT NOT NULL, PRIMARY KEY (region_id, ward_id))"));
+            var repo = new CRUDRepository<WardRow>(conn, new CRUDRepositoryOptions<WardRow>
+            {
+                Ids = ["region_id", "ward_id"],
+                Entity = "wards",
+            });
+            await repo.Create(new WardRow { region_id = 1, ward_id = 1, name = "north" });
+            await repo.Update(new WardRow { region_id = 1, ward_id = 1, name = "south" });
+            var loaded = await repo.ReadSingleById(new Row { ["region_id"] = 1L, ["ward_id"] = 1L });
+            Assert.Equal("south", loaded!.name);
+        }
+        finally
+        {
+            await isolated.Cleanup();
+        }
+    }
+
     [Fact]
     public async Task SharedSpecs()
     {
