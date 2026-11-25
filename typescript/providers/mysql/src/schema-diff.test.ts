@@ -114,9 +114,15 @@ describe("schemaDiff mysql rebuild option", () => {
     const down = text(schemaDiff("mysql", snap([parent, plain]), snap([parent])));
     const ident = /([A-Za-z0-9_`-]+)/;
     assert.equal(token(up, new RegExp(`CREATE INDEX ${ident.source} ON`)), fitMysqlIdentifier(index));
-    assert.equal(token(down, new RegExp(`DROP INDEX ${ident.source} ON`)), fitMysqlIdentifier(index));
+    assert.equal(down.includes("DROP INDEX"), false);
     assert.equal(token(up, new RegExp(`CREATE TRIGGER ${ident.source}`)), fitMysqlIdentifier(trigger));
     assert.equal(token(down, new RegExp(`DROP TRIGGER IF EXISTS ${ident.source}`)), fitMysqlIdentifier(trigger));
+    const codeIndex = [{ name: "external_reference_code", fields: ["external_reference_code"], isUnique: false }];
+    const withCodeIndex = table(entity, fields);
+    withCodeIndex.indexes = codeIndex;
+    const dropCodeIndex = text(schemaDiff("mysql", snap([parent, withCodeIndex]), snap([parent, table(entity, fields)])));
+    const codeIndexName = CreateIndexStatement.nameOf(entity, naming, "external_reference_code", "index");
+    assert.equal(token(dropCodeIndex, new RegExp(`DROP INDEX ${ident.source} ON`)), fitMysqlIdentifier(codeIndexName));
     assert.equal(token(up, new RegExp(`CONSTRAINT ${ident.source} FOREIGN KEY`)), fitMysqlIdentifier(foreignKey));
     assert.equal(token(up, new RegExp(`CONSTRAINT ${ident.source} PRIMARY KEY`)), fitMysqlIdentifier(primaryKey));
     assert.equal(up.includes(index), false);
@@ -129,5 +135,63 @@ describe("schemaDiff mysql rebuild option", () => {
 
     const dropFk = text(schemaDiff("mysql", snap([parent, plain]), snap([parent, withoutFk])));
     assert.equal(token(dropFk, new RegExp(`DROP FOREIGN KEY ${ident.source}`)), fitMysqlIdentifier(foreignKey));
+  });
+
+  it("drops a removed table without dropping its indexes", () => {
+    const users = table("user", [field("id", { isId: true })]);
+    const devices = table("device", [
+      field("id", { isId: true }),
+      field("user_id", { type: "integer", references: "user.id" }),
+      field("fingerprint"),
+    ]);
+    devices.indexes = [{ name: "user_id_fingerprint", fields: ["user_id", "fingerprint"], isUnique: true }];
+    const sql = schemaDiff("mysql", snap([users, devices]), snap([users]))
+      .map((statement) => renderSql("mysql", statement))
+      .join("\n");
+    assert.equal(sql.includes("DROP TABLE"), true);
+    assert.equal(sql.includes("DROP INDEX"), false);
+  });
+
+  it("drops a foreign key before an index that supported it", () => {
+    const users = table("user", [field("id", { isId: true })]);
+    const devices = table("device", [
+      field("id", { isId: true }),
+      field("user_id", { type: "integer", references: "user.id" }),
+      field("fingerprint"),
+    ]);
+    devices.indexes = [{ name: "user_id_fingerprint", fields: ["user_id", "fingerprint"], isUnique: true }];
+    const withoutFk = table("device", [
+      field("id", { isId: true }),
+      field("user_id", { type: "integer" }),
+      field("fingerprint"),
+    ]);
+    const sql = schemaDiff("mysql", snap([users, devices]), snap([users, withoutFk]))
+      .map((statement) => renderSql("mysql", statement))
+      .join("\n");
+    assert.equal(sql.includes("DROP FOREIGN KEY"), true);
+    assert.equal(sql.includes("DROP INDEX"), true);
+    assert.equal(sql.indexOf("DROP FOREIGN KEY") < sql.indexOf("DROP INDEX"), true);
+  });
+
+  it("creates a supporting index before dropping a composite index used by a foreign key", () => {
+    const users = table("user", [field("id", { isId: true })]);
+    const devices = table("device", [
+      field("id", { isId: true }),
+      field("user_id", { type: "integer", references: "user.id" }),
+      field("fingerprint"),
+    ]);
+    devices.indexes = [{ name: "user_id_fingerprint", fields: ["user_id", "fingerprint"], isUnique: true }];
+    const withoutIndex = table("device", [
+      field("id", { isId: true }),
+      field("user_id", { type: "integer", references: "user.id" }),
+      field("fingerprint"),
+    ]);
+    const sql = schemaDiff("mysql", snap([users, devices]), snap([users, withoutIndex]))
+      .map((statement) => renderSql("mysql", statement))
+      .join("\n");
+    assert.equal(sql.includes("CREATE INDEX"), true);
+    assert.equal(sql.includes("DROP INDEX"), true);
+    assert.equal(sql.indexOf("CREATE INDEX") < sql.indexOf("DROP INDEX"), true);
+    assert.match(sql.slice(0, sql.indexOf("DROP INDEX")), /\(`?user_id`?\)/);
   });
 });

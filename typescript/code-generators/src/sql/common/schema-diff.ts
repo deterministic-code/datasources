@@ -88,16 +88,87 @@ const dropTrigger = (
 ): IStatement =>
   dropTriggerStatementOf(CreateTriggerStatement.nameOf(tableStem(table), naming), table.tableName);
 
+const indexPhysical = (naming: StatementNaming, table: LiveTable, index: DatasourceIndex): string =>
+  CreateIndexStatement.nameOf(tableStem(table), naming, index.name, "index");
+
 const dropIndex = (
   dialect: SqlDialect,
   naming: StatementNaming,
   table: LiveTable,
   index: DatasourceIndex,
-): IStatement =>
-  dropIndexStatementOf(
-    CreateIndexStatement.nameOf(tableStem(table), naming, index.name, "index"),
-    table.tableName,
-  );
+): IStatement => dropIndexStatementOf(indexPhysical(naming, table, index), table.tableName);
+
+const isForeignKey = (field: TypeField): boolean => referencePairs(field.references).length === 1;
+
+const sameRefs = (field: TypeField, afterFields: Map<string, TypeField>): boolean => {
+  const next = afterFields.get(field.name);
+  return next !== undefined && refsOf(next) === refsOf(field);
+};
+
+const indexSupports = (index: DatasourceIndex, field: TypeField): boolean =>
+  isForeignKey(field) && index.fields[0] === field.name;
+
+const pkSupports = (table: LiveTable, field: TypeField): boolean => tableIdentity(table)[0] === field.name;
+
+const supportingIndexName = (
+  naming: StatementNaming,
+  table: LiveTable,
+  droppedPhysical: string,
+  field: string,
+): string => {
+  for (const candidate of [field, `${field}_fk`]) {
+    if (indexPhysical(naming, table, { name: candidate, fields: [field], isUnique: false }) !== droppedPhysical) {
+      return candidate;
+    }
+  }
+  return `${field}_supporting`;
+};
+
+const mysqlIndexDrop = (
+  before: LiveTable,
+  after: LiveTable,
+  beforeNaming: StatementNaming,
+  afterNaming: StatementNaming,
+  beforeTables: readonly LiveTable[],
+  afterFields: Map<string, TypeField>,
+  droppedForeignKeys: Set<string>,
+  createdIndexes: Set<string>,
+  index: DatasourceIndex,
+): IStatement[] => {
+  const droppedPhysical = indexPhysical(beforeNaming, before, index);
+  const out: IStatement[] = [];
+  for (const field of before.fields.filter((item) => indexSupports(index, item))) {
+    if (!sameRefs(field, afterFields)) {
+      if (!droppedForeignKeys.has(field.name)) {
+        droppedForeignKeys.add(field.name);
+        out.push(dropForeignKeyStatementOf(beforeNaming, beforeTables, before, field));
+      }
+      continue;
+    }
+    const supporting = after.indexes.filter(
+      (item) => indexSupports(item, field) && indexPhysical(afterNaming, after, item) !== droppedPhysical,
+    );
+    const kept = afterFields.get(field.name);
+    if (pkSupports(after, field) || (kept !== undefined && uniqueField(after, kept)) || supporting.length > 0) {
+      for (const added of supporting) {
+        const previous = before.indexes.find((prior) => prior.name === added.name);
+        if ((previous === undefined || indexKey(previous) !== indexKey(added)) && !createdIndexes.has(added.name)) {
+          createdIndexes.add(added.name);
+          out.push(createIndexStatementOf(afterNaming, after, added));
+        }
+      }
+      continue;
+    }
+    const support: DatasourceIndex = {
+      name: supportingIndexName(afterNaming, after, droppedPhysical, field.name),
+      fields: [field.name],
+      isUnique: false,
+    };
+    createdIndexes.add(support.name);
+    out.push(createIndexStatementOf(afterNaming, after, support));
+  }
+  return out;
+};
 
 const compiledColumn = (dialect: SqlDialect, column: Column, name: string) => {
   const ctor = dialectDriver(dialect).constructor as {
@@ -129,7 +200,6 @@ const dropTable = (
   naming: StatementNaming,
 ): IStatement[] => [
   ...(hasAuditColumns(table) ? [dropTrigger(dialect, table, naming)] : []),
-  ...[...table.indexes].reverse().map((index) => dropIndex(dialect, naming, table, index)),
   dropTableStatementOf(table.tableName),
 ];
 
@@ -215,13 +285,29 @@ const diffTable = (
   const keptFields = after.fields.filter((field) => beforeFields.has(field.name));
   const beforeIndexes = new Map(before.indexes.map((index) => [index.name, index]));
   const afterIndexes = new Map(after.indexes.map((index) => [index.name, index]));
+  const droppedForeignKeys = new Set<string>();
+  const createdIndexes = new Set<string>();
   const out: IStatement[] = [];
 
   for (const index of before.indexes) {
     const next = afterIndexes.get(index.name);
-    if (next === undefined || indexKey(index) !== indexKey(next)) {
-      out.push(dropIndex(dialect, beforeNaming, before, index));
+    if (next !== undefined && indexKey(index) === indexKey(next)) continue;
+    if (dialect === "mysql") {
+      out.push(
+        ...mysqlIndexDrop(
+          before,
+          after,
+          beforeNaming,
+          afterNaming,
+          beforeTables,
+          afterFields,
+          droppedForeignKeys,
+          createdIndexes,
+          index,
+        ),
+      );
     }
+    out.push(dropIndex(dialect, beforeNaming, before, index));
   }
 
   for (const field of before.fields) {
@@ -233,7 +319,8 @@ const diffTable = (
         }),
       );
     }
-    if (referencePairs(field.references).length === 1 && (!afterFields.has(field.name) || refsOf(afterFields.get(field.name)!) !== refsOf(field))) {
+    if (isForeignKey(field) && !sameRefs(field, afterFields) && !droppedForeignKeys.has(field.name)) {
+      droppedForeignKeys.add(field.name);
       out.push(dropForeignKeyStatementOf(beforeNaming, beforeTables, before, field));
     }
   }
@@ -292,7 +379,8 @@ const diffTable = (
 
   for (const index of after.indexes) {
     const previous = beforeIndexes.get(index.name);
-    if (previous === undefined || indexKey(previous) !== indexKey(index)) {
+    if ((previous === undefined || indexKey(previous) !== indexKey(index)) && !createdIndexes.has(index.name)) {
+      createdIndexes.add(index.name);
       out.push(createIndexStatementOf(afterNaming, after, index));
     }
   }
