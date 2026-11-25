@@ -15,3 +15,11 @@ impl SchemaObject for RegionCategory {}
 
 impl SchemaObject for RegionCategoryTree {}
 
+impl SchemaObject for WardAlias {}
+
+impl SchemaObject for WardNode {}
+
+impl SchemaObject for WardSetting {}
+
+impl SchemaObject for WardView {}
+

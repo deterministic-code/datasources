@@ -128,8 +128,8 @@ mod tests {
         assert_eq!(graph_line(&GraphNode { value: "blade".into(), edges: vec![] }), "blade");
         assert_eq!(
             transcript(
-                &[food],
-                &[root],
+                &[food.clone()],
+                &[root.clone()],
                 &[GraphNode {
                     value: "core".into(),
                     edges: vec![GraphNode { value: "blade".into(), edges: vec![] }],

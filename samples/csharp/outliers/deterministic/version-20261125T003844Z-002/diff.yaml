@@ -1,0 +1,94 @@
+types.yaml:
+  types:
+    added:
+      - ward:
+          tags:
+            - datasource_type
+          fields:
+            - region_id:
+                type: integer
+                is_id: true
+            - ward_id:
+                type: integer
+                is_id: true
+            - name:
+                type: string
+                size: 128
+      - ward_alias:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - parent_region_id:
+                references: ward.region_id
+            - parent_ward_id:
+                references: ward.ward_id
+            - name:
+                type: string
+                size: 128
+      - ward_setting:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - parent_region_id:
+                references: ward.region_id
+            - parent_ward_id:
+                references: ward.ward_id
+            - name:
+                type: string
+                size: 64
+            - value:
+                type: string
+                size: 256
+      - ward_setting_map:
+          tags:
+            - view_type
+          inherits: dictionary
+          fields:
+            - key:
+                type: string
+                size: 64
+                references: ward_setting.name
+            - value:
+                type: string
+                size: 256
+                references: ward_setting.value
+      - ward_node:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - parent_region_id:
+                references: ward.region_id
+            - parent_ward_id:
+                references: ward.ward_id
+            - name:
+                type: string
+                size: 128
+      - ward_view:
+          tags:
+            - view_type
+          inherits: ward
+          fields:
+            - aliases:
+                type: ward_alias[]
+                references:
+                  - ward_alias.parent_region_id
+                  - ward_alias.parent_ward_id
+            - settings:
+                type: ward_setting_map{}
+                references:
+                  - ward_setting.parent_region_id
+                  - ward_setting.parent_ward_id
+            - nodes:
+                type: ward_node[]
+                references:
+                  - ward_node.parent_region_id
+                  - ward_node.parent_ward_id

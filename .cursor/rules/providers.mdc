@@ -8,3 +8,7 @@ alwaysApply: true
 `sqlite`, `mysql`, `postgres`, `sqlserver`, `oracle`, and every other catalog provider are installed by `npx @deterministic-code/datasources-cli setup` or `add`. The manifest lists only those providers, matching `INSTALLED_PROVIDERS`. A generator reads the dialect from a provider the project already has. In this repo, a crate depends only on the provider crates that package uses.
 
 A missing dialect, compile error, or failing test is not a reason to add the other drivers.
+
+Never write `datasources` or `datasources-*` into a sample `Cargo.toml` (path, git, or crates.io). Never add a sample `ProjectReference` or extra `file:` package that duplicates `setup` / `add`. A missing crate, a `cargo test --lib` compile error, or a failing e2e is not a reason to put those paths in the manifest. `setup` runs `cargo add --path` (or crates.io). Generated sample code stays behind `#[cfg(not(test))]` when the lib test graph has no datasources crate.
+
+A C# sample may keep `Datasources.csproj` with `Condition="Exists(...)"`. Never add `Datasources.Sqlite.csproj` (or any other provider) to a sample, even with `Exists`. `setup` / `add` installs providers. Setup treats any `Include` of that csproj as already installed, so sqlite is skipped in e2e.

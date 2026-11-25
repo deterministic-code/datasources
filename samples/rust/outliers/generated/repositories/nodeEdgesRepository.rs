@@ -46,7 +46,7 @@ impl NodeEdgesRepository {
             ("to_node_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["from_node_id".into(), "to_node_id".into()];
-        let repo = ReadonlyRepository::<NodeEdge>::new(connection, options)?;
+        let repo = ReadonlyRepository::<NodeEdge>::new(connection, options.clone())?;
         Ok(repo)
     }
 }
