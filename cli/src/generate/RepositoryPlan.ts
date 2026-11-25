@@ -30,11 +30,16 @@ const compositeKeys = (
     throw new Error(`${authored.name}.${field.name} composite references must name one type`);
   }
   const columns = new Set(expanded.get(authored.name)!.fields.map((item) => item.name));
-  for (const pair of pairs) {
-    if (!columns.has(pair.field))
-      throw new Error(`${authored.name}.${field.name} composite reference ${pair.type}.${pair.field} has no column on ${authored.name}`);
-  }
-  return pairs.map((pair) => ({ source: property(pair.field), relatedKey: property(pair.field) }));
+  const childType = expanded.get(child);
+  return pairs.map((pair) => {
+    if (columns.has(pair.field)) return { source: property(pair.field), relatedKey: property(pair.field) };
+    const fk = childType?.fields.find((item) => item.name === pair.field);
+    const target = referenceOf(fk?.references);
+    if (target !== undefined) return { source: property(target.field), relatedKey: property(pair.field) };
+    throw new Error(
+      `${authored.name}.${field.name} composite reference ${pair.type}.${pair.field} has no column on ${authored.name}`,
+    );
+  });
 };
 
 const treeKeys = (

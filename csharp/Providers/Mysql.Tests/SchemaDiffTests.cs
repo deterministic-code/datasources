@@ -6,13 +6,72 @@ namespace Datasources.Mysql.Tests;
 
 public class SchemaDiffTests
 {
-    static (IReadOnlyList<SqlTable> Tables, StatementNaming Naming) Snap(string yaml)
+    static (IReadOnlyList<SqlTable> Tables, StatementNaming Naming) Snap(string yaml, string? datasourceYaml = null)
     {
-        var spec = SpecParser.Parse(new Dictionary<string, string> { ["types.yaml"] = yaml });
+        var files = new Dictionary<string, string> { ["types.yaml"] = yaml };
+        if (datasourceYaml is not null)
+            files["datasource.yaml"] = datasourceYaml;
+        var spec = SpecParser.Parse(files);
         var types = SqlSchema.From(spec);
         var naming = PackCasing.Of(new Dictionary<string, string>()).Naming;
         return (SqlSchema.BuildLive(types, naming), naming);
     }
+
+    static string Sql(IReadOnlyList<IStatement> statements) =>
+        string.Join("\n", statements.Select(statement => new StatementTextRenderer(t => new MysqlStatementRenderer(t)).Render(statement)));
+
+    const string UsersAndDevices = """
+        types:
+          - user:
+              tags: [datasource_type]
+              inherits: set
+              fields: []
+          - device:
+              tags: [datasource_type]
+              inherits: set
+              fields:
+                - user_id:
+                    type: integer
+                    references: user.id
+                - fingerprint:
+                    type: string
+        """;
+
+    const string UsersAndDevicesNoFk = """
+        types:
+          - user:
+              tags: [datasource_type]
+              inherits: set
+              fields: []
+          - device:
+              tags: [datasource_type]
+              inherits: set
+              fields:
+                - user_id:
+                    type: integer
+                - fingerprint:
+                    type: string
+        """;
+
+    const string UsersOnly = """
+        types:
+          - user:
+              tags: [datasource_type]
+              inherits: set
+              fields: []
+        """;
+
+    const string DeviceFingerprintIndex = """
+        includes:
+          - types:
+              filter: tag == "datasource_type"
+        types:
+          - device:
+              indexes:
+                - user_id_fingerprint:
+                    fields: [user_id, fingerprint]
+                    is_unique: true
+        """;
 
     const string IntegerAge = """
         types:
@@ -107,5 +166,41 @@ public class SchemaDiffTests
         var sql = rebuilt.Select(statement => new StatementTextRenderer(t => new MysqlStatementRenderer(t)).Render(statement)).ToList();
         Assert.Contains(sql, item => item.Contains("RENAME TABLE") && item.Contains("orders__new"));
         Assert.Contains(sql, item => item.Contains("CREATE TRIGGER"));
+    }
+
+    [Fact]
+    public void DropsARemovedTableWithoutDroppingItsIndexes()
+    {
+        RegisterSqlGenerate.Register();
+        var before = Snap(UsersAndDevices, DeviceFingerprintIndex);
+        var after = Snap(UsersOnly);
+        var sql = Sql(SchemaDiff.Of("mysql", before.Tables, before.Naming, after.Tables, after.Naming));
+        Assert.Contains("DROP TABLE", sql);
+        Assert.DoesNotContain("DROP INDEX", sql);
+    }
+
+    [Fact]
+    public void DropsAForeignKeyBeforeAnIndexThatSupportedIt()
+    {
+        RegisterSqlGenerate.Register();
+        var before = Snap(UsersAndDevices, DeviceFingerprintIndex);
+        var after = Snap(UsersAndDevicesNoFk);
+        var sql = Sql(SchemaDiff.Of("mysql", before.Tables, before.Naming, after.Tables, after.Naming));
+        Assert.Contains("DROP FOREIGN KEY", sql);
+        Assert.Contains("DROP INDEX", sql);
+        Assert.True(sql.IndexOf("DROP FOREIGN KEY", StringComparison.Ordinal) < sql.IndexOf("DROP INDEX", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CreatesASupportingIndexBeforeDroppingACompositeIndexUsedByAForeignKey()
+    {
+        RegisterSqlGenerate.Register();
+        var before = Snap(UsersAndDevices, DeviceFingerprintIndex);
+        var after = Snap(UsersAndDevices);
+        var sql = Sql(SchemaDiff.Of("mysql", before.Tables, before.Naming, after.Tables, after.Naming));
+        Assert.Contains("CREATE INDEX", sql);
+        Assert.Contains("DROP INDEX", sql);
+        Assert.True(sql.IndexOf("CREATE INDEX", StringComparison.Ordinal) < sql.IndexOf("DROP INDEX", StringComparison.Ordinal));
+        Assert.Matches(@"\(`?user_id`?\)", sql[..sql.IndexOf("DROP INDEX", StringComparison.Ordinal)]);
     }
 }

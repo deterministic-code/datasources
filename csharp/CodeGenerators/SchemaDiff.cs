@@ -57,8 +57,6 @@ public static class SchemaDiff
     {
         if (SqlSchema.HasAuditColumns(table))
             yield return DropTrigger(dialect, table, naming);
-        foreach (var index in table.Indexes.Reverse())
-            yield return DropIndex(dialect, naming, table, index);
         yield return TableStatements.DropTable(table.TableName);
     }
 
@@ -83,22 +81,27 @@ public static class SchemaDiff
         var afterFields = after.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
         var beforeIndexes = before.Indexes.ToDictionary(index => index.Name, StringComparer.Ordinal);
         var afterIndexes = after.Indexes.ToDictionary(index => index.Name, StringComparer.Ordinal);
+        var droppedForeignKeys = new HashSet<string>(StringComparer.Ordinal);
+        var createdIndexes = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var index in before.Indexes)
-            if (!afterIndexes.TryGetValue(index.Name, out var next) || IndexKey(index) != IndexKey(next))
-                yield return DropIndex(dialect, beforeNaming, before, index);
+        {
+            if (afterIndexes.TryGetValue(index.Name, out var next) && IndexKey(index) == IndexKey(next))
+                continue;
+            if (dialect == "mysql")
+                foreach (var statement in MysqlIndexDrop(
+                    before, after, beforeNaming, afterNaming, beforeTables, afterFields, droppedForeignKeys, createdIndexes, index))
+                    yield return statement;
+            yield return DropIndex(dialect, beforeNaming, before, index);
+        }
 
         foreach (var field in before.Fields)
         {
             if (UniqueField(before, field) && (!afterFields.TryGetValue(field.Name, out var kept) || !UniqueField(after, kept)))
                 yield return new AlterTableStatement(before.TableName, new AlterTableStatement.DropConstraint(
                     TableStatements.UniqueOf(beforeNaming, before, field).Name));
-            if (field.References is not null || field.ReferencePair is not null)
-            {
-                var same = afterFields.TryGetValue(field.Name, out var next) && RefsOf(next) == RefsOf(field);
-                if (!same)
-                    yield return TableStatements.DropForeignKey(beforeNaming, beforeTables, before, field);
-            }
+            if (IsForeignKey(field) && !SameRefs(field, afterFields) && droppedForeignKeys.Add(field.Name))
+                yield return TableStatements.DropForeignKey(beforeNaming, beforeTables, before, field);
         }
 
         if (SqlSchema.HasAuditColumns(before) && !SqlSchema.HasAuditColumns(after))
@@ -137,7 +140,8 @@ public static class SchemaDiff
         }
 
         foreach (var index in after.Indexes)
-            if (!beforeIndexes.TryGetValue(index.Name, out var previous) || IndexKey(previous) != IndexKey(index))
+            if ((!beforeIndexes.TryGetValue(index.Name, out var previous) || IndexKey(previous) != IndexKey(index))
+                && createdIndexes.Add(index.Name))
                 yield return TableStatements.CreateIndex(afterNaming, after, index);
 
         if (!SqlSchema.HasAuditColumns(before) && SqlSchema.HasAuditColumns(after))
@@ -216,7 +220,76 @@ public static class SchemaDiff
         TableStatements.DropTrigger(CreateTriggerStatement.NameOf(SqlSchema.TableStem(table), naming), table.TableName);
 
     static DropIndexStatement DropIndex(string dialect, StatementNaming naming, SqlTable table, DatasourceIndex index) =>
-        TableStatements.DropIndex(CreateIndexStatement.NameOf(SqlSchema.TableStem(table), naming, index.Name, "index"), table.TableName);
+        TableStatements.DropIndex(IndexPhysical(naming, table, index), table.TableName);
+
+    static IEnumerable<IStatement> MysqlIndexDrop(
+        SqlTable before,
+        SqlTable after,
+        StatementNaming beforeNaming,
+        StatementNaming afterNaming,
+        IReadOnlyList<SqlTable> beforeTables,
+        Dictionary<string, SpecTypeField> afterFields,
+        HashSet<string> droppedForeignKeys,
+        HashSet<string> createdIndexes,
+        DatasourceIndex index)
+    {
+        var droppedPhysical = IndexPhysical(beforeNaming, before, index);
+        foreach (var field in before.Fields.Where(item => IndexSupports(index, item)))
+        {
+            if (!SameRefs(field, afterFields))
+            {
+                if (droppedForeignKeys.Add(field.Name))
+                    yield return TableStatements.DropForeignKey(beforeNaming, beforeTables, before, field);
+                continue;
+            }
+            var supporting = after.Indexes.Where(item =>
+                IndexSupports(item, field) && IndexPhysical(afterNaming, after, item) != droppedPhysical).ToList();
+            if (PkSupports(after, field)
+                || afterFields.TryGetValue(field.Name, out var kept) && UniqueField(after, kept)
+                || supporting.Count > 0)
+            {
+                foreach (var added in supporting)
+                    if (!before.Indexes.Any(prior => prior.Name == added.Name && IndexKey(prior) == IndexKey(added))
+                        && createdIndexes.Add(added.Name))
+                        yield return TableStatements.CreateIndex(afterNaming, after, added);
+                continue;
+            }
+            var support = new DatasourceIndex
+            {
+                Name = SupportingIndexName(afterNaming, after, droppedPhysical, field.Name),
+                Fields = [field.Name],
+                IsUnique = false,
+            };
+            createdIndexes.Add(support.Name);
+            yield return TableStatements.CreateIndex(afterNaming, after, support);
+        }
+    }
+
+    static string IndexPhysical(StatementNaming naming, SqlTable table, DatasourceIndex index) =>
+        CreateIndexStatement.NameOf(SqlSchema.TableStem(table), naming, index.Name, "index");
+
+    static string SupportingIndexName(StatementNaming naming, SqlTable table, string droppedPhysical, string field)
+    {
+        foreach (var candidate in new[] { field, $"{field}_fk" })
+            if (IndexPhysical(naming, table, new DatasourceIndex { Name = candidate, Fields = [field], IsUnique = false }) != droppedPhysical)
+                return candidate;
+        return $"{field}_supporting";
+    }
+
+    static bool IsForeignKey(SpecTypeField field) =>
+        field.References is not null || field.ReferencePair is not null;
+
+    static bool SameRefs(SpecTypeField field, IReadOnlyDictionary<string, SpecTypeField> afterFields) =>
+        afterFields.TryGetValue(field.Name, out var next) && RefsOf(next) == RefsOf(field);
+
+    static bool IndexSupports(DatasourceIndex index, SpecTypeField field) =>
+        IsForeignKey(field) && index.Fields.Count > 0 && index.Fields[0] == field.Name;
+
+    static bool PkSupports(SqlTable table, SpecTypeField field)
+    {
+        var keys = SqlSchema.TableIdentity(table);
+        return keys.Count > 0 && keys[0] == field.Name;
+    }
 
     static bool UniqueField(SqlTable table, SpecTypeField field) =>
         SqlSchema.FieldOverlay(table, field.Name)?.IsUnique == true || field.Name == "uuid";

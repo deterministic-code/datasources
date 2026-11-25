@@ -11,7 +11,7 @@ use datasources::{
     DropTriggerStatement, ForeignKeyStatement, RebuildColumn, RebuildTableStatement, Result, Statement,
     TableConstraint,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub enum DdlStatement {
     CreateTable(CreateTableStatement),
@@ -123,9 +123,6 @@ fn drop_table(dialect: &str, table: &SqlTable, mapping: &StatementNaming) -> Res
     if has_audit_columns(table) {
         out.push(DdlStatement::DropTrigger(drop_trigger(dialect, table, mapping)?));
     }
-    for index in table.indexes.iter().rev() {
-        out.push(DdlStatement::DropIndex(drop_index(dialect, mapping, table, index)?));
-    }
     out.push(DdlStatement::DropTable(table_statements::drop_table(&table.table_name)));
     Ok(out)
 }
@@ -158,11 +155,27 @@ fn diff_table(
     let after_indexes: std::collections::HashMap<_, _> =
         after.indexes.iter().map(|index| (index.name.as_str(), index)).collect();
     let mut out = Vec::new();
+    let mut dropped_foreign_keys = HashSet::new();
+    let mut created_indexes = HashSet::new();
 
     for index in &before.indexes {
-        if after_indexes.get(index.name.as_str()).map(|kept| index_key(kept)) != Some(index_key(index)) {
-            out.push(DdlStatement::DropIndex(drop_index(dialect, before_map, before, index)?));
+        if after_indexes.get(index.name.as_str()).map(|kept| index_key(kept)) == Some(index_key(index)) {
+            continue;
         }
+        if dialect == "mysql" {
+            out.extend(mysql_index_drop(
+                before,
+                after,
+                before_map,
+                after_map,
+                before_tables,
+                &after_fields,
+                &mut dropped_foreign_keys,
+                &mut created_indexes,
+                index,
+            )?);
+        }
+        out.push(DdlStatement::DropIndex(drop_index(dialect, before_map, before, index)?));
     }
 
     for field in &before.fields {
@@ -180,12 +193,7 @@ fn diff_table(
                 },
             )));
         }
-        if has_refs(field)
-            && after_fields
-                .get(field.name.as_str())
-                .map(|next| refs_of(next) != refs_of(field))
-                .unwrap_or(true)
-        {
+        if has_refs(field) && !same_refs(field, &after_fields) && dropped_foreign_keys.insert(field.name.clone()) {
             out.push(DdlStatement::ForeignKey(table_statements::drop_foreign_key(
                 before_map, before_tables, before, field,
             )?));
@@ -270,7 +278,9 @@ fn diff_table(
     }
 
     for index in &after.indexes {
-        if before_indexes.get(index.name.as_str()).map(|kept| index_key(kept)) != Some(index_key(index)) {
+        if before_indexes.get(index.name.as_str()).map(|kept| index_key(kept)) != Some(index_key(index))
+            && created_indexes.insert(index.name.clone())
+        {
             out.push(DdlStatement::CreateIndex(table_statements::create_index(
                 after_map, after, index,
             )));
@@ -395,9 +405,100 @@ fn drop_index(
     index: &DatasourceIndex,
 ) -> Result<DropIndexStatement> {
     Ok(table_statements::drop_index(
-        &datasources::CreateIndexStatement::name_of(&table_stem(table), naming, &[&index.name, "index"]),
+        &index_physical(naming, table, index),
         &table.table_name,
     ))
+}
+
+fn index_physical(naming: &StatementNaming, table: &SqlTable, index: &DatasourceIndex) -> String {
+    CreateIndexStatement::name_of(&table_stem(table), naming, &[&index.name, "index"])
+}
+
+fn same_refs(field: &SpecTypeField, after_fields: &HashMap<&str, &SpecTypeField>) -> bool {
+    after_fields
+        .get(field.name.as_str())
+        .is_some_and(|next| refs_of(next) == refs_of(field))
+}
+
+fn index_supports(index: &DatasourceIndex, field: &SpecTypeField) -> bool {
+    has_refs(field) && index.fields.first().is_some_and(|name| name == &field.name)
+}
+
+fn pk_supports(table: &SqlTable, field: &SpecTypeField) -> bool {
+    table_identity(table).first().is_some_and(|name| name == &field.name)
+}
+
+fn supporting_index_name(naming: &StatementNaming, table: &SqlTable, dropped_physical: &str, field: &str) -> String {
+    for candidate in [field.to_string(), format!("{field}_fk")] {
+        let index = DatasourceIndex {
+            name: candidate.clone(),
+            fields: vec![field.to_string()],
+            is_unique: false,
+        };
+        if index_physical(naming, table, &index) != dropped_physical {
+            return candidate;
+        }
+    }
+    format!("{field}_supporting")
+}
+
+fn mysql_index_drop(
+    before: &SqlTable,
+    after: &SqlTable,
+    before_map: &StatementNaming,
+    after_map: &StatementNaming,
+    before_tables: &[SqlTable],
+    after_fields: &HashMap<&str, &SpecTypeField>,
+    dropped_foreign_keys: &mut HashSet<String>,
+    created_indexes: &mut HashSet<String>,
+    index: &DatasourceIndex,
+) -> Result<Vec<DdlStatement>> {
+    let dropped_physical = index_physical(before_map, before, index);
+    let mut out = Vec::new();
+    for field in before.fields.iter().filter(|item| index_supports(index, item)) {
+        if !same_refs(field, after_fields) {
+            if dropped_foreign_keys.insert(field.name.clone()) {
+                out.push(DdlStatement::ForeignKey(table_statements::drop_foreign_key(
+                    before_map, before_tables, before, field,
+                )?));
+            }
+            continue;
+        }
+        let supporting: Vec<&DatasourceIndex> = after
+            .indexes
+            .iter()
+            .filter(|item| {
+                index_supports(item, field) && index_physical(after_map, after, item) != dropped_physical
+            })
+            .collect();
+        let unique_stays = after_fields
+            .get(field.name.as_str())
+            .is_some_and(|kept| unique_field(after, kept));
+        if pk_supports(after, field) || unique_stays || !supporting.is_empty() {
+            for added in supporting {
+                let already = before
+                    .indexes
+                    .iter()
+                    .any(|prior| prior.name == added.name && index_key(prior) == index_key(added));
+                if !already && created_indexes.insert(added.name.clone()) {
+                    out.push(DdlStatement::CreateIndex(table_statements::create_index(
+                        after_map, after, added,
+                    )));
+                }
+            }
+            continue;
+        }
+        let support = DatasourceIndex {
+            name: supporting_index_name(after_map, after, &dropped_physical, &field.name),
+            fields: vec![field.name.clone()],
+            is_unique: false,
+        };
+        created_indexes.insert(support.name.clone());
+        out.push(DdlStatement::CreateIndex(table_statements::create_index(
+            after_map, after, &support,
+        )));
+    }
+    Ok(out)
 }
 
 fn unique_field(table: &SqlTable, field: &SpecTypeField) -> bool {
