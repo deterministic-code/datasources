@@ -56,6 +56,8 @@ Drivers for C#. Click a tile for Information, Overrides, TypeConverter, RowTypeC
 
 #### TypeConverter
 
+<div class="driver-conversions">
+
 | Type | From | To |
 |---|---|---|
 | `string` | `string` | `TEXT` |
@@ -81,7 +83,11 @@ Drivers for C#. Click a tile for Information, Overrides, TypeConverter, RowTypeC
 | `integer` | `INTEGER` | `integer` |
 | `nope` | `nope` | `InvalidOperationException` |
 
+</div>
+
 #### RowTypeConverters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -110,7 +116,11 @@ Drivers for C#. Click a tile for Information, Overrides, TypeConverter, RowTypeC
 | `uuid` | `Guid` | `550e8400-e29b-41d4-a716-446655440000` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `decimal` | `10.5` | `string` | `"10.5"` |
 
+</div>
+
 #### DefaultValueConverter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -134,6 +144,8 @@ Drivers for C#. Click a tile for Information, Overrides, TypeConverter, RowTypeC
 | `string` | `'hi'` | `String` |
 | `string` | `oops` | `InvalidOperationException` |
 
+</div>
+
 #### ChangeLogs
 
 _None._
@@ -154,6 +166,8 @@ _None._
 - Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)
 
 #### TypeConverter
+
+<div class="driver-conversions">
 
 | Type | From | To |
 |---|---|---|
@@ -184,7 +198,11 @@ _None._
 | `integer` | `INT` | `integer` |
 | `nope` | `nope` | `InvalidOperationException` |
 
+</div>
+
 #### RowTypeConverters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -217,7 +235,11 @@ _None._
 | `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `string` | `"2020-01-02 03:04:05.000"` |
 | `binary` | `string` | `AQIDBA==` | `byte[]` | `[1,2,3,4]` |
 
+</div>
+
 #### DefaultValueConverter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -238,6 +260,8 @@ _None._
 | `uuid` | `(UUID())` | `NewId` |
 | `binary` | `X'ab')` | `InvalidOperationException` |
 | `string` | `'hi')` | `InvalidOperationException` |
+
+</div>
 
 #### ChangeLogs
 
@@ -260,6 +284,8 @@ _None._
 - Overrides CreateTableStatement type mapping (int→INTEGER, uuid→UUID, string→TEXT, bool→BOOLEAN, decimal→NUMERIC, float→DOUBLE PRECISION, datetime→TIMESTAMPTZ, binary→BYTEA)
 
 #### TypeConverter
+
+<div class="driver-conversions">
 
 | Type | From | To |
 |---|---|---|
@@ -286,7 +312,11 @@ _None._
 | `unsignedinteger` | `BIGINT` | `unsignedinteger` |
 | `nope` | `nope` | `InvalidOperationException` |
 
+</div>
+
 #### RowTypeConverters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -317,7 +347,11 @@ _None._
 | `binary` | `string` | `AQIDBA==` | `byte[]` | `[1,2,3,4]` |
 | `binary` | `string` | `AQIDBA==` | `byte[]` | `[1,2,3,4]` |
 
+</div>
+
 #### DefaultValueConverter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -338,6 +372,8 @@ _None._
 | `binary` | `'\xab'` | `Hex('ab')` |
 | `string` | `'hi'` | `String` |
 | `datetime` | `nope` | `InvalidOperationException` |
+
+</div>
 
 #### ChangeLogs
 
@@ -380,6 +416,8 @@ Drivers for Rust. Click a tile for information, Overrides, type_converter, row_t
 
 #### type_converter
 
+<div class="driver-conversions">
+
 | Type | From | To |
 |---|---|---|
 | `string` | `string` | `TEXT` |
@@ -404,7 +442,11 @@ Drivers for Rust. Click a tile for information, Overrides, type_converter, row_t
 | `float` | `REAL` | `float` |
 | `nope` | `nope` | `error` |
 
+</div>
+
 #### row_type_converters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -433,7 +475,11 @@ Drivers for Rust. Click a tile for information, Overrides, type_converter, row_t
 | `uuid` | `Uuid` | `550e8400-e29b-41d4-a716-446655440000` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `Decimal` | `10.5` | `String` | `"10.5"` |
 
+</div>
+
 #### default_value_converter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -449,6 +495,8 @@ Drivers for Rust. Click a tile for information, Overrides, type_converter, row_t
 | `binary` | `X'ab'` | `Hex('ab')` |
 | `string` | `'hi'` | `hi` |
 | `string` | `oops` | `error` |
+
+</div>
 
 #### change_logs
 
@@ -470,6 +518,8 @@ _None._
 - Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)
 
 #### type_converter
+
+<div class="driver-conversions">
 
 | Type | From | To |
 |---|---|---|
@@ -500,7 +550,11 @@ _None._
 | `integer` | `INT` | `integer` |
 | `nope` | `nope` | `error` |
 
+</div>
+
 #### row_type_converters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -533,7 +587,11 @@ _None._
 | `datetime` | `String` | `"2020-01-02T03:04:05.000Z"` | `String` | `"2020-01-02 03:04:05.000"` |
 | `binary` | `String` | `AQIDBA==` | `Vec<u8>` | `[1,2,3,4]` |
 
+</div>
+
 #### default_value_converter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -552,6 +610,8 @@ _None._
 | `uuid` | `(UUID())` | `NewId` |
 | `binary` | `X'ab')` | `error` |
 | `string` | `'hi')` | `error` |
+
+</div>
 
 #### change_logs
 
@@ -574,6 +634,8 @@ _None._
 - Overrides CreateTableStatement type mapping (int→INTEGER, uuid→UUID, string→TEXT, bool→BOOLEAN, decimal→NUMERIC, float→DOUBLE PRECISION, datetime→TIMESTAMPTZ, binary→BYTEA)
 
 #### type_converter
+
+<div class="driver-conversions">
 
 | Type | From | To |
 |---|---|---|
@@ -600,7 +662,11 @@ _None._
 | `uuid` | `UUID` | `uuid` |
 | `nope` | `nope` | `error` |
 
+</div>
+
 #### row_type_converters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -631,7 +697,11 @@ _None._
 | `binary` | `String` | `AQIDBA==` | `Vec<u8>` | `[1,2,3,4]` |
 | `binary` | `String` | `AQIDBA==` | `Vec<u8>` | `[1,2,3,4]` |
 
+</div>
+
 #### default_value_converter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -649,6 +719,8 @@ _None._
 | `binary` | `'\xab'` | `Hex('ab')` |
 | `string` | `'hi'` | `hi` |
 | `datetime` | `nope` | `error` |
+
+</div>
 
 #### change_logs
 
@@ -691,6 +763,8 @@ Drivers for TypeScript. Click a tile for information, Overrides, typeConverter, 
 
 #### typeConverter
 
+<div class="driver-conversions">
+
 | Type | From | To |
 |---|---|---|
 | `string` | `string` | `TEXT` |
@@ -716,7 +790,11 @@ Drivers for TypeScript. Click a tile for information, Overrides, typeConverter, 
 | `integer` | `INTEGER` | `integer` |
 | `nope` | `nope` | `Error` |
 
+</div>
+
 #### rowTypeConverters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -745,7 +823,11 @@ Drivers for TypeScript. Click a tile for information, Overrides, typeConverter, 
 | `uuid` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
 | `decimal` | `string` | `10.5` | `string` | `"10.5"` |
 
+</div>
+
 #### defaultValueConverter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -769,6 +851,8 @@ Drivers for TypeScript. Click a tile for information, Overrides, typeConverter, 
 | `string` | `'hi'` | `hi` |
 | `string` | `oops` | `Error` |
 
+</div>
+
 #### changeLogs
 
 _None._
@@ -789,6 +873,8 @@ _None._
 - Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)
 
 #### typeConverter
+
+<div class="driver-conversions">
 
 | Type | From | To |
 |---|---|---|
@@ -819,7 +905,11 @@ _None._
 | `integer` | `INT` | `integer` |
 | `nope` | `nope` | `Error` |
 
+</div>
+
 #### rowTypeConverters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -852,7 +942,11 @@ _None._
 | `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `string` | `"2020-01-02 03:04:05.000"` |
 | `binary` | `string` | `AQIDBA==` | `Uint8Array` | `[1,2,3,4]` |
 
+</div>
+
 #### defaultValueConverter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -873,6 +967,8 @@ _None._
 | `uuid` | `(UUID())` | `NewId` |
 | `binary` | `X'ab')` | `Error` |
 | `string` | `'hi')` | `Error` |
+
+</div>
 
 #### changeLogs
 
@@ -895,6 +991,8 @@ _None._
 - Overrides CreateTableStatement type mapping (int→INTEGER, uuid→UUID, string→TEXT, bool→BOOLEAN, decimal→NUMERIC, float→DOUBLE PRECISION, datetime→TIMESTAMPTZ, binary→BYTEA)
 
 #### typeConverter
+
+<div class="driver-conversions">
 
 | Type | From | To |
 |---|---|---|
@@ -921,7 +1019,11 @@ _None._
 | `unsignedinteger` | `BIGINT` | `unsignedinteger` |
 | `nope` | `nope` | `Error` |
 
+</div>
+
 #### rowTypeConverters
+
+<div class="driver-conversions driver-conversions-cells">
 
 | Type | From Type | From | To Type | To |
 |---|---|---|---|---|
@@ -952,7 +1054,11 @@ _None._
 | `binary` | `string` | `AQIDBA==` | `Uint8Array` | `[1,2,3,4]` |
 | `binary` | `string` | `AQIDBA==` | `Uint8Array` | `[1,2,3,4]` |
 
+</div>
+
 #### defaultValueConverter
+
+<div class="driver-conversions">
 
 | Column type | From | To |
 |---|---|---|
@@ -973,6 +1079,8 @@ _None._
 | `binary` | `'\xab'` | `Hex('ab')` |
 | `string` | `'hi'` | `hi` |
 | `datetime` | `nope` | `Error` |
+
+</div>
 
 #### changeLogs
 
