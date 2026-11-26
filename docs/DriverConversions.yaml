@@ -1,854 +1,3144 @@
-# Generated from C# Conversion[] tables. Run npm run docs:drivers.
-
+# Source for docs/drivers.md and driver converter tests. Run npm run docs:drivers.
 sqlite:
-  typeConverter:
-    - type: "string"
-      from: "string"
-      to: "TEXT"
-    - type: "character"
-      from: "character"
-      to: "TEXT"
-    - type: "integer"
-      from: "integer"
-      to: "INTEGER"
-    - type: "unsignedinteger"
-      from: "unsignedinteger"
-      to: "INTEGER"
-    - type: "smallinteger"
-      from: "smallinteger"
-      to: "INTEGER"
-    - type: "unsignedsmallinteger"
-      from: "unsignedsmallinteger"
-      to: "INTEGER"
-    - type: "biginteger"
-      from: "biginteger"
-      to: "INTEGER"
-    - type: "unsignedbiginteger"
-      from: "unsignedbiginteger"
-      to: "INTEGER"
-    - type: "float"
-      from: "float"
-      to: "REAL"
-    - type: "decimal"
-      from: "decimal"
-      to: "NUMERIC"
-    - type: "boolean"
-      from: "boolean"
-      to: "BOOLEAN"
-    - type: "datetime"
-      from: "datetime"
-      to: "TEXT"
-    - type: "binary"
-      from: "binary"
-      to: "BLOB"
-    - type: "uuid"
-      from: "uuid"
-      to: "TEXT"
-    - type: "reference"
-      from: "reference"
-      to: "INTEGER"
-    - type: "string"
-      from: "new SpecField { Type = \"string\" }"
-      to: "TEXT"
-    - type: "string"
-      from: "new SpecField { Type = \"string\", Size = \"unlimited\" }"
-      to: "TEXT"
-    - type: "string"
-      from: "new SpecField { Type = \"string\", Size = 64 }"
-      to: "VARCHAR(64)"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-    - type: "string"
-      from: "TEXT"
-      to: "string"
-    - type: "integer"
-      from: "INTEGER"
-      to: "integer"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-  rowTypeConverters:
-    - type: "boolean"
-      from: "1L"
-      to: "true"
-    - type: "boolean"
-      from: "0L"
-      to: "false"
-    - type: "datetime"
-      from: "\"2020-01-02T03:04:05.000Z\""
-      to: "new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)"
-    - type: "datetime"
-      from: "\"2020-01-02T03:04:05.000+00:00\""
-      to: "new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)"
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\")"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\").ToByteArray()"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "decimal"
-      from: "7L"
-      to: "\"7\""
-    - type: "decimal"
-      from: "10.5d"
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "\"10.50\""
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "\"10.50000000000000\""
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "0L"
-      to: "\"0\""
-    - type: "decimal"
-      from: "\"0.00\""
-      to: "\"0\""
-    - type: "integer"
-      from: "\"10\""
-      to: "10L"
-    - type: "integer"
-      from: "\"0\""
-      to: "0L"
-    - type: "integer"
-      from: "10.0d"
-      to: "10L"
-    - type: "integer"
-      from: "\"\""
-      to: "FormatException"
-    - type: "integer"
-      from: "\"1.0\""
-      to: "1L"
-    - type: "integer"
-      from: "\"10.0\""
-      to: "10L"
-    - type: "integer"
-      from: "\"10.00000000000000\""
-      to: "10L"
-    - type: "integer"
-      from: "\"10.50000000000000\""
-      to: "FormatException"
-    - type: "boolean"
-      from: "true"
-      to: "1L"
-    - type: "boolean"
-      from: "false"
-      to: "0L"
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\")"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "decimal"
-      from: "10.5m"
-      to: "\"10.5\""
-  defaultValueConverter:
-    - type: "datetime"
-      from: "Now"
-      to: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
-    - type: "datetime"
-      from: "UtcNow"
-      to: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
-    - type: "datetime"
-      from: "DateTime('2020-01-01T00:00:00Z')"
-      to: "'2020-01-01T00:00:00Z'"
-    - type: "uuid"
-      from: "Empty"
-      to: "'00000000-0000-0000-0000-000000000000'"
-    - type: "uuid"
-      from: "uuid('11111111-1111-1111-1111-111111111111')"
-      to: "'11111111-1111-1111-1111-111111111111'"
-    - type: "binary"
-      from: "Hex('ab')"
-      to: "X'ab'"
-    - type: "boolean"
-      from: "true"
-      to: "1"
-    - type: "boolean"
-      from: "false"
-      to: "0"
-    - type: "string"
-      from: "hi"
-      to: "'hi'"
-    - type: "integer"
-      from: "7"
-      to: "7"
-    - type: "reference"
-      from: "1"
-      to: "null"
-    - type: "nope"
-      from: "x"
-      to: "InvalidOperationException"
-    - type: "datetime"
-      from: "2020-01-01T00:00:00Z"
-      to: "InvalidOperationException"
-    - type: "datetime"
-      from: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
-      to: "Now"
-    - type: "datetime"
-      from: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
-      to: "UtcNow"
-    - type: "datetime"
-      from: "'2020-01-01T00:00:00Z'"
-      to: "DateTime('2020-01-01T00:00:00Z')"
-    - type: "binary"
-      from: "X'ab'"
-      to: "Hex('ab')"
-    - type: "string"
-      from: "'hi'"
-      to: "String"
-    - type: "string"
-      from: "oops"
-      to: "InvalidOperationException"
-
+  csharp:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "TEXT"
+      - type: "integer"
+        from: "integer"
+        to: "INTEGER"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "INTEGER"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "INTEGER"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "INTEGER"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "INTEGER"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "INTEGER"
+      - type: "float"
+        from: "float"
+        to: "REAL"
+      - type: "decimal"
+        from: "decimal"
+        to: "NUMERIC"
+      - type: "boolean"
+        from: "boolean"
+        to: "BOOLEAN"
+      - type: "datetime"
+        from: "datetime"
+        to: "TEXT"
+      - type: "binary"
+        from: "binary"
+        to: "BLOB"
+      - type: "uuid"
+        from: "uuid"
+        to: "TEXT"
+      - type: "reference"
+        from: "reference"
+        to: "INTEGER"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: "unlimited"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "InvalidOperationException"
+      - type: "string"
+        reverse: true
+        from: "TEXT"
+        to: "string"
+      - type: "integer"
+        reverse: true
+        from: "INTEGER"
+        to: "integer"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "InvalidOperationException"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "long"
+        from:
+          long: 1
+        toType: "bool"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "long"
+        from:
+          long: 0
+        toType: "bool"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "DateTime"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "DateTime"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "Guid"
+        from: &a1
+          guid: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "byte[]"
+        from:
+          bytes: &a5
+            - 0
+            - 132
+            - 14
+            - 85
+            - 155
+            - 226
+            - 212
+            - 65
+            - 167
+            - 22
+            - 68
+            - 102
+            - 85
+            - 68
+            - 0
+            - 0
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "long"
+        from:
+          long: 7
+        toType: "string"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "double"
+        from:
+          float: 10.5
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "long"
+        from:
+          long: 0
+        toType: "string"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "0.00"
+        toType: "string"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "0"
+        toType: "long"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "double"
+        from:
+          float: 10
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: ""
+        toType: "FormatException"
+        to:
+          error: "FormatException"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "1.0"
+        toType: "long"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.0"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.00000000000000"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "FormatException"
+        to:
+          error: "FormatException"
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: true
+        toType: "long"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: false
+        toType: "long"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "Guid"
+        from: *a1
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "decimal"
+        from:
+          decimal: "10.5"
+        toType: "string"
+        to:
+          text: "10.5"
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+      - type: "datetime"
+        from: "DateTime('2020-01-01T00:00:00Z')"
+        to: "'2020-01-01T00:00:00Z'"
+      - type: "uuid"
+        from: "Empty"
+        to: "'00000000-0000-0000-0000-000000000000'"
+      - type: "uuid"
+        from: "uuid('11111111-1111-1111-1111-111111111111')"
+        to: "'11111111-1111-1111-1111-111111111111'"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "X'ab'"
+      - type: "boolean"
+        from: "true"
+        to: "1"
+      - type: "boolean"
+        from: "false"
+        to: "0"
+      - type: "string"
+        from: "hi"
+        to: "'hi'"
+      - type: "integer"
+        from: "7"
+        to: "7"
+      - type: "reference"
+        from: "1"
+        to: null
+      - type: "nope"
+        from: "x"
+        to:
+          error: "InvalidOperationException"
+      - type: "datetime"
+        from: "2020-01-01T00:00:00Z"
+        to:
+          error: "InvalidOperationException"
+      - type: "datetime"
+        reverse: true
+        from: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
+        to: "Now"
+      - type: "datetime"
+        reverse: true
+        from: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        to: "UtcNow"
+      - type: "datetime"
+        reverse: true
+        from: "'2020-01-01T00:00:00Z'"
+        to: "DateTime('2020-01-01T00:00:00Z')"
+      - type: "binary"
+        reverse: true
+        from: "X'ab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "String"
+      - type: "string"
+        reverse: true
+        from: "oops"
+        to:
+          error: "InvalidOperationException"
+  rust:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "TEXT"
+      - type: "integer"
+        from: "integer"
+        to: "INTEGER"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "INTEGER"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "INTEGER"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "INTEGER"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "INTEGER"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "INTEGER"
+      - type: "float"
+        from: "float"
+        to: "REAL"
+      - type: "decimal"
+        from: "decimal"
+        to: "NUMERIC"
+      - type: "boolean"
+        from: "boolean"
+        to: "BOOLEAN"
+      - type: "datetime"
+        from: "datetime"
+        to: "TEXT"
+      - type: "binary"
+        from: "binary"
+        to: "BLOB"
+      - type: "uuid"
+        from: "uuid"
+        to: "TEXT"
+      - type: "reference"
+        from: "reference"
+        to: "INTEGER"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: "unlimited"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "error"
+      - type: "float"
+        reverse: true
+        from: "REAL"
+        to: "float"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "error"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "i64"
+        from:
+          long: 1
+        toType: "bool"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "i64"
+        from:
+          long: 0
+        toType: "bool"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "String"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "DateTime<Utc>"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "String"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "DateTime<Utc>"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "Uuid"
+        from: &a2
+          guid: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "Vec<u8>"
+        from:
+          bytes: &a3
+            - 85
+            - 14
+            - 132
+            - 0
+            - 226
+            - 155
+            - 65
+            - 212
+            - 167
+            - 22
+            - 68
+            - 102
+            - 85
+            - 68
+            - 0
+            - 0
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "i64"
+        from:
+          long: 7
+        toType: "String"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "f64"
+        from:
+          float: 10.5
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "10.50"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "10.50000000000000"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "i64"
+        from:
+          long: 0
+        toType: "String"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "0.00"
+        toType: "String"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "0"
+        toType: "i64"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "f64"
+        from:
+          float: 10
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: ""
+        toType: "error"
+        to:
+          error: "error"
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "1.0"
+        toType: "i64"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.0"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.00000000000000"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.50000000000000"
+        toType: "error"
+        to:
+          error: "error"
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: true
+        toType: "i64"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: false
+        toType: "i64"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "Uuid"
+        from: *a2
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "Decimal"
+        from:
+          decimal: "10.5"
+        toType: "String"
+        to:
+          text: "10.5"
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "X'ab'"
+      - type: "boolean"
+        from: "true"
+        to: "1"
+      - type: "boolean"
+        from: "false"
+        to: "0"
+      - type: "string"
+        from: "hi"
+        to: "'hi'"
+      - type: "nope"
+        from: "x"
+        to:
+          error: "error"
+      - type: "datetime"
+        reverse: true
+        from: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
+        to: "Now"
+      - type: "datetime"
+        reverse: true
+        from: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        to: "UtcNow"
+      - type: "binary"
+        reverse: true
+        from: "X'ab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "hi"
+      - type: "string"
+        reverse: true
+        from: "oops"
+        to:
+          error: "error"
+  typescript:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "TEXT"
+      - type: "integer"
+        from: "integer"
+        to: "INTEGER"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "INTEGER"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "INTEGER"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "INTEGER"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "INTEGER"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "INTEGER"
+      - type: "float"
+        from: "float"
+        to: "REAL"
+      - type: "decimal"
+        from: "decimal"
+        to: "NUMERIC"
+      - type: "boolean"
+        from: "boolean"
+        to: "BOOLEAN"
+      - type: "datetime"
+        from: "datetime"
+        to: "TEXT"
+      - type: "binary"
+        from: "binary"
+        to: "BLOB"
+      - type: "uuid"
+        from: "uuid"
+        to: "TEXT"
+      - type: "reference"
+        from: "reference"
+        to: "INTEGER"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: "unlimited"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "Error"
+      - type: "string"
+        reverse: true
+        from: "TEXT"
+        to: "string"
+      - type: "integer"
+        reverse: true
+        from: "INTEGER"
+        to: "integer"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "Error"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "number"
+        from:
+          long: 1
+        toType: "boolean"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "number"
+        from:
+          long: 0
+        toType: "boolean"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "Date"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "Date"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "string"
+        from: &a4
+          text: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "Uint8Array"
+        from:
+          bytes: *a3
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          long: 7
+        toType: "string"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          float: 10.5
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          long: 0
+        toType: "string"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "0.00"
+        toType: "string"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "0"
+        toType: "number"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "number"
+        from:
+          float: 10
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: ""
+        toType: "DatasourceError"
+        to:
+          error: "DatasourceError"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "1.0"
+        toType: "number"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.0"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.00000000000000"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "DatasourceError"
+        to:
+          error: "DatasourceError"
+      - type: "boolean"
+        reverse: true
+        fromType: "boolean"
+        from:
+          bool: true
+        toType: "number"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "boolean"
+        from:
+          bool: false
+        toType: "number"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "string"
+        from: *a4
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "string"
+        from:
+          decimal: "10.5"
+        toType: "string"
+        to:
+          text: "10.5"
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+      - type: "datetime"
+        from: "DateTime('2020-01-01T00:00:00Z')"
+        to: "'2020-01-01T00:00:00Z'"
+      - type: "uuid"
+        from: "Empty"
+        to: "'00000000-0000-0000-0000-000000000000'"
+      - type: "uuid"
+        from: "uuid('11111111-1111-1111-1111-111111111111')"
+        to: "'11111111-1111-1111-1111-111111111111'"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "X'ab'"
+      - type: "boolean"
+        from: "true"
+        to: "1"
+      - type: "boolean"
+        from: "false"
+        to: "0"
+      - type: "string"
+        from: "hi"
+        to: "'hi'"
+      - type: "integer"
+        from: "7"
+        to: "7"
+      - type: "reference"
+        from: "1"
+        to: null
+      - type: "nope"
+        from: "x"
+        to:
+          error: "Error"
+      - type: "datetime"
+        from: "2020-01-01T00:00:00Z"
+        to:
+          error: "Error"
+      - type: "datetime"
+        reverse: true
+        from: "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
+        to: "Now"
+      - type: "datetime"
+        reverse: true
+        from: "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        to: "UtcNow"
+      - type: "datetime"
+        reverse: true
+        from: "'2020-01-01T00:00:00Z'"
+        to: "DateTime('2020-01-01T00:00:00Z')"
+      - type: "binary"
+        reverse: true
+        from: "X'ab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "hi"
+      - type: "string"
+        reverse: true
+        from: "oops"
+        to:
+          error: "Error"
 mysql:
-  typeConverter:
-    - type: "string"
-      from: "string"
-      to: "TEXT"
-    - type: "character"
-      from: "character"
-      to: "CHAR(1)"
-    - type: "integer"
-      from: "integer"
-      to: "INT"
-    - type: "unsignedinteger"
-      from: "unsignedinteger"
-      to: "INT UNSIGNED"
-    - type: "smallinteger"
-      from: "smallinteger"
-      to: "SMALLINT"
-    - type: "unsignedsmallinteger"
-      from: "unsignedsmallinteger"
-      to: "SMALLINT UNSIGNED"
-    - type: "biginteger"
-      from: "biginteger"
-      to: "BIGINT"
-    - type: "unsignedbiginteger"
-      from: "unsignedbiginteger"
-      to: "BIGINT UNSIGNED"
-    - type: "float"
-      from: "float"
-      to: "DOUBLE"
-    - type: "decimal"
-      from: "decimal"
-      to: "DECIMAL(10, 2)"
-    - type: "boolean"
-      from: "boolean"
-      to: "TINYINT(1)"
-    - type: "datetime"
-      from: "datetime"
-      to: "DATETIME(3)"
-    - type: "binary"
-      from: "binary"
-      to: "BLOB"
-    - type: "uuid"
-      from: "uuid"
-      to: "CHAR(36)"
-    - type: "reference"
-      from: "reference"
-      to: "INT"
-    - type: "string"
-      from: "new SpecField { Type = \"string\" }"
-      to: "TEXT"
-    - type: "string"
-      from: "new SpecField { Type = \"string\", Size = 64 }"
-      to: "VARCHAR(64)"
-    - type: "string"
-      from: "new SpecField { Type = \"string\", Size = 20000 }"
-      to: "LONGTEXT"
-    - type: "character"
-      from: "new SpecField { Type = \"character\", Size = 4 }"
-      to: "CHAR(4)"
-    - type: "decimal"
-      from: "new SpecField { Type = \"decimal\", Size = new[] { 8, 3 } }"
-      to: "DECIMAL(8, 3)"
-    - type: "binary"
-      from: "new SpecField { Type = \"binary\", Size = 16 }"
-      to: "VARBINARY(16)"
-    - type: "binary"
-      from: "new SpecField { Type = \"binary\", Size = 70000 }"
-      to: "LONGBLOB"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-    - type: "decimal"
-      from: "new SpecField { Name = \"amount\", Type = \"decimal\", Size = 8 }"
-      to: "InvalidOperationException"
-    - type: "integer"
-      from: "INT"
-      to: "integer"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-  rowTypeConverters:
-    - type: "boolean"
-      from: "1L"
-      to: "true"
-    - type: "boolean"
-      from: "0L"
-      to: "false"
-    - type: "datetime"
-      from: "\"2020-01-02T03:04:05.000Z\""
-      to: "new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)"
-    - type: "datetime"
-      from: "\"2020-01-02T03:04:05.000+00:00\""
-      to: "new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)"
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\")"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\").ToByteArray()"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "decimal"
-      from: "7L"
-      to: "\"7\""
-    - type: "decimal"
-      from: "10.5d"
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "\"10.50\""
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "\"10.50000000000000\""
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "0L"
-      to: "\"0\""
-    - type: "decimal"
-      from: "\"0.00\""
-      to: "\"0\""
-    - type: "binary"
-      from: "\"AQIDBA==\""
-      to: "new byte[] { 1, 2, 3, 4 }"
-    - type: "binary"
-      from: "System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 })"
-      to: "new byte[] { 1, 2, 3, 4 }"
-    - type: "integer"
-      from: "\"10\""
-      to: "10L"
-    - type: "integer"
-      from: "\"0\""
-      to: "0L"
-    - type: "integer"
-      from: "10.0d"
-      to: "10L"
-    - type: "integer"
-      from: "\"1.0\""
-      to: "1L"
-    - type: "integer"
-      from: "\"10.0\""
-      to: "10L"
-    - type: "integer"
-      from: "\"10.00000000000000\""
-      to: "10L"
-    - type: "integer"
-      from: "\"10.50000000000000\""
-      to: "FormatException"
-    - type: "integer"
-      from: "\"\""
-      to: "FormatException"
-    - type: "boolean"
-      from: "true"
-      to: "1L"
-    - type: "boolean"
-      from: "false"
-      to: "0L"
-    - type: "datetime"
-      from: "\"2020-01-02T03:04:05.000Z\""
-      to: "\"2020-01-02 03:04:05.000\""
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\")"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "decimal"
-      from: "10.5m"
-      to: "\"10.5\""
-    - type: "binary"
-      from: "\"AQIDBA==\""
-      to: "new byte[] { 1, 2, 3, 4 }"
-  defaultValueConverter:
-    - type: "datetime"
-      from: "Now"
-      to: "(NOW(3))"
-    - type: "datetime"
-      from: "UtcNow"
-      to: "(UTC_TIMESTAMP(3))"
-    - type: "uuid"
-      from: "NewId"
-      to: "(UUID())"
-    - type: "binary"
-      from: "Hex('ab')"
-      to: "(X'ab')"
-    - type: "boolean"
-      from: "true"
-      to: "1"
-    - type: "boolean"
-      from: "false"
-      to: "0"
-    - type: "string"
-      from: "hi"
-      to: "('hi')"
-    - type: "integer"
-      from: "7"
-      to: "7"
-    - type: "reference"
-      from: "1"
-      to: "null"
-    - type: "nope"
-      from: "x"
-      to: "InvalidOperationException"
-    - type: "binary"
-      from: "(X'ab')"
-      to: "Hex('ab')"
-    - type: "binary"
-      from: "X'ab'"
-      to: "Hex('ab')"
-    - type: "string"
-      from: "('hi')"
-      to: "String"
-    - type: "string"
-      from: "'hi'"
-      to: "String"
-    - type: "uuid"
-      from: "(UUID())"
-      to: "NewId"
-    - type: "binary"
-      from: "X'ab')"
-      to: "InvalidOperationException"
-    - type: "string"
-      from: "'hi')"
-      to: "InvalidOperationException"
-
+  csharp:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "CHAR(1)"
+      - type: "integer"
+        from: "integer"
+        to: "INT"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "INT UNSIGNED"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "SMALLINT"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "SMALLINT UNSIGNED"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "BIGINT"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "BIGINT UNSIGNED"
+      - type: "float"
+        from: "float"
+        to: "DOUBLE"
+      - type: "decimal"
+        from: "decimal"
+        to: "DECIMAL(10, 2)"
+      - type: "boolean"
+        from: "boolean"
+        to: "TINYINT(1)"
+      - type: "datetime"
+        from: "datetime"
+        to: "DATETIME(3)"
+      - type: "binary"
+        from: "binary"
+        to: "BLOB"
+      - type: "uuid"
+        from: "uuid"
+        to: "CHAR(36)"
+      - type: "reference"
+        from: "reference"
+        to: "INT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 20000
+        to: "LONGTEXT"
+      - type: "character"
+        from:
+          field:
+            type: "character"
+            size: 4
+        to: "CHAR(4)"
+      - type: "decimal"
+        from:
+          field:
+            type: "decimal"
+            size:
+              - 8
+              - 3
+        to: "DECIMAL(8, 3)"
+      - type: "binary"
+        from:
+          field:
+            type: "binary"
+            size: 16
+        to: "VARBINARY(16)"
+      - type: "binary"
+        from:
+          field:
+            type: "binary"
+            size: 70000
+        to: "LONGBLOB"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "InvalidOperationException"
+      - type: "decimal"
+        from:
+          field:
+            name: "amount"
+            type: "decimal"
+            size: 8
+        to:
+          error: "InvalidOperationException"
+      - type: "integer"
+        reverse: true
+        from: "INT"
+        to: "integer"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "InvalidOperationException"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "long"
+        from:
+          long: 1
+        toType: "bool"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "long"
+        from:
+          long: 0
+        toType: "bool"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "DateTime"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "DateTime"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "Guid"
+        from: &a6
+          guid: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "byte[]"
+        from:
+          bytes: *a5
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "long"
+        from:
+          long: 7
+        toType: "string"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "double"
+        from:
+          float: 10.5
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "long"
+        from:
+          long: 0
+        toType: "string"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "0.00"
+        toType: "string"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "0"
+        toType: "long"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "double"
+        from:
+          float: 10
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: ""
+        toType: "FormatException"
+        to:
+          error: "FormatException"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "1.0"
+        toType: "long"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.0"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.00000000000000"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "FormatException"
+        to:
+          error: "FormatException"
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: true
+        toType: "long"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: false
+        toType: "long"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "Guid"
+        from: *a6
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "decimal"
+        from:
+          decimal: "10.5"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "binary"
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "byte[]"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "binary"
+        fromType: "string"
+        from:
+          latin1:
+            - 1
+            - 2
+            - 3
+            - 4
+        toType: "byte[]"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "datetime"
+        reverse: true
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "string"
+        to:
+          text: "2020-01-02 03:04:05.000"
+      - type: "binary"
+        reverse: true
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "byte[]"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "(NOW(3))"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(UTC_TIMESTAMP(3))"
+      - type: "uuid"
+        from: "NewId"
+        to: "(UUID())"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "(X'ab')"
+      - type: "boolean"
+        from: "true"
+        to: "1"
+      - type: "boolean"
+        from: "false"
+        to: "0"
+      - type: "string"
+        from: "hi"
+        to: "('hi')"
+      - type: "integer"
+        from: "7"
+        to: "7"
+      - type: "reference"
+        from: "1"
+        to: null
+      - type: "nope"
+        from: "x"
+        to:
+          error: "InvalidOperationException"
+      - type: "binary"
+        reverse: true
+        from: "(X'ab')"
+        to: "Hex('ab')"
+      - type: "binary"
+        reverse: true
+        from: "X'ab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "('hi')"
+        to: "String"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "String"
+      - type: "uuid"
+        reverse: true
+        from: "(UUID())"
+        to: "NewId"
+      - type: "binary"
+        reverse: true
+        from: "X'ab')"
+        to:
+          error: "InvalidOperationException"
+      - type: "string"
+        reverse: true
+        from: "'hi')"
+        to:
+          error: "InvalidOperationException"
+  rust:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "CHAR(1)"
+      - type: "integer"
+        from: "integer"
+        to: "INT"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "INT UNSIGNED"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "SMALLINT"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "SMALLINT UNSIGNED"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "BIGINT"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "BIGINT UNSIGNED"
+      - type: "float"
+        from: "float"
+        to: "DOUBLE"
+      - type: "decimal"
+        from: "decimal"
+        to: "DECIMAL(10, 2)"
+      - type: "boolean"
+        from: "boolean"
+        to: "TINYINT(1)"
+      - type: "datetime"
+        from: "datetime"
+        to: "DATETIME(3)"
+      - type: "binary"
+        from: "binary"
+        to: "BLOB"
+      - type: "uuid"
+        from: "uuid"
+        to: "CHAR(36)"
+      - type: "reference"
+        from: "reference"
+        to: "INT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 20000
+        to: "LONGTEXT"
+      - type: "character"
+        from:
+          field:
+            type: "character"
+            size: 4
+        to: "CHAR(4)"
+      - type: "decimal"
+        from:
+          field:
+            type: "decimal"
+            size:
+              - 8
+              - 3
+        to: "DECIMAL(8, 3)"
+      - type: "binary"
+        from:
+          field:
+            type: "binary"
+            size: 16
+        to: "VARBINARY(16)"
+      - type: "binary"
+        from:
+          field:
+            type: "binary"
+            size: 70000
+        to: "LONGBLOB"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "error"
+      - type: "decimal"
+        from:
+          field:
+            name: "amount"
+            type: "decimal"
+            size: 8
+        to:
+          error: "error"
+      - type: "integer"
+        reverse: true
+        from: "INT"
+        to: "integer"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "error"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "i64"
+        from:
+          long: 1
+        toType: "bool"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "i64"
+        from:
+          long: 0
+        toType: "bool"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "String"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "DateTime<Utc>"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "String"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "DateTime<Utc>"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "Uuid"
+        from: &a7
+          guid: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "Vec<u8>"
+        from:
+          bytes: *a3
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "i64"
+        from:
+          long: 7
+        toType: "String"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "f64"
+        from:
+          float: 10.5
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "10.50"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "10.50000000000000"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "i64"
+        from:
+          long: 0
+        toType: "String"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "0.00"
+        toType: "String"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "0"
+        toType: "i64"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "f64"
+        from:
+          float: 10
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: ""
+        toType: "error"
+        to:
+          error: "error"
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "1.0"
+        toType: "i64"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.0"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.00000000000000"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.50000000000000"
+        toType: "error"
+        to:
+          error: "error"
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: true
+        toType: "i64"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: false
+        toType: "i64"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "Uuid"
+        from: *a7
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "Decimal"
+        from:
+          decimal: "10.5"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "binary"
+        fromType: "String"
+        from:
+          base64: "AQIDBA=="
+        toType: "Vec<u8>"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "binary"
+        fromType: "String"
+        from:
+          latin1:
+            - 1
+            - 2
+            - 3
+            - 4
+        toType: "Vec<u8>"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "datetime"
+        reverse: true
+        fromType: "String"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "String"
+        to:
+          text: "2020-01-02 03:04:05.000"
+      - type: "binary"
+        reverse: true
+        fromType: "String"
+        from:
+          base64: "AQIDBA=="
+        toType: "Vec<u8>"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "(NOW(3))"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(UTC_TIMESTAMP(3))"
+      - type: "uuid"
+        from: "NewId"
+        to: "(UUID())"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "(X'ab')"
+      - type: "boolean"
+        from: "true"
+        to: "1"
+      - type: "boolean"
+        from: "false"
+        to: "0"
+      - type: "string"
+        from: "hi"
+        to: "('hi')"
+      - type: "nope"
+        from: "x"
+        to:
+          error: "error"
+      - type: "binary"
+        reverse: true
+        from: "(X'ab')"
+        to: "Hex('ab')"
+      - type: "binary"
+        reverse: true
+        from: "X'ab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "('hi')"
+        to: "hi"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "hi"
+      - type: "uuid"
+        reverse: true
+        from: "(UUID())"
+        to: "NewId"
+      - type: "binary"
+        reverse: true
+        from: "X'ab')"
+        to:
+          error: "error"
+      - type: "string"
+        reverse: true
+        from: "'hi')"
+        to:
+          error: "error"
+  typescript:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "CHAR(1)"
+      - type: "integer"
+        from: "integer"
+        to: "INT"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "INT UNSIGNED"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "SMALLINT"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "SMALLINT UNSIGNED"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "BIGINT"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "BIGINT UNSIGNED"
+      - type: "float"
+        from: "float"
+        to: "DOUBLE"
+      - type: "decimal"
+        from: "decimal"
+        to: "DECIMAL(10, 2)"
+      - type: "boolean"
+        from: "boolean"
+        to: "TINYINT(1)"
+      - type: "datetime"
+        from: "datetime"
+        to: "DATETIME(3)"
+      - type: "binary"
+        from: "binary"
+        to: "BLOB"
+      - type: "uuid"
+        from: "uuid"
+        to: "CHAR(36)"
+      - type: "reference"
+        from: "reference"
+        to: "INT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+        to: "TEXT"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 20000
+        to: "LONGTEXT"
+      - type: "character"
+        from:
+          field:
+            type: "character"
+            size: 4
+        to: "CHAR(4)"
+      - type: "decimal"
+        from:
+          field:
+            type: "decimal"
+            size:
+              - 8
+              - 3
+        to: "DECIMAL(8, 3)"
+      - type: "binary"
+        from:
+          field:
+            type: "binary"
+            size: 16
+        to: "VARBINARY(16)"
+      - type: "binary"
+        from:
+          field:
+            type: "binary"
+            size: 70000
+        to: "LONGBLOB"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "Error"
+      - type: "decimal"
+        from:
+          field:
+            name: "amount"
+            type: "decimal"
+            size: 8
+        to:
+          error: "Error"
+      - type: "integer"
+        reverse: true
+        from: "INT"
+        to: "integer"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "Error"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "number"
+        from:
+          long: 1
+        toType: "boolean"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "number"
+        from:
+          long: 0
+        toType: "boolean"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "Date"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "Date"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "string"
+        from: &a8
+          text: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "Uint8Array"
+        from:
+          bytes: *a3
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          long: 7
+        toType: "string"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          float: 10.5
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          long: 0
+        toType: "string"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "0.00"
+        toType: "string"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "0"
+        toType: "number"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "number"
+        from:
+          float: 10
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: ""
+        toType: "DatasourceError"
+        to:
+          error: "DatasourceError"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "1.0"
+        toType: "number"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.0"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.00000000000000"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "DatasourceError"
+        to:
+          error: "DatasourceError"
+      - type: "boolean"
+        reverse: true
+        fromType: "boolean"
+        from:
+          bool: true
+        toType: "number"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "boolean"
+        from:
+          bool: false
+        toType: "number"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "string"
+        from: *a8
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "string"
+        from:
+          decimal: "10.5"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "binary"
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "Uint8Array"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "binary"
+        fromType: "string"
+        from:
+          latin1:
+            - 1
+            - 2
+            - 3
+            - 4
+        toType: "Uint8Array"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "datetime"
+        reverse: true
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "string"
+        to:
+          text: "2020-01-02 03:04:05.000"
+      - type: "binary"
+        reverse: true
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "Uint8Array"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "(NOW(3))"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(UTC_TIMESTAMP(3))"
+      - type: "uuid"
+        from: "NewId"
+        to: "(UUID())"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "(X'ab')"
+      - type: "boolean"
+        from: "true"
+        to: "1"
+      - type: "boolean"
+        from: "false"
+        to: "0"
+      - type: "string"
+        from: "hi"
+        to: "('hi')"
+      - type: "integer"
+        from: "7"
+        to: "7"
+      - type: "reference"
+        from: "1"
+        to: null
+      - type: "nope"
+        from: "x"
+        to:
+          error: "Error"
+      - type: "binary"
+        reverse: true
+        from: "(X'ab')"
+        to: "Hex('ab')"
+      - type: "binary"
+        reverse: true
+        from: "X'ab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "('hi')"
+        to: "hi"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "hi"
+      - type: "uuid"
+        reverse: true
+        from: "(UUID())"
+        to: "NewId"
+      - type: "binary"
+        reverse: true
+        from: "X'ab')"
+        to:
+          error: "Error"
+      - type: "string"
+        reverse: true
+        from: "'hi')"
+        to:
+          error: "Error"
 postgres:
-  typeConverter:
-    - type: "string"
-      from: "string"
-      to: "TEXT"
-    - type: "character"
-      from: "character"
-      to: "CHAR(1)"
-    - type: "integer"
-      from: "integer"
-      to: "INTEGER"
-    - type: "unsignedinteger"
-      from: "unsignedinteger"
-      to: "BIGINT"
-    - type: "smallinteger"
-      from: "smallinteger"
-      to: "SMALLINT"
-    - type: "unsignedsmallinteger"
-      from: "unsignedsmallinteger"
-      to: "INTEGER"
-    - type: "biginteger"
-      from: "biginteger"
-      to: "BIGINT"
-    - type: "unsignedbiginteger"
-      from: "unsignedbiginteger"
-      to: "NUMERIC(20)"
-    - type: "float"
-      from: "float"
-      to: "DOUBLE PRECISION"
-    - type: "decimal"
-      from: "decimal"
-      to: "NUMERIC"
-    - type: "boolean"
-      from: "boolean"
-      to: "BOOLEAN"
-    - type: "datetime"
-      from: "datetime"
-      to: "TIMESTAMPTZ"
-    - type: "binary"
-      from: "binary"
-      to: "BYTEA"
-    - type: "uuid"
-      from: "uuid"
-      to: "UUID"
-    - type: "reference"
-      from: "reference"
-      to: "INTEGER"
-    - type: "string"
-      from: "new SpecField { Type = \"string\", Size = 64 }"
-      to: "VARCHAR(64)"
-    - type: "character"
-      from: "new SpecField { Type = \"character\", Size = 4 }"
-      to: "CHAR(4)"
-    - type: "decimal"
-      from: "new SpecField { Type = \"decimal\", Size = new[] { 10, 2 } }"
-      to: "NUMERIC(10, 2)"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-    - type: "integer"
-      from: "INTEGER"
-      to: "integer"
-    - type: "unsignedinteger"
-      from: "BIGINT"
-      to: "unsignedinteger"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-  rowTypeConverters:
-    - type: "boolean"
-      from: "1L"
-      to: "true"
-    - type: "boolean"
-      from: "0L"
-      to: "false"
-    - type: "datetime"
-      from: "\"2020-01-02T03:04:05.000Z\""
-      to: "new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)"
-    - type: "datetime"
-      from: "\"2020-01-02T03:04:05.000+00:00\""
-      to: "new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)"
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\")"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\").ToByteArray()"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "decimal"
-      from: "7L"
-      to: "\"7\""
-    - type: "decimal"
-      from: "10.5d"
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "\"10.50\""
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "\"10.50000000000000\""
-      to: "\"10.5\""
-    - type: "decimal"
-      from: "0L"
-      to: "\"0\""
-    - type: "decimal"
-      from: "\"0.00\""
-      to: "\"0\""
-    - type: "binary"
-      from: "\"AQIDBA==\""
-      to: "new byte[] { 1, 2, 3, 4 }"
-    - type: "integer"
-      from: "\"10\""
-      to: "10L"
-    - type: "integer"
-      from: "\"0\""
-      to: "0L"
-    - type: "integer"
-      from: "10.0d"
-      to: "10L"
-    - type: "integer"
-      from: "\"1.0\""
-      to: "1L"
-    - type: "integer"
-      from: "\"10.0\""
-      to: "10L"
-    - type: "integer"
-      from: "\"10.00000000000000\""
-      to: "10L"
-    - type: "integer"
-      from: "\"10.50000000000000\""
-      to: "FormatException"
-    - type: "integer"
-      from: "\"\""
-      to: "FormatException"
-    - type: "uuid"
-      from: "Guid.Parse(\"550e8400-e29b-41d4-a716-446655440000\")"
-      to: "\"550e8400-e29b-41d4-a716-446655440000\""
-    - type: "decimal"
-      from: "10.5m"
-      to: "\"10.5\""
-    - type: "binary"
-      from: "\"AQIDBA==\""
-      to: "new byte[] { 1, 2, 3, 4 }"
-  defaultValueConverter:
-    - type: "datetime"
-      from: "Now"
-      to: "LOCALTIMESTAMP"
-    - type: "datetime"
-      from: "UtcNow"
-      to: "(NOW() AT TIME ZONE 'UTC')"
-    - type: "uuid"
-      from: "NewId"
-      to: "gen_random_uuid()"
-    - type: "uuid"
-      from: "Empty"
-      to: "'00000000-0000-0000-0000-000000000000'"
-    - type: "binary"
-      from: "Hex('ab')"
-      to: "'\\xab'"
-    - type: "boolean"
-      from: "true"
-      to: "TRUE"
-    - type: "boolean"
-      from: "false"
-      to: "FALSE"
-    - type: "string"
-      from: "hi"
-      to: "'hi'"
-    - type: "integer"
-      from: "7"
-      to: "7"
-    - type: "reference"
-      from: "1"
-      to: "null"
-    - type: "nope"
-      from: "x"
-      to: "InvalidOperationException"
-    - type: "datetime"
-      from: "LOCALTIMESTAMP"
-      to: "Now"
-    - type: "datetime"
-      from: "(NOW() AT TIME ZONE 'UTC')"
-      to: "UtcNow"
-    - type: "uuid"
-      from: "gen_random_uuid()"
-      to: "NewId"
-    - type: "binary"
-      from: "'\\xab'"
-      to: "Hex('ab')"
-    - type: "string"
-      from: "'hi'"
-      to: "String"
-    - type: "datetime"
-      from: "nope"
-      to: "InvalidOperationException"
-
-sqlserver:
-  typeConverter:
-    - type: "string"
-      from: "string"
-      to: "NVARCHAR(MAX)"
-    - type: "character"
-      from: "character"
-      to: "NCHAR(1)"
-    - type: "integer"
-      from: "integer"
-      to: "INT"
-    - type: "unsignedinteger"
-      from: "unsignedinteger"
-      to: "BIGINT"
-    - type: "smallinteger"
-      from: "smallinteger"
-      to: "SMALLINT"
-    - type: "unsignedsmallinteger"
-      from: "unsignedsmallinteger"
-      to: "INT"
-    - type: "biginteger"
-      from: "biginteger"
-      to: "BIGINT"
-    - type: "unsignedbiginteger"
-      from: "unsignedbiginteger"
-      to: "DECIMAL(20)"
-    - type: "float"
-      from: "float"
-      to: "FLOAT"
-    - type: "decimal"
-      from: "decimal"
-      to: "DECIMAL"
-    - type: "boolean"
-      from: "boolean"
-      to: "BIT"
-    - type: "datetime"
-      from: "datetime"
-      to: "DATETIME2"
-    - type: "binary"
-      from: "binary"
-      to: "VARBINARY(MAX)"
-    - type: "uuid"
-      from: "uuid"
-      to: "UNIQUEIDENTIFIER"
-    - type: "reference"
-      from: "reference"
-      to: "INT"
-    - type: "string"
-      from: "new SpecField { Type = \"string\", Size = 64 }"
-      to: "NVARCHAR(64)"
-    - type: "character"
-      from: "new SpecField { Type = \"character\", Size = 4 }"
-      to: "NCHAR(4)"
-    - type: "decimal"
-      from: "new SpecField { Type = \"decimal\", Size = new[] { 10, 2 } }"
-      to: "DECIMAL(10, 2)"
-    - type: "binary"
-      from: "new SpecField { Type = \"binary\", Size = 16 }"
-      to: "VARBINARY(16)"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-    - type: "integer"
-      from: "INT"
-      to: "integer"
-    - type: "unsignedinteger"
-      from: "BIGINT"
-      to: "unsignedinteger"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-  rowTypeConverters: []
-  defaultValueConverter:
-    - type: "datetime"
-      from: "Now"
-      to: "GETDATE()"
-    - type: "datetime"
-      from: "UtcNow"
-      to: "GETUTCDATE()"
-    - type: "uuid"
-      from: "NewId"
-      to: "NEWID()"
-    - type: "uuid"
-      from: "Empty"
-      to: "'00000000-0000-0000-0000-000000000000'"
-    - type: "binary"
-      from: "Hex('ab')"
-      to: "0xab"
-    - type: "boolean"
-      from: "true"
-      to: "1"
-    - type: "boolean"
-      from: "false"
-      to: "0"
-    - type: "string"
-      from: "hi"
-      to: "'hi'"
-    - type: "integer"
-      from: "7"
-      to: "7"
-    - type: "reference"
-      from: "1"
-      to: "null"
-    - type: "nope"
-      from: "x"
-      to: "InvalidOperationException"
-    - type: "datetime"
-      from: "GETDATE()"
-      to: "Now"
-    - type: "datetime"
-      from: "GETUTCDATE()"
-      to: "UtcNow"
-    - type: "uuid"
-      from: "NEWID()"
-      to: "NewId"
-    - type: "binary"
-      from: "0xab"
-      to: "Hex('ab')"
-    - type: "string"
-      from: "'hi'"
-      to: "String"
-
-oracle:
-  typeConverter:
-    - type: "string"
-      from: "string"
-      to: "CLOB"
-    - type: "character"
-      from: "character"
-      to: "CHAR(1)"
-    - type: "integer"
-      from: "integer"
-      to: "NUMBER(10)"
-    - type: "unsignedinteger"
-      from: "unsignedinteger"
-      to: "NUMBER(10)"
-    - type: "smallinteger"
-      from: "smallinteger"
-      to: "NUMBER(5)"
-    - type: "unsignedsmallinteger"
-      from: "unsignedsmallinteger"
-      to: "NUMBER(5)"
-    - type: "biginteger"
-      from: "biginteger"
-      to: "NUMBER(19)"
-    - type: "unsignedbiginteger"
-      from: "unsignedbiginteger"
-      to: "NUMBER(20)"
-    - type: "float"
-      from: "float"
-      to: "BINARY_DOUBLE"
-    - type: "decimal"
-      from: "decimal"
-      to: "NUMBER"
-    - type: "boolean"
-      from: "boolean"
-      to: "NUMBER(1)"
-    - type: "datetime"
-      from: "datetime"
-      to: "TIMESTAMP"
-    - type: "binary"
-      from: "binary"
-      to: "BLOB"
-    - type: "uuid"
-      from: "uuid"
-      to: "VARCHAR2(36)"
-    - type: "reference"
-      from: "reference"
-      to: "NUMBER(10)"
-    - type: "string"
-      from: "new SpecField { Type = \"string\", Size = 64 }"
-      to: "VARCHAR2(64)"
-    - type: "character"
-      from: "new SpecField { Type = \"character\", Size = 4 }"
-      to: "CHAR(4)"
-    - type: "decimal"
-      from: "new SpecField { Type = \"decimal\", Size = new[] { 10, 2 } }"
-      to: "NUMBER(10, 2)"
-    - type: "binary"
-      from: "new SpecField { Type = \"binary\", Size = 16 }"
-      to: "RAW(16)"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-    - type: "integer"
-      from: "NUMBER(10)"
-      to: "integer"
-    - type: "nope"
-      from: "nope"
-      to: "InvalidOperationException"
-  rowTypeConverters: []
-  defaultValueConverter:
-    - type: "datetime"
-      from: "Now"
-      to: "LOCALTIMESTAMP"
-    - type: "datetime"
-      from: "UtcNow"
-      to: "SYS_EXTRACT_UTC(SYSTIMESTAMP)"
-    - type: "uuid"
-      from: "NewId"
-      to: "SYS_GUID()"
-    - type: "uuid"
-      from: "Empty"
-      to: "'00000000-0000-0000-0000-000000000000'"
-    - type: "binary"
-      from: "Hex('ab')"
-      to: "HEXTORAW('ab')"
-    - type: "boolean"
-      from: "true"
-      to: "1"
-    - type: "boolean"
-      from: "false"
-      to: "0"
-    - type: "string"
-      from: "hi"
-      to: "'hi'"
-    - type: "integer"
-      from: "7"
-      to: "7"
-    - type: "reference"
-      from: "1"
-      to: "null"
-    - type: "nope"
-      from: "x"
-      to: "InvalidOperationException"
-    - type: "datetime"
-      from: "LOCALTIMESTAMP"
-      to: "Now"
-    - type: "datetime"
-      from: "SYS_EXTRACT_UTC(SYSTIMESTAMP)"
-      to: "UtcNow"
-    - type: "uuid"
-      from: "SYS_GUID()"
-      to: "NewId"
-    - type: "binary"
-      from: "HEXTORAW('ab')"
-      to: "Hex('ab')"
-    - type: "string"
-      from: "'hi'"
-      to: "String"
+  csharp:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "CHAR(1)"
+      - type: "integer"
+        from: "integer"
+        to: "INTEGER"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "BIGINT"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "SMALLINT"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "INTEGER"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "BIGINT"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "NUMERIC(20)"
+      - type: "float"
+        from: "float"
+        to: "DOUBLE PRECISION"
+      - type: "decimal"
+        from: "decimal"
+        to: "NUMERIC"
+      - type: "boolean"
+        from: "boolean"
+        to: "BOOLEAN"
+      - type: "datetime"
+        from: "datetime"
+        to: "TIMESTAMPTZ"
+      - type: "binary"
+        from: "binary"
+        to: "BYTEA"
+      - type: "uuid"
+        from: "uuid"
+        to: "UUID"
+      - type: "reference"
+        from: "reference"
+        to: "INTEGER"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "character"
+        from:
+          field:
+            type: "character"
+            size: 4
+        to: "CHAR(4)"
+      - type: "decimal"
+        from:
+          field:
+            type: "decimal"
+            size:
+              - 10
+              - 2
+        to: "NUMERIC(10, 2)"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "InvalidOperationException"
+      - type: "integer"
+        reverse: true
+        from: "INTEGER"
+        to: "integer"
+      - type: "unsignedinteger"
+        reverse: true
+        from: "BIGINT"
+        to: "unsignedinteger"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "InvalidOperationException"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "long"
+        from:
+          long: 1
+        toType: "bool"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "long"
+        from:
+          long: 0
+        toType: "bool"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "DateTime"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "DateTime"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "Guid"
+        from: &a9
+          guid: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "byte[]"
+        from:
+          bytes: *a5
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "long"
+        from:
+          long: 7
+        toType: "string"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "double"
+        from:
+          float: 10.5
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "long"
+        from:
+          long: 0
+        toType: "string"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "0.00"
+        toType: "string"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "0"
+        toType: "long"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "double"
+        from:
+          float: 10
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: ""
+        toType: "FormatException"
+        to:
+          error: "FormatException"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "1.0"
+        toType: "long"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.0"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.00000000000000"
+        toType: "long"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "FormatException"
+        to:
+          error: "FormatException"
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: true
+        toType: "long"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: false
+        toType: "long"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "Guid"
+        from: *a9
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "decimal"
+        from:
+          decimal: "10.5"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "binary"
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "byte[]"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "binary"
+        reverse: true
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "byte[]"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "LOCALTIMESTAMP"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(NOW() AT TIME ZONE 'UTC')"
+      - type: "uuid"
+        from: "NewId"
+        to: "gen_random_uuid()"
+      - type: "uuid"
+        from: "Empty"
+        to: "'00000000-0000-0000-0000-000000000000'"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "'\\xab'"
+      - type: "boolean"
+        from: "true"
+        to: "TRUE"
+      - type: "boolean"
+        from: "false"
+        to: "FALSE"
+      - type: "string"
+        from: "hi"
+        to: "'hi'"
+      - type: "integer"
+        from: "7"
+        to: "7"
+      - type: "reference"
+        from: "1"
+        to: null
+      - type: "nope"
+        from: "x"
+        to:
+          error: "InvalidOperationException"
+      - type: "datetime"
+        reverse: true
+        from: "LOCALTIMESTAMP"
+        to: "Now"
+      - type: "datetime"
+        reverse: true
+        from: "(NOW() AT TIME ZONE 'UTC')"
+        to: "UtcNow"
+      - type: "uuid"
+        reverse: true
+        from: "gen_random_uuid()"
+        to: "NewId"
+      - type: "binary"
+        reverse: true
+        from: "'\\xab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "String"
+      - type: "datetime"
+        reverse: true
+        from: "nope"
+        to:
+          error: "InvalidOperationException"
+  rust:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "CHAR(1)"
+      - type: "integer"
+        from: "integer"
+        to: "INTEGER"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "BIGINT"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "SMALLINT"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "INTEGER"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "BIGINT"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "NUMERIC(20)"
+      - type: "float"
+        from: "float"
+        to: "DOUBLE PRECISION"
+      - type: "decimal"
+        from: "decimal"
+        to: "NUMERIC"
+      - type: "boolean"
+        from: "boolean"
+        to: "BOOLEAN"
+      - type: "datetime"
+        from: "datetime"
+        to: "TIMESTAMPTZ"
+      - type: "binary"
+        from: "binary"
+        to: "BYTEA"
+      - type: "uuid"
+        from: "uuid"
+        to: "UUID"
+      - type: "reference"
+        from: "reference"
+        to: "INTEGER"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "character"
+        from:
+          field:
+            type: "character"
+            size: 4
+        to: "CHAR(4)"
+      - type: "decimal"
+        from:
+          field:
+            type: "decimal"
+            size:
+              - 10
+              - 2
+        to: "NUMERIC(10, 2)"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "error"
+      - type: "datetime"
+        reverse: true
+        from: "TIMESTAMPTZ"
+        to: "datetime"
+      - type: "uuid"
+        reverse: true
+        from: "UUID"
+        to: "uuid"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "error"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "i64"
+        from:
+          long: 1
+        toType: "bool"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "i64"
+        from:
+          long: 0
+        toType: "bool"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "String"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "DateTime<Utc>"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "String"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "DateTime<Utc>"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "Uuid"
+        from: &a10
+          guid: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "Vec<u8>"
+        from:
+          bytes: *a3
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "i64"
+        from:
+          long: 7
+        toType: "String"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "f64"
+        from:
+          float: 10.5
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "10.50"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "10.50000000000000"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "i64"
+        from:
+          long: 0
+        toType: "String"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "String"
+        from:
+          text: "0.00"
+        toType: "String"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "0"
+        toType: "i64"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "f64"
+        from:
+          float: 10
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: ""
+        toType: "error"
+        to:
+          error: "error"
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "1.0"
+        toType: "i64"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.0"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.00000000000000"
+        toType: "i64"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "String"
+        from:
+          text: "10.50000000000000"
+        toType: "error"
+        to:
+          error: "error"
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: true
+        toType: "i64"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "bool"
+        from:
+          bool: false
+        toType: "i64"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "Uuid"
+        from: *a10
+        toType: "String"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "Decimal"
+        from:
+          decimal: "10.5"
+        toType: "String"
+        to:
+          text: "10.5"
+      - type: "binary"
+        fromType: "String"
+        from:
+          base64: "AQIDBA=="
+        toType: "Vec<u8>"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "binary"
+        reverse: true
+        fromType: "String"
+        from:
+          base64: "AQIDBA=="
+        toType: "Vec<u8>"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "LOCALTIMESTAMP"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(NOW() AT TIME ZONE 'UTC')"
+      - type: "uuid"
+        from: "NewId"
+        to: "gen_random_uuid()"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "'\\xab'"
+      - type: "boolean"
+        from: "true"
+        to: "TRUE"
+      - type: "boolean"
+        from: "false"
+        to: "FALSE"
+      - type: "string"
+        from: "hi"
+        to: "'hi'"
+      - type: "nope"
+        from: "x"
+        to:
+          error: "error"
+      - type: "datetime"
+        reverse: true
+        from: "LOCALTIMESTAMP"
+        to: "Now"
+      - type: "datetime"
+        reverse: true
+        from: "(NOW() AT TIME ZONE 'UTC')"
+        to: "UtcNow"
+      - type: "uuid"
+        reverse: true
+        from: "gen_random_uuid()"
+        to: "NewId"
+      - type: "binary"
+        reverse: true
+        from: "'\\xab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "hi"
+      - type: "datetime"
+        reverse: true
+        from: "nope"
+        to:
+          error: "error"
+  typescript:
+    typeConverter:
+      - type: "string"
+        from: "string"
+        to: "TEXT"
+      - type: "character"
+        from: "character"
+        to: "CHAR(1)"
+      - type: "integer"
+        from: "integer"
+        to: "INTEGER"
+      - type: "unsignedinteger"
+        from: "unsignedinteger"
+        to: "BIGINT"
+      - type: "smallinteger"
+        from: "smallinteger"
+        to: "SMALLINT"
+      - type: "unsignedsmallinteger"
+        from: "unsignedsmallinteger"
+        to: "INTEGER"
+      - type: "biginteger"
+        from: "biginteger"
+        to: "BIGINT"
+      - type: "unsignedbiginteger"
+        from: "unsignedbiginteger"
+        to: "NUMERIC(20)"
+      - type: "float"
+        from: "float"
+        to: "DOUBLE PRECISION"
+      - type: "decimal"
+        from: "decimal"
+        to: "NUMERIC"
+      - type: "boolean"
+        from: "boolean"
+        to: "BOOLEAN"
+      - type: "datetime"
+        from: "datetime"
+        to: "TIMESTAMPTZ"
+      - type: "binary"
+        from: "binary"
+        to: "BYTEA"
+      - type: "uuid"
+        from: "uuid"
+        to: "UUID"
+      - type: "reference"
+        from: "reference"
+        to: "INTEGER"
+      - type: "string"
+        from:
+          field:
+            type: "string"
+            size: 64
+        to: "VARCHAR(64)"
+      - type: "character"
+        from:
+          field:
+            type: "character"
+            size: 4
+        to: "CHAR(4)"
+      - type: "decimal"
+        from:
+          field:
+            type: "decimal"
+            size:
+              - 10
+              - 2
+        to: "NUMERIC(10, 2)"
+      - type: "nope"
+        from: "nope"
+        to:
+          error: "Error"
+      - type: "integer"
+        reverse: true
+        from: "INTEGER"
+        to: "integer"
+      - type: "unsignedinteger"
+        reverse: true
+        from: "BIGINT"
+        to: "unsignedinteger"
+      - type: "nope"
+        reverse: true
+        from: "nope"
+        to:
+          error: "Error"
+    rowTypeConverters:
+      - type: "boolean"
+        fromType: "number"
+        from:
+          long: 1
+        toType: "boolean"
+        to:
+          bool: true
+      - type: "boolean"
+        fromType: "number"
+        from:
+          long: 0
+        toType: "boolean"
+        to:
+          bool: false
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000Z"
+        toType: "Date"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "datetime"
+        fromType: "string"
+        from:
+          text: "2020-01-02T03:04:05.000+00:00"
+        toType: "Date"
+        to:
+          datetime: "2020-01-02T03:04:05.000Z"
+      - type: "uuid"
+        fromType: "string"
+        from: &a11
+          text: "550e8400-e29b-41d4-a716-446655440000"
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "uuid"
+        fromType: "Uint8Array"
+        from:
+          bytes: *a3
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          long: 7
+        toType: "string"
+        to:
+          text: "7"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          float: 10.5
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "decimal"
+        fromType: "number"
+        from:
+          long: 0
+        toType: "string"
+        to:
+          text: "0"
+      - type: "decimal"
+        fromType: "string"
+        from:
+          text: "0.00"
+        toType: "string"
+        to:
+          text: "0"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "0"
+        toType: "number"
+        to:
+          long: 0
+      - type: "integer"
+        fromType: "number"
+        from:
+          float: 10
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: ""
+        toType: "DatasourceError"
+        to:
+          error: "DatasourceError"
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "1.0"
+        toType: "number"
+        to:
+          long: 1
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.0"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.00000000000000"
+        toType: "number"
+        to:
+          long: 10
+      - type: "integer"
+        fromType: "string"
+        from:
+          text: "10.50000000000000"
+        toType: "DatasourceError"
+        to:
+          error: "DatasourceError"
+      - type: "boolean"
+        reverse: true
+        fromType: "boolean"
+        from:
+          bool: true
+        toType: "number"
+        to:
+          long: 1
+      - type: "boolean"
+        reverse: true
+        fromType: "boolean"
+        from:
+          bool: false
+        toType: "number"
+        to:
+          long: 0
+      - type: "uuid"
+        reverse: true
+        fromType: "string"
+        from: *a11
+        toType: "string"
+        to:
+          text: "550e8400-e29b-41d4-a716-446655440000"
+      - type: "decimal"
+        reverse: true
+        fromType: "string"
+        from:
+          decimal: "10.5"
+        toType: "string"
+        to:
+          text: "10.5"
+      - type: "binary"
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "Uint8Array"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+      - type: "binary"
+        reverse: true
+        fromType: "string"
+        from:
+          base64: "AQIDBA=="
+        toType: "Uint8Array"
+        to:
+          bytes:
+            - 1
+            - 2
+            - 3
+            - 4
+    defaultValueConverter:
+      - type: "datetime"
+        from: "Now"
+        to: "LOCALTIMESTAMP"
+      - type: "datetime"
+        from: "UtcNow"
+        to: "(NOW() AT TIME ZONE 'UTC')"
+      - type: "uuid"
+        from: "NewId"
+        to: "gen_random_uuid()"
+      - type: "uuid"
+        from: "Empty"
+        to: "'00000000-0000-0000-0000-000000000000'"
+      - type: "binary"
+        from: "Hex('ab')"
+        to: "'\\xab'"
+      - type: "boolean"
+        from: "true"
+        to: "TRUE"
+      - type: "boolean"
+        from: "false"
+        to: "FALSE"
+      - type: "string"
+        from: "hi"
+        to: "'hi'"
+      - type: "integer"
+        from: "7"
+        to: "7"
+      - type: "reference"
+        from: "1"
+        to: null
+      - type: "nope"
+        from: "x"
+        to:
+          error: "Error"
+      - type: "datetime"
+        reverse: true
+        from: "LOCALTIMESTAMP"
+        to: "Now"
+      - type: "datetime"
+        reverse: true
+        from: "(NOW() AT TIME ZONE 'UTC')"
+        to: "UtcNow"
+      - type: "uuid"
+        reverse: true
+        from: "gen_random_uuid()"
+        to: "NewId"
+      - type: "binary"
+        reverse: true
+        from: "'\\xab'"
+        to: "Hex('ab')"
+      - type: "string"
+        reverse: true
+        from: "'hi'"
+        to: "hi"
+      - type: "datetime"
+        reverse: true
+        from: "nope"
+        to:
+          error: "Error"

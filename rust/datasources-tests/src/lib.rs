@@ -1,10 +1,12 @@
 mod bind_repositories;
 mod contact;
+mod conversion_matrix;
 mod repository_tests_spec;
 mod schema_spec;
 mod sql_spec;
 
 pub use contact::*;
+pub use conversion_matrix::{assert_cells, assert_defaults, assert_types};
 pub use repository_tests_spec::{files, run, RepositoryDialect};
 pub use schema_spec::apply_schema;
 pub use schema_spec::tables as schema_tables;

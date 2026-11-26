@@ -73,9 +73,9 @@ Drivers for C#. Click a tile for Information, Overrides, TypeConverter, RowTypeC
 | `binary` | `binary` | `BLOB` |
 | `uuid` | `uuid` | `TEXT` |
 | `reference` | `reference` | `INTEGER` |
-| `string` | `new SpecField { Type = "string" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = "unlimited" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
+| `string` | `{ type: string }` | `TEXT` |
+| `string` | `{ type: string, size: "unlimited" }` | `TEXT` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
 | `nope` | `nope` | `InvalidOperationException` |
 | `string` | `TEXT` | `string` |
 | `integer` | `INTEGER` | `integer` |
@@ -83,32 +83,32 @@ Drivers for C#. Click a tile for Information, Overrides, TypeConverter, RowTypeC
 
 #### RowTypeConverters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `""` | `FormatException` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `boolean` | `true` | `1L` |
-| `boolean` | `false` | `0L` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `long` | `1` | `bool` | `true` |
+| `boolean` | `long` | `0` | `bool` | `false` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `DateTime` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000+00:00"` | `DateTime` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `Guid` | `550e8400-e29b-41d4-a716-446655440000` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `byte[]` | `[0,132,14,85,155,226,212,65,167,22,68,102,85,68,0,0]` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `long` | `7` | `string` | `"7"` |
+| `decimal` | `double` | `10.5` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50"` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50000000000000"` | `string` | `"10.5"` |
+| `decimal` | `long` | `0` | `string` | `"0"` |
+| `decimal` | `string` | `"0.00"` | `string` | `"0"` |
+| `integer` | `string` | `"10"` | `long` | `10` |
+| `integer` | `string` | `"0"` | `long` | `0` |
+| `integer` | `double` | `10` | `long` | `10` |
+| `integer` | `string` | `""` | `FormatException` | `FormatException` |
+| `integer` | `string` | `"1.0"` | `long` | `1` |
+| `integer` | `string` | `"10.0"` | `long` | `10` |
+| `integer` | `string` | `"10.00000000000000"` | `long` | `10` |
+| `integer` | `string` | `"10.50000000000000"` | `FormatException` | `FormatException` |
+| `boolean` | `bool` | `true` | `long` | `1` |
+| `boolean` | `bool` | `false` | `long` | `0` |
+| `uuid` | `Guid` | `550e8400-e29b-41d4-a716-446655440000` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `decimal` | `10.5` | `string` | `"10.5"` |
 
 #### DefaultValueConverter
 
@@ -172,50 +172,50 @@ _None._
 | `binary` | `binary` | `BLOB` |
 | `uuid` | `uuid` | `CHAR(36)` |
 | `reference` | `reference` | `INT` |
-| `string` | `new SpecField { Type = "string" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `string` | `new SpecField { Type = "string", Size = 20000 }` | `LONGTEXT` |
-| `character` | `new SpecField { Type = "character", Size = 4 }` | `CHAR(4)` |
-| `decimal` | `new SpecField { Type = "decimal", Size = new[] { 8, 3 } }` | `DECIMAL(8, 3)` |
-| `binary` | `new SpecField { Type = "binary", Size = 16 }` | `VARBINARY(16)` |
-| `binary` | `new SpecField { Type = "binary", Size = 70000 }` | `LONGBLOB` |
+| `string` | `{ type: string }` | `TEXT` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `string` | `{ type: string, size: 20000 }` | `LONGTEXT` |
+| `character` | `{ type: character, size: 4 }` | `CHAR(4)` |
+| `decimal` | `{ type: decimal, size: [8,3] }` | `DECIMAL(8, 3)` |
+| `binary` | `{ type: binary, size: 16 }` | `VARBINARY(16)` |
+| `binary` | `{ type: binary, size: 70000 }` | `LONGBLOB` |
 | `nope` | `nope` | `InvalidOperationException` |
-| `decimal` | `new SpecField { Name = "amount", Type = "decimal", Size = 8 }` | `InvalidOperationException` |
+| `decimal` | `{ type: decimal, name: amount, size: 8 }` | `InvalidOperationException` |
 | `integer` | `INT` | `integer` |
 | `nope` | `nope` | `InvalidOperationException` |
 
 #### RowTypeConverters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
-| `binary` | `System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 })` | `new byte[] { 1, 2, 3, 4 }` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `integer` | `""` | `FormatException` |
-| `boolean` | `true` | `1L` |
-| `boolean` | `false` | `0L` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `"2020-01-02 03:04:05.000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `long` | `1` | `bool` | `true` |
+| `boolean` | `long` | `0` | `bool` | `false` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `DateTime` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000+00:00"` | `DateTime` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `Guid` | `550e8400-e29b-41d4-a716-446655440000` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `byte[]` | `[0,132,14,85,155,226,212,65,167,22,68,102,85,68,0,0]` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `long` | `7` | `string` | `"7"` |
+| `decimal` | `double` | `10.5` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50"` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50000000000000"` | `string` | `"10.5"` |
+| `decimal` | `long` | `0` | `string` | `"0"` |
+| `decimal` | `string` | `"0.00"` | `string` | `"0"` |
+| `integer` | `string` | `"10"` | `long` | `10` |
+| `integer` | `string` | `"0"` | `long` | `0` |
+| `integer` | `double` | `10` | `long` | `10` |
+| `integer` | `string` | `""` | `FormatException` | `FormatException` |
+| `integer` | `string` | `"1.0"` | `long` | `1` |
+| `integer` | `string` | `"10.0"` | `long` | `10` |
+| `integer` | `string` | `"10.00000000000000"` | `long` | `10` |
+| `integer` | `string` | `"10.50000000000000"` | `FormatException` | `FormatException` |
+| `boolean` | `bool` | `true` | `long` | `1` |
+| `boolean` | `bool` | `false` | `long` | `0` |
+| `uuid` | `Guid` | `550e8400-e29b-41d4-a716-446655440000` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `decimal` | `10.5` | `string` | `"10.5"` |
+| `binary` | `string` | `AQIDBA==` | `byte[]` | `[1,2,3,4]` |
+| `binary` | `string` | `latin1(1, 2, 3, 4)` | `byte[]` | `[1,2,3,4]` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `string` | `"2020-01-02 03:04:05.000"` |
+| `binary` | `string` | `AQIDBA==` | `byte[]` | `[1,2,3,4]` |
 
 #### DefaultValueConverter
 
@@ -278,9 +278,9 @@ _None._
 | `binary` | `binary` | `BYTEA` |
 | `uuid` | `uuid` | `UUID` |
 | `reference` | `reference` | `INTEGER` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `character` | `new SpecField { Type = "character", Size = 4 }` | `CHAR(4)` |
-| `decimal` | `new SpecField { Type = "decimal", Size = new[] { 10, 2 } }` | `NUMERIC(10, 2)` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `character` | `{ type: character, size: 4 }` | `CHAR(4)` |
+| `decimal` | `{ type: decimal, size: [10,2] }` | `NUMERIC(10, 2)` |
 | `nope` | `nope` | `InvalidOperationException` |
 | `integer` | `INTEGER` | `integer` |
 | `unsignedinteger` | `BIGINT` | `unsignedinteger` |
@@ -288,32 +288,34 @@ _None._
 
 #### RowTypeConverters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `integer` | `""` | `FormatException` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `long` | `1` | `bool` | `true` |
+| `boolean` | `long` | `0` | `bool` | `false` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `DateTime` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000+00:00"` | `DateTime` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `Guid` | `550e8400-e29b-41d4-a716-446655440000` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `byte[]` | `[0,132,14,85,155,226,212,65,167,22,68,102,85,68,0,0]` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `long` | `7` | `string` | `"7"` |
+| `decimal` | `double` | `10.5` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50"` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50000000000000"` | `string` | `"10.5"` |
+| `decimal` | `long` | `0` | `string` | `"0"` |
+| `decimal` | `string` | `"0.00"` | `string` | `"0"` |
+| `integer` | `string` | `"10"` | `long` | `10` |
+| `integer` | `string` | `"0"` | `long` | `0` |
+| `integer` | `double` | `10` | `long` | `10` |
+| `integer` | `string` | `""` | `FormatException` | `FormatException` |
+| `integer` | `string` | `"1.0"` | `long` | `1` |
+| `integer` | `string` | `"10.0"` | `long` | `10` |
+| `integer` | `string` | `"10.00000000000000"` | `long` | `10` |
+| `integer` | `string` | `"10.50000000000000"` | `FormatException` | `FormatException` |
+| `boolean` | `bool` | `true` | `long` | `1` |
+| `boolean` | `bool` | `false` | `long` | `0` |
+| `uuid` | `Guid` | `550e8400-e29b-41d4-a716-446655440000` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `decimal` | `10.5` | `string` | `"10.5"` |
+| `binary` | `string` | `AQIDBA==` | `byte[]` | `[1,2,3,4]` |
+| `binary` | `string` | `AQIDBA==` | `byte[]` | `[1,2,3,4]` |
 
 #### DefaultValueConverter
 
@@ -395,42 +397,41 @@ Drivers for Rust. Click a tile for information, Overrides, type_converter, row_t
 | `binary` | `binary` | `BLOB` |
 | `uuid` | `uuid` | `TEXT` |
 | `reference` | `reference` | `INTEGER` |
-| `string` | `new SpecField { Type = "string" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = "unlimited" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `nope` | `nope` | `InvalidOperationException` |
-| `string` | `TEXT` | `string` |
-| `integer` | `INTEGER` | `integer` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `string` | `{ type: string }` | `TEXT` |
+| `string` | `{ type: string, size: "unlimited" }` | `TEXT` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `nope` | `nope` | `error` |
+| `float` | `REAL` | `float` |
+| `nope` | `nope` | `error` |
 
 #### row_type_converters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `""` | `FormatException` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `boolean` | `true` | `1L` |
-| `boolean` | `false` | `0L` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `i64` | `1` | `bool` | `true` |
+| `boolean` | `i64` | `0` | `bool` | `false` |
+| `datetime` | `String` | `"2020-01-02T03:04:05.000Z"` | `DateTime<Utc>` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `String` | `"2020-01-02T03:04:05.000+00:00"` | `DateTime<Utc>` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `Uuid` | `550e8400-e29b-41d4-a716-446655440000` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `Vec<u8>` | `[85,14,132,0,226,155,65,212,167,22,68,102,85,68,0,0]` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `i64` | `7` | `String` | `"7"` |
+| `decimal` | `f64` | `10.5` | `String` | `"10.5"` |
+| `decimal` | `String` | `"10.50"` | `String` | `"10.5"` |
+| `decimal` | `String` | `"10.50000000000000"` | `String` | `"10.5"` |
+| `decimal` | `i64` | `0` | `String` | `"0"` |
+| `decimal` | `String` | `"0.00"` | `String` | `"0"` |
+| `integer` | `String` | `"10"` | `i64` | `10` |
+| `integer` | `String` | `"0"` | `i64` | `0` |
+| `integer` | `f64` | `10` | `i64` | `10` |
+| `integer` | `String` | `""` | `error` | `error` |
+| `integer` | `String` | `"1.0"` | `i64` | `1` |
+| `integer` | `String` | `"10.0"` | `i64` | `10` |
+| `integer` | `String` | `"10.00000000000000"` | `i64` | `10` |
+| `integer` | `String` | `"10.50000000000000"` | `error` | `error` |
+| `boolean` | `bool` | `true` | `i64` | `1` |
+| `boolean` | `bool` | `false` | `i64` | `0` |
+| `uuid` | `Uuid` | `550e8400-e29b-41d4-a716-446655440000` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `Decimal` | `10.5` | `String` | `"10.5"` |
 
 #### default_value_converter
 
@@ -438,23 +439,16 @@ Drivers for Rust. Click a tile for information, Overrides, type_converter, row_t
 |---|---|---|
 | `datetime` | `Now` | `(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))` |
 | `datetime` | `UtcNow` | `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` |
-| `datetime` | `DateTime('2020-01-01T00:00:00Z')` | `'2020-01-01T00:00:00Z'` |
-| `uuid` | `Empty` | `'00000000-0000-0000-0000-000000000000'` |
-| `uuid` | `uuid('11111111-1111-1111-1111-111111111111')` | `'11111111-1111-1111-1111-111111111111'` |
 | `binary` | `Hex('ab')` | `X'ab'` |
 | `boolean` | `true` | `1` |
 | `boolean` | `false` | `0` |
 | `string` | `hi` | `'hi'` |
-| `integer` | `7` | `7` |
-| `reference` | `1` | `null` |
-| `nope` | `x` | `InvalidOperationException` |
-| `datetime` | `2020-01-01T00:00:00Z` | `InvalidOperationException` |
+| `nope` | `x` | `error` |
 | `datetime` | `(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))` | `Now` |
 | `datetime` | `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` | `UtcNow` |
-| `datetime` | `'2020-01-01T00:00:00Z'` | `DateTime('2020-01-01T00:00:00Z')` |
 | `binary` | `X'ab'` | `Hex('ab')` |
-| `string` | `'hi'` | `String` |
-| `string` | `oops` | `InvalidOperationException` |
+| `string` | `'hi'` | `hi` |
+| `string` | `oops` | `error` |
 
 #### change_logs
 
@@ -494,50 +488,50 @@ _None._
 | `binary` | `binary` | `BLOB` |
 | `uuid` | `uuid` | `CHAR(36)` |
 | `reference` | `reference` | `INT` |
-| `string` | `new SpecField { Type = "string" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `string` | `new SpecField { Type = "string", Size = 20000 }` | `LONGTEXT` |
-| `character` | `new SpecField { Type = "character", Size = 4 }` | `CHAR(4)` |
-| `decimal` | `new SpecField { Type = "decimal", Size = new[] { 8, 3 } }` | `DECIMAL(8, 3)` |
-| `binary` | `new SpecField { Type = "binary", Size = 16 }` | `VARBINARY(16)` |
-| `binary` | `new SpecField { Type = "binary", Size = 70000 }` | `LONGBLOB` |
-| `nope` | `nope` | `InvalidOperationException` |
-| `decimal` | `new SpecField { Name = "amount", Type = "decimal", Size = 8 }` | `InvalidOperationException` |
+| `string` | `{ type: string }` | `TEXT` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `string` | `{ type: string, size: 20000 }` | `LONGTEXT` |
+| `character` | `{ type: character, size: 4 }` | `CHAR(4)` |
+| `decimal` | `{ type: decimal, size: [8,3] }` | `DECIMAL(8, 3)` |
+| `binary` | `{ type: binary, size: 16 }` | `VARBINARY(16)` |
+| `binary` | `{ type: binary, size: 70000 }` | `LONGBLOB` |
+| `nope` | `nope` | `error` |
+| `decimal` | `{ type: decimal, name: amount, size: 8 }` | `error` |
 | `integer` | `INT` | `integer` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `nope` | `nope` | `error` |
 
 #### row_type_converters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
-| `binary` | `System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 })` | `new byte[] { 1, 2, 3, 4 }` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `integer` | `""` | `FormatException` |
-| `boolean` | `true` | `1L` |
-| `boolean` | `false` | `0L` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `"2020-01-02 03:04:05.000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `i64` | `1` | `bool` | `true` |
+| `boolean` | `i64` | `0` | `bool` | `false` |
+| `datetime` | `String` | `"2020-01-02T03:04:05.000Z"` | `DateTime<Utc>` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `String` | `"2020-01-02T03:04:05.000+00:00"` | `DateTime<Utc>` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `Uuid` | `550e8400-e29b-41d4-a716-446655440000` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `Vec<u8>` | `[85,14,132,0,226,155,65,212,167,22,68,102,85,68,0,0]` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `i64` | `7` | `String` | `"7"` |
+| `decimal` | `f64` | `10.5` | `String` | `"10.5"` |
+| `decimal` | `String` | `"10.50"` | `String` | `"10.5"` |
+| `decimal` | `String` | `"10.50000000000000"` | `String` | `"10.5"` |
+| `decimal` | `i64` | `0` | `String` | `"0"` |
+| `decimal` | `String` | `"0.00"` | `String` | `"0"` |
+| `integer` | `String` | `"10"` | `i64` | `10` |
+| `integer` | `String` | `"0"` | `i64` | `0` |
+| `integer` | `f64` | `10` | `i64` | `10` |
+| `integer` | `String` | `""` | `error` | `error` |
+| `integer` | `String` | `"1.0"` | `i64` | `1` |
+| `integer` | `String` | `"10.0"` | `i64` | `10` |
+| `integer` | `String` | `"10.00000000000000"` | `i64` | `10` |
+| `integer` | `String` | `"10.50000000000000"` | `error` | `error` |
+| `boolean` | `bool` | `true` | `i64` | `1` |
+| `boolean` | `bool` | `false` | `i64` | `0` |
+| `uuid` | `Uuid` | `550e8400-e29b-41d4-a716-446655440000` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `Decimal` | `10.5` | `String` | `"10.5"` |
+| `binary` | `String` | `AQIDBA==` | `Vec<u8>` | `[1,2,3,4]` |
+| `binary` | `String` | `latin1(1, 2, 3, 4)` | `Vec<u8>` | `[1,2,3,4]` |
+| `datetime` | `String` | `"2020-01-02T03:04:05.000Z"` | `String` | `"2020-01-02 03:04:05.000"` |
+| `binary` | `String` | `AQIDBA==` | `Vec<u8>` | `[1,2,3,4]` |
 
 #### default_value_converter
 
@@ -550,16 +544,14 @@ _None._
 | `boolean` | `true` | `1` |
 | `boolean` | `false` | `0` |
 | `string` | `hi` | `('hi')` |
-| `integer` | `7` | `7` |
-| `reference` | `1` | `null` |
-| `nope` | `x` | `InvalidOperationException` |
+| `nope` | `x` | `error` |
 | `binary` | `(X'ab')` | `Hex('ab')` |
 | `binary` | `X'ab'` | `Hex('ab')` |
-| `string` | `('hi')` | `String` |
-| `string` | `'hi'` | `String` |
+| `string` | `('hi')` | `hi` |
+| `string` | `'hi'` | `hi` |
 | `uuid` | `(UUID())` | `NewId` |
-| `binary` | `X'ab')` | `InvalidOperationException` |
-| `string` | `'hi')` | `InvalidOperationException` |
+| `binary` | `X'ab')` | `error` |
+| `string` | `'hi')` | `error` |
 
 #### change_logs
 
@@ -600,42 +592,44 @@ _None._
 | `binary` | `binary` | `BYTEA` |
 | `uuid` | `uuid` | `UUID` |
 | `reference` | `reference` | `INTEGER` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `character` | `new SpecField { Type = "character", Size = 4 }` | `CHAR(4)` |
-| `decimal` | `new SpecField { Type = "decimal", Size = new[] { 10, 2 } }` | `NUMERIC(10, 2)` |
-| `nope` | `nope` | `InvalidOperationException` |
-| `integer` | `INTEGER` | `integer` |
-| `unsignedinteger` | `BIGINT` | `unsignedinteger` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `character` | `{ type: character, size: 4 }` | `CHAR(4)` |
+| `decimal` | `{ type: decimal, size: [10,2] }` | `NUMERIC(10, 2)` |
+| `nope` | `nope` | `error` |
+| `datetime` | `TIMESTAMPTZ` | `datetime` |
+| `uuid` | `UUID` | `uuid` |
+| `nope` | `nope` | `error` |
 
 #### row_type_converters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `integer` | `""` | `FormatException` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `i64` | `1` | `bool` | `true` |
+| `boolean` | `i64` | `0` | `bool` | `false` |
+| `datetime` | `String` | `"2020-01-02T03:04:05.000Z"` | `DateTime<Utc>` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `String` | `"2020-01-02T03:04:05.000+00:00"` | `DateTime<Utc>` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `Uuid` | `550e8400-e29b-41d4-a716-446655440000` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `Vec<u8>` | `[85,14,132,0,226,155,65,212,167,22,68,102,85,68,0,0]` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `i64` | `7` | `String` | `"7"` |
+| `decimal` | `f64` | `10.5` | `String` | `"10.5"` |
+| `decimal` | `String` | `"10.50"` | `String` | `"10.5"` |
+| `decimal` | `String` | `"10.50000000000000"` | `String` | `"10.5"` |
+| `decimal` | `i64` | `0` | `String` | `"0"` |
+| `decimal` | `String` | `"0.00"` | `String` | `"0"` |
+| `integer` | `String` | `"10"` | `i64` | `10` |
+| `integer` | `String` | `"0"` | `i64` | `0` |
+| `integer` | `f64` | `10` | `i64` | `10` |
+| `integer` | `String` | `""` | `error` | `error` |
+| `integer` | `String` | `"1.0"` | `i64` | `1` |
+| `integer` | `String` | `"10.0"` | `i64` | `10` |
+| `integer` | `String` | `"10.00000000000000"` | `i64` | `10` |
+| `integer` | `String` | `"10.50000000000000"` | `error` | `error` |
+| `boolean` | `bool` | `true` | `i64` | `1` |
+| `boolean` | `bool` | `false` | `i64` | `0` |
+| `uuid` | `Uuid` | `550e8400-e29b-41d4-a716-446655440000` | `String` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `Decimal` | `10.5` | `String` | `"10.5"` |
+| `binary` | `String` | `AQIDBA==` | `Vec<u8>` | `[1,2,3,4]` |
+| `binary` | `String` | `AQIDBA==` | `Vec<u8>` | `[1,2,3,4]` |
 
 #### default_value_converter
 
@@ -644,20 +638,17 @@ _None._
 | `datetime` | `Now` | `LOCALTIMESTAMP` |
 | `datetime` | `UtcNow` | `(NOW() AT TIME ZONE 'UTC')` |
 | `uuid` | `NewId` | `gen_random_uuid()` |
-| `uuid` | `Empty` | `'00000000-0000-0000-0000-000000000000'` |
 | `binary` | `Hex('ab')` | `'\xab'` |
 | `boolean` | `true` | `TRUE` |
 | `boolean` | `false` | `FALSE` |
 | `string` | `hi` | `'hi'` |
-| `integer` | `7` | `7` |
-| `reference` | `1` | `null` |
-| `nope` | `x` | `InvalidOperationException` |
+| `nope` | `x` | `error` |
 | `datetime` | `LOCALTIMESTAMP` | `Now` |
 | `datetime` | `(NOW() AT TIME ZONE 'UTC')` | `UtcNow` |
 | `uuid` | `gen_random_uuid()` | `NewId` |
 | `binary` | `'\xab'` | `Hex('ab')` |
-| `string` | `'hi'` | `String` |
-| `datetime` | `nope` | `InvalidOperationException` |
+| `string` | `'hi'` | `hi` |
+| `datetime` | `nope` | `error` |
 
 #### change_logs
 
@@ -717,42 +708,42 @@ Drivers for TypeScript. Click a tile for information, Overrides, typeConverter, 
 | `binary` | `binary` | `BLOB` |
 | `uuid` | `uuid` | `TEXT` |
 | `reference` | `reference` | `INTEGER` |
-| `string` | `new SpecField { Type = "string" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = "unlimited" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `string` | `{ type: string }` | `TEXT` |
+| `string` | `{ type: string, size: "unlimited" }` | `TEXT` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `nope` | `nope` | `Error` |
 | `string` | `TEXT` | `string` |
 | `integer` | `INTEGER` | `integer` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `nope` | `nope` | `Error` |
 
 #### rowTypeConverters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `""` | `FormatException` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `boolean` | `true` | `1L` |
-| `boolean` | `false` | `0L` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `number` | `1` | `boolean` | `true` |
+| `boolean` | `number` | `0` | `boolean` | `false` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `Date` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000+00:00"` | `Date` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `Uint8Array` | `[85,14,132,0,226,155,65,212,167,22,68,102,85,68,0,0]` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `number` | `7` | `string` | `"7"` |
+| `decimal` | `number` | `10.5` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50"` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50000000000000"` | `string` | `"10.5"` |
+| `decimal` | `number` | `0` | `string` | `"0"` |
+| `decimal` | `string` | `"0.00"` | `string` | `"0"` |
+| `integer` | `string` | `"10"` | `number` | `10` |
+| `integer` | `string` | `"0"` | `number` | `0` |
+| `integer` | `number` | `10` | `number` | `10` |
+| `integer` | `string` | `""` | `DatasourceError` | `DatasourceError` |
+| `integer` | `string` | `"1.0"` | `number` | `1` |
+| `integer` | `string` | `"10.0"` | `number` | `10` |
+| `integer` | `string` | `"10.00000000000000"` | `number` | `10` |
+| `integer` | `string` | `"10.50000000000000"` | `DatasourceError` | `DatasourceError` |
+| `boolean` | `boolean` | `true` | `number` | `1` |
+| `boolean` | `boolean` | `false` | `number` | `0` |
+| `uuid` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `string` | `10.5` | `string` | `"10.5"` |
 
 #### defaultValueConverter
 
@@ -769,14 +760,14 @@ Drivers for TypeScript. Click a tile for information, Overrides, typeConverter, 
 | `string` | `hi` | `'hi'` |
 | `integer` | `7` | `7` |
 | `reference` | `1` | `null` |
-| `nope` | `x` | `InvalidOperationException` |
-| `datetime` | `2020-01-01T00:00:00Z` | `InvalidOperationException` |
+| `nope` | `x` | `Error` |
+| `datetime` | `2020-01-01T00:00:00Z` | `Error` |
 | `datetime` | `(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))` | `Now` |
 | `datetime` | `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))` | `UtcNow` |
 | `datetime` | `'2020-01-01T00:00:00Z'` | `DateTime('2020-01-01T00:00:00Z')` |
 | `binary` | `X'ab'` | `Hex('ab')` |
-| `string` | `'hi'` | `String` |
-| `string` | `oops` | `InvalidOperationException` |
+| `string` | `'hi'` | `hi` |
+| `string` | `oops` | `Error` |
 
 #### changeLogs
 
@@ -816,50 +807,50 @@ _None._
 | `binary` | `binary` | `BLOB` |
 | `uuid` | `uuid` | `CHAR(36)` |
 | `reference` | `reference` | `INT` |
-| `string` | `new SpecField { Type = "string" }` | `TEXT` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `string` | `new SpecField { Type = "string", Size = 20000 }` | `LONGTEXT` |
-| `character` | `new SpecField { Type = "character", Size = 4 }` | `CHAR(4)` |
-| `decimal` | `new SpecField { Type = "decimal", Size = new[] { 8, 3 } }` | `DECIMAL(8, 3)` |
-| `binary` | `new SpecField { Type = "binary", Size = 16 }` | `VARBINARY(16)` |
-| `binary` | `new SpecField { Type = "binary", Size = 70000 }` | `LONGBLOB` |
-| `nope` | `nope` | `InvalidOperationException` |
-| `decimal` | `new SpecField { Name = "amount", Type = "decimal", Size = 8 }` | `InvalidOperationException` |
+| `string` | `{ type: string }` | `TEXT` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `string` | `{ type: string, size: 20000 }` | `LONGTEXT` |
+| `character` | `{ type: character, size: 4 }` | `CHAR(4)` |
+| `decimal` | `{ type: decimal, size: [8,3] }` | `DECIMAL(8, 3)` |
+| `binary` | `{ type: binary, size: 16 }` | `VARBINARY(16)` |
+| `binary` | `{ type: binary, size: 70000 }` | `LONGBLOB` |
+| `nope` | `nope` | `Error` |
+| `decimal` | `{ type: decimal, name: amount, size: 8 }` | `Error` |
 | `integer` | `INT` | `integer` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `nope` | `nope` | `Error` |
 
 #### rowTypeConverters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
-| `binary` | `System.Text.Encoding.Latin1.GetString(new byte[] { 1, 2, 3, 4 })` | `new byte[] { 1, 2, 3, 4 }` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `integer` | `""` | `FormatException` |
-| `boolean` | `true` | `1L` |
-| `boolean` | `false` | `0L` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `"2020-01-02 03:04:05.000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `number` | `1` | `boolean` | `true` |
+| `boolean` | `number` | `0` | `boolean` | `false` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `Date` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000+00:00"` | `Date` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `Uint8Array` | `[85,14,132,0,226,155,65,212,167,22,68,102,85,68,0,0]` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `number` | `7` | `string` | `"7"` |
+| `decimal` | `number` | `10.5` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50"` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50000000000000"` | `string` | `"10.5"` |
+| `decimal` | `number` | `0` | `string` | `"0"` |
+| `decimal` | `string` | `"0.00"` | `string` | `"0"` |
+| `integer` | `string` | `"10"` | `number` | `10` |
+| `integer` | `string` | `"0"` | `number` | `0` |
+| `integer` | `number` | `10` | `number` | `10` |
+| `integer` | `string` | `""` | `DatasourceError` | `DatasourceError` |
+| `integer` | `string` | `"1.0"` | `number` | `1` |
+| `integer` | `string` | `"10.0"` | `number` | `10` |
+| `integer` | `string` | `"10.00000000000000"` | `number` | `10` |
+| `integer` | `string` | `"10.50000000000000"` | `DatasourceError` | `DatasourceError` |
+| `boolean` | `boolean` | `true` | `number` | `1` |
+| `boolean` | `boolean` | `false` | `number` | `0` |
+| `uuid` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `string` | `10.5` | `string` | `"10.5"` |
+| `binary` | `string` | `AQIDBA==` | `Uint8Array` | `[1,2,3,4]` |
+| `binary` | `string` | `latin1(1, 2, 3, 4)` | `Uint8Array` | `[1,2,3,4]` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `string` | `"2020-01-02 03:04:05.000"` |
+| `binary` | `string` | `AQIDBA==` | `Uint8Array` | `[1,2,3,4]` |
 
 #### defaultValueConverter
 
@@ -874,14 +865,14 @@ _None._
 | `string` | `hi` | `('hi')` |
 | `integer` | `7` | `7` |
 | `reference` | `1` | `null` |
-| `nope` | `x` | `InvalidOperationException` |
+| `nope` | `x` | `Error` |
 | `binary` | `(X'ab')` | `Hex('ab')` |
 | `binary` | `X'ab'` | `Hex('ab')` |
-| `string` | `('hi')` | `String` |
-| `string` | `'hi'` | `String` |
+| `string` | `('hi')` | `hi` |
+| `string` | `'hi'` | `hi` |
 | `uuid` | `(UUID())` | `NewId` |
-| `binary` | `X'ab')` | `InvalidOperationException` |
-| `string` | `'hi')` | `InvalidOperationException` |
+| `binary` | `X'ab')` | `Error` |
+| `string` | `'hi')` | `Error` |
 
 #### changeLogs
 
@@ -922,42 +913,44 @@ _None._
 | `binary` | `binary` | `BYTEA` |
 | `uuid` | `uuid` | `UUID` |
 | `reference` | `reference` | `INTEGER` |
-| `string` | `new SpecField { Type = "string", Size = 64 }` | `VARCHAR(64)` |
-| `character` | `new SpecField { Type = "character", Size = 4 }` | `CHAR(4)` |
-| `decimal` | `new SpecField { Type = "decimal", Size = new[] { 10, 2 } }` | `NUMERIC(10, 2)` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `string` | `{ type: string, size: 64 }` | `VARCHAR(64)` |
+| `character` | `{ type: character, size: 4 }` | `CHAR(4)` |
+| `decimal` | `{ type: decimal, size: [10,2] }` | `NUMERIC(10, 2)` |
+| `nope` | `nope` | `Error` |
 | `integer` | `INTEGER` | `integer` |
 | `unsignedinteger` | `BIGINT` | `unsignedinteger` |
-| `nope` | `nope` | `InvalidOperationException` |
+| `nope` | `nope` | `Error` |
 
 #### rowTypeConverters
 
-| Type | From | To |
-|---|---|---|
-| `boolean` | `1L` | `true` |
-| `boolean` | `0L` | `false` |
-| `datetime` | `"2020-01-02T03:04:05.000Z"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `datetime` | `"2020-01-02T03:04:05.000+00:00"` | `new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc)` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000").ToByteArray()` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `7L` | `"7"` |
-| `decimal` | `10.5d` | `"10.5"` |
-| `decimal` | `"10.50"` | `"10.5"` |
-| `decimal` | `"10.50000000000000"` | `"10.5"` |
-| `decimal` | `0L` | `"0"` |
-| `decimal` | `"0.00"` | `"0"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
-| `integer` | `"10"` | `10L` |
-| `integer` | `"0"` | `0L` |
-| `integer` | `10.0d` | `10L` |
-| `integer` | `"1.0"` | `1L` |
-| `integer` | `"10.0"` | `10L` |
-| `integer` | `"10.00000000000000"` | `10L` |
-| `integer` | `"10.50000000000000"` | `FormatException` |
-| `integer` | `""` | `FormatException` |
-| `uuid` | `Guid.Parse("550e8400-e29b-41d4-a716-446655440000")` | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `decimal` | `10.5m` | `"10.5"` |
-| `binary` | `"AQIDBA=="` | `new byte[] { 1, 2, 3, 4 }` |
+| Type | From Type | From | To Type | To |
+|---|---|---|---|---|
+| `boolean` | `number` | `1` | `boolean` | `true` |
+| `boolean` | `number` | `0` | `boolean` | `false` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000Z"` | `Date` | `2020-01-02T03:04:05.000Z` |
+| `datetime` | `string` | `"2020-01-02T03:04:05.000+00:00"` | `Date` | `2020-01-02T03:04:05.000Z` |
+| `uuid` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `uuid` | `Uint8Array` | `[85,14,132,0,226,155,65,212,167,22,68,102,85,68,0,0]` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `number` | `7` | `string` | `"7"` |
+| `decimal` | `number` | `10.5` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50"` | `string` | `"10.5"` |
+| `decimal` | `string` | `"10.50000000000000"` | `string` | `"10.5"` |
+| `decimal` | `number` | `0` | `string` | `"0"` |
+| `decimal` | `string` | `"0.00"` | `string` | `"0"` |
+| `integer` | `string` | `"10"` | `number` | `10` |
+| `integer` | `string` | `"0"` | `number` | `0` |
+| `integer` | `number` | `10` | `number` | `10` |
+| `integer` | `string` | `""` | `DatasourceError` | `DatasourceError` |
+| `integer` | `string` | `"1.0"` | `number` | `1` |
+| `integer` | `string` | `"10.0"` | `number` | `10` |
+| `integer` | `string` | `"10.00000000000000"` | `number` | `10` |
+| `integer` | `string` | `"10.50000000000000"` | `DatasourceError` | `DatasourceError` |
+| `boolean` | `boolean` | `true` | `number` | `1` |
+| `boolean` | `boolean` | `false` | `number` | `0` |
+| `uuid` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` | `string` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `decimal` | `string` | `10.5` | `string` | `"10.5"` |
+| `binary` | `string` | `AQIDBA==` | `Uint8Array` | `[1,2,3,4]` |
+| `binary` | `string` | `AQIDBA==` | `Uint8Array` | `[1,2,3,4]` |
 
 #### defaultValueConverter
 
@@ -973,13 +966,13 @@ _None._
 | `string` | `hi` | `'hi'` |
 | `integer` | `7` | `7` |
 | `reference` | `1` | `null` |
-| `nope` | `x` | `InvalidOperationException` |
+| `nope` | `x` | `Error` |
 | `datetime` | `LOCALTIMESTAMP` | `Now` |
 | `datetime` | `(NOW() AT TIME ZONE 'UTC')` | `UtcNow` |
 | `uuid` | `gen_random_uuid()` | `NewId` |
 | `binary` | `'\xab'` | `Hex('ab')` |
-| `string` | `'hi'` | `String` |
-| `datetime` | `nope` | `InvalidOperationException` |
+| `string` | `'hi'` | `hi` |
+| `datetime` | `nope` | `Error` |
 
 #### changeLogs
 
