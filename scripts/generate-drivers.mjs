@@ -53,12 +53,44 @@ const list = (items, empty = "_None._") =>
 
 const fence = (text) => `\`${String(text).replaceAll("|", "\\|")}\``;
 
+const fieldText = (field) => {
+  const bits = [`type: ${field.type}`];
+  if (field.name !== undefined) bits.push(`name: ${field.name}`);
+  if (field.size !== undefined) bits.push(`size: ${JSON.stringify(field.size)}`);
+  return `{ ${bits.join(", ")} }`;
+};
+
+const display = (value) => {
+  if (value === null || value === undefined) return "null";
+  if (typeof value !== "object") return String(value);
+  if ("field" in value) return fieldText(value.field);
+  if ("error" in value) return String(value.error);
+  if ("latin1" in value) return `latin1(${value.latin1.join(", ")})`;
+  if ("bytes" in value) return JSON.stringify(value.bytes);
+  const [[tag, inner]] = Object.entries(value);
+  if (tag === "text") return JSON.stringify(inner);
+  if (tag === "guid" || tag === "datetime" || tag === "decimal" || tag === "base64") return String(inner);
+  return String(inner);
+};
+
 const typeFromToTable = (rows, typeHeader, empty) => {
   if (!rows?.length) return empty;
   return [
     `| ${typeHeader} | From | To |`,
     "|---|---|---|",
-    ...rows.map((row) => `| ${fence(row.type)} | ${fence(row.from)} | ${fence(row.to)} |`),
+    ...rows.map((row) => `| ${fence(row.type)} | ${fence(display(row.from))} | ${fence(display(row.to))} |`),
+  ].join("\n");
+};
+
+const rowTypeTable = (rows, empty) => {
+  if (!rows?.length) return empty;
+  return [
+    "| Type | From Type | From | To Type | To |",
+    "|---|---|---|---|---|",
+    ...rows.map(
+      (row) =>
+        `| ${fence(row.type)} | ${fence(row.fromType)} | ${fence(display(row.from))} | ${fence(row.toType)} | ${fence(display(row.to))} |`,
+    ),
   ].join("\n");
 };
 
@@ -70,7 +102,7 @@ const tile = (href, logo, title) => `  <a class="driver-tile" href="${href}">
 const driverSection = (language, driver, conversions) => {
   const api = API[language.id];
   const anchor = `${language.id}-${driver.id}`;
-  const tables = conversions[driver.id] ?? {};
+  const tables = conversions[driver.id]?.[language.id] ?? {};
   return `### ${driver.title} {#${anchor}}
 
 <a href="#${language.id}" class="driver-back">← ${language.title} drivers</a>
@@ -89,7 +121,7 @@ ${typeFromToTable(tables.typeConverter, "Type", "_None._")}
 
 #### ${api.converters}
 
-${typeFromToTable(tables.rowTypeConverters, "Type", "_None — cells are already canonical._")}
+${rowTypeTable(tables.rowTypeConverters, "_None — cells are already canonical._")}
 
 #### ${api.defaultValueConverter}
 

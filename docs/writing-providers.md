@@ -333,7 +333,7 @@ pub struct Information {
 
 {{Information|information|information}} is optional metadata a driver may publish. Each list is free-form text: {{Descriptions|descriptions|descriptions}} for capability notes, {{Overrides|overrides|overrides}} for dialect-specific behavior, and {{ChangeLogs|changeLogs|change_logs}} for provider history. The default is unset.
 
-Published drivers list that metadata and C# From/To conversion tables per language on [Languages and Datasource Providers](./drivers.md). Edit `docs/DriverSummary.yaml` for {{Information|information|information}}, Overrides, and ChangeLogs. Conversion tables come from C# converter tests via `scripts/generate-driver-conversions.mjs`. Run `npm run docs:drivers`.
+Published drivers list that metadata and From/To conversion tables per language on [Languages and Datasource Providers](./drivers.md). Edit `docs/DriverSummary.yaml` for {{Information|information|information}}, Overrides, and ChangeLogs. Conversion tables come from `docs/DriverConversions.yaml`. Each language's driver tests run that language's rows. Run `npm run docs:drivers`.
 
 The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. {{SelectInsertedIdStatementTextRenderer.Render|SelectInsertedIdStatementTextRenderer.render|SelectInsertedIdStatementTextRenderer::render}} throws until a provider overrides it.
 
