@@ -73,25 +73,28 @@ const display = (value) => {
   return String(inner);
 };
 
+const wrapTable = (className, rows) =>
+  `<div class="${className}">\n\n${rows.join("\n")}\n\n</div>`;
+
 const typeFromToTable = (rows, typeHeader, empty) => {
   if (!rows?.length) return empty;
-  return [
+  return wrapTable("driver-conversions", [
     `| ${typeHeader} | From | To |`,
     "|---|---|---|",
     ...rows.map((row) => `| ${fence(row.type)} | ${fence(display(row.from))} | ${fence(display(row.to))} |`),
-  ].join("\n");
+  ]);
 };
 
 const rowTypeTable = (rows, empty) => {
   if (!rows?.length) return empty;
-  return [
+  return wrapTable("driver-conversions driver-conversions-cells", [
     "| Type | From Type | From | To Type | To |",
     "|---|---|---|---|---|",
     ...rows.map(
       (row) =>
         `| ${fence(row.type)} | ${fence(row.fromType)} | ${fence(display(row.from))} | ${fence(row.toType)} | ${fence(display(row.to))} |`,
     ),
-  ].join("\n");
+  ]);
 };
 
 const tile = (href, logo, title) => `  <a class="driver-tile" href="${href}">

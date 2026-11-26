@@ -217,6 +217,56 @@ div[class*="language-"] > .example-source-link ~ .example-source-link ~ .example
   color: var(--vp-c-brand-1);
 }
 
+.vp-doc .driver-conversions table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.vp-doc .driver-conversions th,
+.vp-doc .driver-conversions td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+.vp-doc .driver-conversions code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.vp-doc .driver-conversions table th:nth-child(1),
+.vp-doc .driver-conversions table td:nth-child(1) {
+  width: 22%;
+}
+
+.vp-doc .driver-conversions table th:nth-child(2),
+.vp-doc .driver-conversions table td:nth-child(2),
+.vp-doc .driver-conversions table th:nth-child(3),
+.vp-doc .driver-conversions table td:nth-child(3) {
+  width: 39%;
+}
+
+.vp-doc .driver-conversions-cells table th:nth-child(1),
+.vp-doc .driver-conversions-cells table td:nth-child(1) {
+  width: 12%;
+}
+
+.vp-doc .driver-conversions-cells table th:nth-child(2),
+.vp-doc .driver-conversions-cells table td:nth-child(2),
+.vp-doc .driver-conversions-cells table th:nth-child(4),
+.vp-doc .driver-conversions-cells table td:nth-child(4) {
+  width: 14%;
+}
+
+.vp-doc .driver-conversions-cells table th:nth-child(3),
+.vp-doc .driver-conversions-cells table td:nth-child(3),
+.vp-doc .driver-conversions-cells table th:nth-child(5),
+.vp-doc .driver-conversions-cells table td:nth-child(5) {
+  width: 30%;
+}
+
 .quick-start {
   display: flex;
   flex-wrap: wrap;
