@@ -65,9 +65,9 @@ impl ContactGroupsRepository {
     }
 
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let options = Self::options(Arc::clone(&connection))?;
         let contact = ContactsRepository::new(Arc::clone(&connection))?;
         let contact_group_member = ContactGroupMembersRepository::new(Arc::clone(&connection))?;
+        let options = Self::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<ContactGroup>::new(Arc::clone(&connection), options)?;
         repo.add_linked(Enrichment::new("members", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("contact_group_id", "contact_id")), &contact, Arc::clone(&contact_group_member.inner) as Arc<dyn ICRUDRepository<_>>, None);
         Ok(Self { inner: Arc::new(repo), contact, contact_group_member })
@@ -90,8 +90,7 @@ impl ContactGroupsRepository {
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into()];
         let contact = ContactsRepository::new(Arc::clone(&connection))?;
-        let contact_group_member = ContactGroupMembersRepository::new(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<ContactGroup>::new(connection, options)?;
+        let mut repo = ReadonlyRepository::<ContactGroup>::new(connection, options.clone())?;
         repo.add_enriched(Enrichment::new("members", "id", "id", None, EnrichmentPropertyType::List), &contact, None);
         Ok(repo)
     }
@@ -195,9 +194,9 @@ impl ICRUDRepository<ContactGroup> for ContactGroupsRepository {
 }
 
 pub fn contact_groups_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-        let options = ContactGroupsRepository::options(Arc::clone(&connection))?;
         let contact = Arc::new(super::contactsRepository::contacts_row_repository(Arc::clone(&connection))?);
         let contact_group_member = Arc::new(super::contactGroupMembersRepository::contact_group_members_row_repository(Arc::clone(&connection))?);
+        let options = ContactGroupsRepository::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
         repo.add_linked(Enrichment::new("members", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("contact_group_id", "contact_id")), Arc::clone(&contact), Arc::clone(&contact_group_member) as Arc<dyn ICRUDRepository<_>>, None);
         Ok(repo)

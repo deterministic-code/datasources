@@ -26,7 +26,7 @@ class TypeScriptRepositoryGenerators extends RepositoryGenerator {
       ...child,
       repoImport: `./${this.repositoryFile(child.specName, casing)}`,
     }));
-    const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
+    const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing, model.specName));
     const dialects = this.dialectsBag(model);
     const token = model.optimisticConcurrency;
     return {

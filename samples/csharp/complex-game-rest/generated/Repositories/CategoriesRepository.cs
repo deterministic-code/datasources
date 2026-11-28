@@ -2,10 +2,18 @@ using Datasources;
 
 public sealed class CategoriesRepository : CRUDRepository<Backend.Types.View.Category>
 {
-    public CategoriesRepository(IConnection connection) : base(connection, Options(connection)) { }
 
-    public static IReadonlyRepository<Backend.Types.View.Category> CreateReadonly(IConnection connection) =>
-        new ReadonlyRepository<Backend.Types.View.Category>(connection, Options(connection));
+    public CategoriesRepository(IConnection connection) : base(connection, Options(connection))
+    {
+        AddEnriched(new("Parent", "CategoryId", "Id"), new CRUDRepository<Backend.Types.View.Category>(connection, Options(connection)));
+    }
+
+    public static IReadonlyRepository<Backend.Types.View.Category> CreateReadonly(IConnection connection)
+    {
+        var repo = new ReadonlyRepository<Backend.Types.View.Category>(connection, Options(connection));
+        repo.AddEnriched(new("Parent", "CategoryId", "Id"), new ReadonlyRepository<Backend.Types.View.Category>(connection, Options(connection)));
+        return repo;
+    }
 
     public static CRUDRepositoryOptions<Backend.Types.View.Category> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.Category>()
@@ -20,16 +28,16 @@ public sealed class CategoriesRepository : CRUDRepository<Backend.Types.View.Cat
                     ["Created"] = "created",
                     ["Updated"] = "updated",
                     ["Version"] = "version",
-                    ["CategoryId"] = "category_id",
                     ["Name"] = "name",
                     ["Description"] = "description",
                     ["IsEnabled"] = "is_enabled",
                     ["IsDeleted"] = "is_deleted",
+                    ["CategoryId"] = "category_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "CategoryId", "Name", "Description", "IsEnabled", "IsDeleted"],
-                CreateProperties = ["CategoryId", "Name", "Description", "IsEnabled", "IsDeleted"],
-                UpdateProperties = ["Uuid", "CategoryId", "Name", "Description", "IsEnabled", "IsDeleted"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description", "IsEnabled", "IsDeleted", "CategoryId"],
+                CreateProperties = ["Name", "Description", "IsEnabled", "IsDeleted"],
+                UpdateProperties = ["Uuid", "Name", "Description", "IsEnabled", "IsDeleted"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),
@@ -37,7 +45,6 @@ public sealed class CategoriesRepository : CRUDRepository<Backend.Types.View.Cat
                     ["Created"] = new("datetime", false, true),
                     ["Updated"] = new("datetime", false, true),
                     ["Version"] = new("binary", false, true),
-                    ["CategoryId"] = new("biginteger", true, false),
                     ["Name"] = new("string", false, false),
                     ["Description"] = new("string", false, false),
                     ["IsEnabled"] = new("boolean", false, true),
@@ -55,16 +62,16 @@ public sealed class CategoriesRepository : CRUDRepository<Backend.Types.View.Cat
                     ["Created"] = "created",
                     ["Updated"] = "updated",
                     ["Version"] = "version",
-                    ["CategoryId"] = "category_id",
                     ["Name"] = "name",
                     ["Description"] = "description",
                     ["IsEnabled"] = "is_enabled",
                     ["IsDeleted"] = "is_deleted",
+                    ["CategoryId"] = "category_id",
                 }),
                 Ids = ["Id"],
-                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "CategoryId", "Name", "Description", "IsEnabled", "IsDeleted"],
-                CreateProperties = ["Uuid", "Created", "Version", "CategoryId", "Name", "Description", "IsEnabled", "IsDeleted"],
-                UpdateProperties = ["Uuid", "Created", "Version", "CategoryId", "Name", "Description", "IsEnabled", "IsDeleted"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description", "IsEnabled", "IsDeleted", "CategoryId"],
+                CreateProperties = ["Uuid", "Created", "Version", "Name", "Description", "IsEnabled", "IsDeleted"],
+                UpdateProperties = ["Uuid", "Created", "Version", "Name", "Description", "IsEnabled", "IsDeleted"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),
@@ -72,7 +79,6 @@ public sealed class CategoriesRepository : CRUDRepository<Backend.Types.View.Cat
                     ["Created"] = new("datetime", false, true),
                     ["Updated"] = new("datetime", false, true),
                     ["Version"] = new("binary", false, true),
-                    ["CategoryId"] = new("biginteger", true, false),
                     ["Name"] = new("string", false, false),
                     ["Description"] = new("string", false, false),
                     ["IsEnabled"] = new("boolean", false, true),

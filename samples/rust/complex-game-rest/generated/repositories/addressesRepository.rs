@@ -93,8 +93,8 @@ impl AddressesRepository {
     }
 
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let options = Self::options(Arc::clone(&connection))?;
         let address_type = AddressTypesRepository::new(Arc::clone(&connection))?;
+        let options = Self::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<Address>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), &address_type, None);
         repo.add_enriched(Enrichment::new("description", "address_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object), &address_type, None);
@@ -133,7 +133,7 @@ impl AddressesRepository {
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into(), "address_type_id".into()];
         let address_type = AddressTypesRepository::new(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<Address>::new(connection, options)?;
+        let mut repo = ReadonlyRepository::<Address>::new(connection, options.clone())?;
         repo.add_enriched(Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), &address_type, None);
         repo.add_enriched(Enrichment::new("description", "address_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object), &address_type, None);
         Ok(repo)
@@ -238,8 +238,8 @@ impl ICRUDRepository<Address> for AddressesRepository {
 }
 
 pub fn addresses_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-        let options = AddressesRepository::options(Arc::clone(&connection))?;
         let address_type = Arc::new(super::addressTypesRepository::address_types_row_repository(Arc::clone(&connection))?);
+        let options = AddressesRepository::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), Arc::clone(&address_type), None);
         repo.add_enriched(Enrichment::new("description", "address_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object), Arc::clone(&address_type), None);

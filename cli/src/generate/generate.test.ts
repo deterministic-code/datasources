@@ -983,14 +983,14 @@ seeds:
     const loaded = await loadSpec(nodeFs, dir);
     const spec = await DeterministicParser(memoryReader(loaded.files)).parse(loaded.settings);
     const names = spec.types.map((type) => type.name);
-    expect(names).toEqual(expect.arrayContaining(["user_base", "user", "contact", "games", "categories", "user_settings"]));
+    expect(names).toEqual(expect.arrayContaining(["user_base", "user", "contact", "games", "category", "user_settings"]));
     expect(spec.types.find((type) => type.name === "user")?.fields.map((field) => field.name)).toEqual(
       expect.arrayContaining(["settings", "roles", "groups"]),
     );
     expect(spec.types.find((type) => type.name === "contacts_base")?.fields.some((field) => field.name === "user_id")).toBe(true);
     const models = planRepositories(spec, "typescript", loaded.settings);
     expect(models.map((model) => model.specName)).toEqual(
-      expect.arrayContaining(["user", "games", "contact", "categories", "reviews", "game_states"]),
+      expect.arrayContaining(["user", "games", "contact", "category", "reviews", "game_states"]),
     );
     const entries = await deterministic.generateTypes({
       dialect: "typescript",
@@ -1576,6 +1576,243 @@ types: []
         { "backend.datasources": "sqlite" },
       ),
     ).toThrow("item: no expanded type");
+  });
+
+  it("plans a singular host-key view field as an object enrichment", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - category_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_id:
+            references: category_base.id
+            is_nullable: true
+        - name:
+            type: string
+  - category:
+      tags: [view_type]
+      inherits: category_base
+      fields:
+        - parent:
+            type: category
+            references: category_base.parent_id
+            is_nullable: true
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const csharp = planRepositories(spec, "csharp", settings);
+    const model = csharp.find((item) => item.specName === "category");
+    expect(model?.enrichments).toEqual([
+      {
+        destination: "Parent",
+        source: "ParentId",
+        relatedKey: "Id",
+        kind: "object",
+        via: "category",
+        viaType: "Category",
+      },
+    ]);
+    expect(model?.schema.some((column) => column.from === "ParentId")).toBe(false);
+    expect(model?.schema.some((column) => column.from === "Parent")).toBe(false);
+    expect(model?.createProperties).not.toContain("ParentId");
+    expect(model?.createProperties).not.toContain("Parent");
+    expect(model?.readProperties).toContain("ParentId");
+    const generated = await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(files), settings });
+    const text = textOf(generated, "CategoriesRepository.cs");
+    expect(text).toContain('AddEnriched(new("Parent", "ParentId", "Id"), new CRUDRepository<Backend.Types.View.Category>(connection, Options()))');
+    expect(text).not.toContain("public CategoriesRepository Category");
+    const types = await deterministic.generateTypes({ dialect: "csharp", reader: memoryReader(files), settings });
+    const category = textOf(types, "View/Category.cs");
+    expect(category).toContain("public record class Category");
+    expect(category).toContain("public Category? Parent");
+    expect(category).not.toContain("ParentId");
+    expect(category).not.toContain(": Backend.Types.Datasource.CategoryBase");
+    expect(category).not.toContain(": CategoryBase");
+    const listed = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - category_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - extra:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - category_id:
+            references: category_base.id
+  - category:
+      tags: [view_type]
+      inherits: category_base
+      fields:
+        - child:
+            type: extra
+            references: extra.category_id
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse(settings);
+    expect(() => planRepositories(listed, "csharp", settings)).toThrow("category.child");
+  });
+
+  it("plans a singular host-key view field whose FK lives on a grandparent", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - table_root:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_id:
+            references: table_root.id
+            is_nullable: true
+  - category_base:
+      tags: [datasource_type]
+      inherits: table_root
+      fields:
+        - name:
+            type: string
+  - category:
+      tags: [view_type]
+      inherits: category_base
+      fields:
+        - parent:
+            type: category
+            references: category_base.parent_id
+            is_nullable: true
+`,
+      "datasource.yaml": defaultDatasourceYaml,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const model = planRepositories(spec, "csharp", settings).find((item) => item.specName === "category");
+    expect(model?.enrichments).toEqual([
+      {
+        destination: "Parent",
+        source: "ParentId",
+        relatedKey: "Id",
+        kind: "object",
+        via: "category",
+        viaType: "Category",
+      },
+    ]);
+  });
+
+  it("rejects a composite host-key view field", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - category_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - tenant_id:
+            type: integer
+        - parent_id:
+            references: category_base.id
+            is_nullable: true
+  - category:
+      tags: [view_type]
+      inherits: category_base
+      fields:
+        - parent:
+            type: category
+            references: [category_base.parent_id, category_base.tenant_id]
+            is_nullable: true
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({ "backend.datasources": "sqlite" });
+    expect(() => planRepositories(spec, "csharp", { "backend.datasources": "sqlite" })).toThrow("category.parent");
+  });
+
+  it("rejects a host-key view field when the host column is missing", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - category_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_id:
+            references: category_base.id
+            is_nullable: true
+  - category:
+      tags: [view_type]
+      inherits: category_base
+      fields:
+        - parent:
+            type: category
+            references: category_base.parent_id
+            is_nullable: true
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({ "backend.datasources": "sqlite" });
+    for (const type of [...spec.types, ...spec.expandedTypes]) {
+      if (type.name === "category_base") type.fields = type.fields.filter((field) => field.name !== "parent_id");
+    }
+    expect(() => planRepositories(spec, "csharp", { "backend.datasources": "sqlite" })).toThrow("category.parent");
+  });
+
+  it("uses the host identity when the host key is not itself a reference", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - category_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_id:
+            type: integer
+            is_nullable: true
+  - category:
+      tags: [view_type]
+      inherits: category_base
+      fields:
+        - parent:
+            type: category
+            references: category_base.parent_id
+            is_nullable: true
+`,
+        "datasource.yaml": defaultDatasourceYaml,
+      }),
+    ).parse({ "backend.datasources": "sqlite" });
+    const model = planRepositories(spec, "csharp", { "backend.datasources": "sqlite" }).find((item) => item.specName === "category");
+    expect(model?.enrichments).toEqual([
+      {
+        destination: "Parent",
+        source: "ParentId",
+        relatedKey: "Id",
+        kind: "object",
+        via: "category",
+        viaType: "Category",
+      },
+    ]);
   });
 
   it("keeps default write lists when an engine file omits a type", async () => {

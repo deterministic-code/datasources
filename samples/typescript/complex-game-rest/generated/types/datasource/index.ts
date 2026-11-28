@@ -16,7 +16,7 @@ export { contactGroupMember, ContactGroupMember } from "./contactGroupMember";
 export { legacyContact, LegacyContact } from "./legacyContact";
 export { contactChangeLog, ContactChangeLog } from "./contactChangeLog";
 export { userSetting, UserSetting } from "./userSetting";
-export { category, Category } from "./category";
+export { categoryBase, CategoryBase } from "./categoryBase";
 export { gamesBase, GamesBase } from "./gamesBase";
 export { gamesCategory, GamesCategory } from "./gamesCategory";
 export { gameState, GameState } from "./gameState";

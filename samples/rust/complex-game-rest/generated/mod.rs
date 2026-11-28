@@ -35,8 +35,8 @@ pub mod legacyContact;
 pub mod contactChangeLog;
 #[path = "types/datasource/userSetting.rs"]
 pub mod userSetting;
-#[path = "types/datasource/category.rs"]
-pub mod category;
+#[path = "types/datasource/categoryBase.rs"]
+pub mod categoryBase;
 #[path = "types/datasource/gamesBase.rs"]
 pub mod gamesBase;
 #[path = "types/datasource/gamesCategory.rs"]
@@ -75,6 +75,8 @@ pub mod contactGroup;
 pub mod userSettingsMap;
 #[path = "types/view/user.rs"]
 pub mod user;
+#[path = "types/view/category.rs"]
+pub mod category;
 #[path = "types/view/gameSettingsMap.rs"]
 pub mod gameSettingsMap;
 #[path = "types/view/game.rs"]
@@ -101,7 +103,7 @@ pub use contactGroupMember::*;
 pub use legacyContact::*;
 pub use contactChangeLog::*;
 pub use userSetting::*;
-pub use category::*;
+pub use categoryBase::*;
 pub use gamesBase::*;
 pub use gamesCategory::*;
 pub use gameState::*;
@@ -121,6 +123,7 @@ pub use phone::*;
 pub use contactGroup::*;
 pub use userSettingsMap::*;
 pub use user::*;
+pub use category::*;
 pub use gameSettingsMap::*;
 pub use game::*;
 pub use skillTree::*;

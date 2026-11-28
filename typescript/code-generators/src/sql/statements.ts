@@ -48,8 +48,13 @@ import {
   type LiveTable,
   type SqlTable,
 } from "./common/sql-schema.ts";
-export const columnOf = (naming: StatementNaming, table: LiveTable, field: TypeField): Column => {
-  const converterField = converterFieldOf(field);
+export const columnOf = (
+  naming: StatementNaming,
+  table: LiveTable,
+  field: TypeField,
+  tables: readonly SqlTable[],
+): Column => {
+  const converterField = converterFieldOf(field, tables);
   const generated = usesGeneratedIdColumn(table, field);
   const named = UniqueConstraint.nameOf(
     tableStem(table), naming, fieldStem(table, field.name), "default_constraint",
@@ -73,7 +78,7 @@ export const createTableStatementOf = (
   tables: readonly SqlTable[],
 ): CreateTableStatement => {
   const keys = tableIdentity(table);
-  const columns = table.fields.map((field) => columnOf(naming, table, field));
+  const columns = table.fields.map((field) => columnOf(naming, table, field, tables));
   const stem = tableStem(table);
   const uniques = table.fields
     .filter((field) => fieldOverlay(table, field.name)?.isUnique === true || field.name === "uuid")

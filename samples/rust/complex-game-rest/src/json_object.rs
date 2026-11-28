@@ -35,6 +35,12 @@ fn peek_to_json(value: Peek<'_, '_>) -> Result<Json> {
             None => Ok(Json::Null),
         };
     }
+    if let Ok(pointer) = value.into_pointer() {
+        return match pointer.borrow_inner() {
+            Some(inner) => peek_to_json(inner),
+            None => Ok(Json::Null),
+        };
+    }
     if is_column(value.shape()) {
         return Ok(scalar_to_json(value));
     }
@@ -60,6 +66,9 @@ fn write_into<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) -> R
     if is_option(shape) {
         return write_option(partial, json, shape);
     }
+    if is_pointer(shape) {
+        return write_pointer(partial, json, shape);
+    }
     if is_column(shape) {
         return write_column(partial, json, shape);
     }
@@ -68,6 +77,12 @@ fn write_into<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) -> R
         Def::Map(map) => write_map(partial, json, map.v()),
         _ => write_struct(partial, json, shape),
     }
+}
+
+fn write_pointer<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) -> Result<Partial<'a>> {
+    let inner = pointer_inner(shape)?;
+    let partial = write_into(partial.begin_smart_ptr().map_err(reflect)?, json, inner)?;
+    partial.end().map_err(reflect)
 }
 
 fn write_option<'a>(partial: Partial<'a>, json: &Json, shape: &'static Shape) -> Result<Partial<'a>> {
@@ -382,6 +397,19 @@ fn is_option(shape: &'static Shape) -> bool {
     matches!(shape.def, Def::Option(_))
 }
 
+fn is_pointer(shape: &'static Shape) -> bool {
+    matches!(shape.def, Def::Pointer(_))
+}
+
+fn pointer_inner(shape: &'static Shape) -> Result<&'static Shape> {
+    match shape.def {
+        Def::Pointer(pointer) => pointer.pointee().ok_or_else(|| {
+            DatasourceError::message(format!("{} has no pointee", shape.type_identifier))
+        }),
+        _ => Err(DatasourceError::message(format!("{} is not a pointer", shape.type_identifier))),
+    }
+}
+
 fn option_inner(shape: &'static Shape) -> Result<&'static Shape> {
     match shape.def {
         Def::Option(option) => Ok(option.t()),
@@ -460,6 +488,27 @@ mod tests {
         assert_eq!(json["stamp"], "AQ==");
         let copied = JsonObjectSerializer::deserialize::<House>(&json).unwrap();
         assert_eq!(copied, house);
+    }
+
+    #[derive(Clone, Debug, Default, PartialEq, datasources::Facet)]
+    #[facet(crate = ::datasources::facet)]
+    struct Nested {
+        parent: Option<Box<Kid>>,
+    }
+
+    #[test]
+    fn object_round_trips_boxed_parent() {
+        let nested = Nested {
+            parent: Some(Box::new(Kid {
+                id: 1,
+                label: "root".into(),
+            })),
+        };
+        let json = JsonObjectSerializer::serialize(&nested).unwrap();
+        assert_eq!(json["parent"]["id"], 1);
+        assert_eq!(json["parent"]["label"], "root");
+        let copied = JsonObjectSerializer::deserialize::<Nested>(&json).unwrap();
+        assert_eq!(copied, nested);
     }
 
     #[test]

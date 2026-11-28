@@ -72,13 +72,13 @@ types:
         - groups:
             type: group[]
             references: user_group.user_id
-  - categories:
-      tags: [datasource_type, view_type]
+  - category_base:
+      tags: [datasource_type]
       inherits: base
       fields:
         - category_id:
             # null is a root category
-            references: categories.id
+            references: category_base.id
             is_nullable: true
         - name:
             type: string
@@ -92,6 +92,14 @@ types:
         - is_deleted:
             type: boolean
             default_value: false
+  - category:
+      tags: [view_type]
+      inherits: category_base
+      fields:
+        - parent:
+            type: category
+            references: category_base.category_id
+            is_nullable: true
   - games_base:
       tags: [datasource_type]
       inherits: base
@@ -118,7 +126,7 @@ types:
         - game_id:
             references: games_base.id
         - category_id:
-            references: categories.id
+            references: category_base.id
   - game_states:
       tags: [datasource_type]
       inherits: base
@@ -179,7 +187,7 @@ types:
             type: game_settings_map{}
             references: game_settings.game_id
         - categories:
-            type: categories[]
+            type: category[]
             references: games_categories.game_id
   - skills:
       tags: [datasource_type]

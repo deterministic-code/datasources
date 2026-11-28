@@ -108,6 +108,12 @@ class Named {
   TypeName = "";
 }
 
+class Category {
+  Id = 0;
+  Name = "";
+  Parent: Category | null = null;
+}
+
 class SkipDelete<T extends object> extends DeleteEnrichmentStrategy<T> {
   deleteChildren(): Promise<void> {
     return Promise.resolve();
@@ -528,6 +534,30 @@ describe("CRUDRepository", () => {
     await expect(parentsRepo.create(Object.assign(new Parent(), {
       Children: [Object.assign(new Child(), { Label: "a" })],
     }))).rejects.toThrow(/Children/);
+  });
+
+  it("create-copies-nested-object-id", async () => {
+    const connection = await setup();
+    const schema = new Schema({
+      Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+      Name: { type: "string", nullable: false, hasDefault: false },
+    });
+    const options = {
+      type: Category,
+      propertyMappings: columns,
+      ids: ["Id"] as string[],
+      schema,
+      readProperties: ["Id", "ParentId", "Name"],
+    };
+    const categories = new CRUDRepository<Category>(connection, options);
+    const root = await categories.create(Object.assign(new Category(), { Name: "food" }));
+    categories.addEnriched(
+      { destinationProperty: "Parent", sourceProperty: "ParentId", relatedKey: "Id" },
+      new CRUDRepository<Category>(connection, options),
+    );
+    await categories.create(Object.assign(new Category(), { Name: "fruit", Parent: Object.assign(new Category(), { Id: root.Id }) }));
+    const loaded = (await collectAsync(categories.read())).find((item) => item.Name === "fruit");
+    expect(loaded?.Parent?.Id).toBe(root.Id);
   });
 
   it("create-resolves-lookup-name", async () => {

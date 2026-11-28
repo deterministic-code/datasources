@@ -4,7 +4,7 @@ use crate::json_row::snake_key;
 use crate::repositories::contact_groups_repository::ContactGroupsRepository;
 use crate::repositories::contacts_repository::ContactsRepository;
 use crate::repositories::legacy_contacts_repository::LegacyContactsRepository;
-use crate::{Address, Contact, ContactGroup, LegacyContact, Phone};
+use crate::{Contact, ContactGroup, LegacyContact};
 use chrono::{DateTime, Utc};
 use datasources::{DatasourceError, Operator, Value, Where, CRUDRepository};
 use futures_util::TryStreamExt;
@@ -73,7 +73,7 @@ impl Api {
     }
 
     async fn post_contact(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let contact = stamp(read(body)?, &self.clock);
+        let contact = read(body)?;
         Ok(ok(201, &self.contacts.create(contact).await?)?)
     }
 
@@ -87,7 +87,7 @@ impl Api {
         if self.contacts.read_single_where(&by, None).await?.is_none() {
             return Ok(empty(404));
         }
-        let mut contact = stamp(read(body)?, &self.clock);
+        let mut contact = read(body)?;
         contact.id = i32::try_from(id).map_err(|_| ApiError::bad("id is required"))?;
         self.contacts.update(contact, None).await?;
         Ok(ok(200, &self.contacts.read_single_where(&by, None).await?.unwrap_or_default())?)
@@ -108,7 +108,7 @@ impl Api {
     }
 
     async fn post_group(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let group = stamp_group(read(body)?, &self.clock);
+        let group = read(body)?;
         Ok(ok(201, &self.groups_repo.create(group).await?)?)
     }
 
@@ -122,7 +122,7 @@ impl Api {
         if self.groups_repo.read_single_where(&by, None).await?.is_none() {
             return Ok(empty(404));
         }
-        let mut group = stamp_group(read(body)?, &self.clock);
+        let mut group = read(body)?;
         group.id = i32::try_from(id).map_err(|_| ApiError::bad("id is required"))?;
         self.groups_repo.update(group, None).await?;
         Ok(ok(200, &self.groups_repo.read_single_where(&by, None).await?.unwrap_or_default())?)
@@ -294,80 +294,6 @@ fn decode(text: &str) -> String {
         i += 1;
     }
     String::from_utf8_lossy(&out).into_owned()
-}
-
-fn stamp(mut contact: Contact, clock: &Clock) -> Contact {
-    let now = date(clock);
-    contact.email = Some(contact.email.unwrap_or_default());
-    contact.notes = Some(if contact.notes.as_deref().unwrap_or("").is_empty() {
-        "none".into()
-    } else {
-        contact.notes.unwrap_or_default()
-    });
-    if contact.uuid.is_nil() {
-        contact.uuid = clock.uuid();
-    }
-    if contact.created == DateTime::<Utc>::default() {
-        contact.created = now;
-    }
-    contact.updated = now;
-    if contact.version.is_empty() {
-        contact.version = vec![0];
-    }
-    contact.addresses = contact.addresses.into_iter().map(|address| stamp_address(address, clock)).collect();
-    contact.phones = contact.phones.into_iter().map(|phone| stamp_phone(phone, clock)).collect();
-    contact
-}
-
-fn stamp_group(mut group: ContactGroup, clock: &Clock) -> ContactGroup {
-    let now = date(clock);
-    if group.uuid.is_nil() {
-        group.uuid = clock.uuid();
-    }
-    if group.created == DateTime::<Utc>::default() {
-        group.created = now;
-    }
-    group.updated = now;
-    if group.version.is_empty() {
-        group.version = vec![0];
-    }
-    group
-}
-
-fn stamp_address(mut address: Address, clock: &Clock) -> Address {
-    let now = date(clock);
-    if address.country.as_deref().unwrap_or("").is_empty() {
-        address.country = Some("US".into());
-    }
-    if address.uuid.is_nil() {
-        address.uuid = clock.uuid();
-    }
-    if address.created == DateTime::<Utc>::default() {
-        address.created = now;
-    }
-    address.updated = now;
-    if address.version.is_empty() {
-        address.version = vec![0];
-    }
-    address
-}
-
-fn stamp_phone(mut phone: Phone, clock: &Clock) -> Phone {
-    let now = date(clock);
-    if phone.label.as_deref().unwrap_or("").is_empty() {
-        phone.label = Some("Main".into());
-    }
-    if phone.uuid.is_nil() {
-        phone.uuid = clock.uuid();
-    }
-    if phone.created == DateTime::<Utc>::default() {
-        phone.created = now;
-    }
-    phone.updated = now;
-    if phone.version.is_empty() {
-        phone.version = vec![0];
-    }
-    phone
 }
 
 fn text_legacy(mut row: LegacyContact, clock: &Clock) -> LegacyContact {

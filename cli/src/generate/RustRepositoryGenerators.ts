@@ -35,7 +35,7 @@ class RustRepositoryGenerators extends RepositoryGenerator {
       rowFn: casing.convertFields(this.rowRepositoryStem(item.specName)),
       comma: index > 0 ? {} : undefined,
     }));
-    const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
+    const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing, model.specName));
     const dialects = dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ typeName: model.typeName, ...planned }),
@@ -44,7 +44,7 @@ class RustRepositoryGenerators extends RepositoryGenerator {
     const token = model.optimisticConcurrency;
     const vias = new Map<string, string>();
     for (const item of model.enrichments) {
-      if (!isSelfVia(item)) vias.set(item.via, item.viaType);
+      if (!isSelfVia(item, model.specName)) vias.set(item.via, item.viaType);
       if (isGraph(item)) vias.set(item.link, item.linkType);
     }
     const rowEntity = this.isRustEnum(spec, model.specName);
@@ -60,14 +60,14 @@ class RustRepositoryGenerators extends RepositoryGenerator {
       readonlyFn: casing.convertFields(this.readonlyRepositoryStem(model.specName)),
       child,
       childFields: child.length === 0 ? "" : `, ${child.map((item) => item.field).join(", ")}`,
-      shareConnection: child.length === 0 && !model.enrichments.some(isSelfVia) ? undefined : {},
+      shareConnection: child.length === 0 && !model.enrichments.some((item) => isSelfVia(item, model.specName)) ? undefined : {},
       enrichments,
       hasEnrichments: enrichments.length === 0 ? undefined : {},
       hasLinked: model.enrichments.some((item) => item.kind === "linked" || item.kind === "graph") ? {} : undefined,
       hasTree: model.enrichments.some((item) => item.kind === "tree") ? {} : undefined,
       hasGraph: model.enrichments.some((item) => item.kind === "graph") ? {} : undefined,
       ...this.writeOf(model, casing),
-      hasSelfVia: model.enrichments.some(isSelfVia) ? {} : undefined,
+      hasSelfVia: model.enrichments.some((item) => isSelfVia(item, model.specName)) ? {} : undefined,
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
       schema: this.schemaBag(model.schema),

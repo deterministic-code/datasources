@@ -58,39 +58,39 @@ public sealed class Api
             return await ($"{method.ToUpperInvariant()} {path}" switch
             {
                 "GET /users" => Get(users, query, ["Id", "Username"]),
-                "POST /users" => Post(users, StampUser(Read<User>(body))),
-                "PUT /users" => Put(users, query, StampUser(Read<User>(body))),
+                "POST /users" => Post(users, Read<User>(body)),
+                "PUT /users" => Put(users, query, Read<User>(body)),
                 "DELETE /users" => Delete(users, query),
                 "GET /categories" => GetCategories(query),
-                "POST /categories" => Post(categories, StampCategory(Read<Category>(body))),
-                "PUT /categories" => Put(categories, query, StampCategory(Read<Category>(body))),
+                "POST /categories" => Post(categories, Read<Category>(body)),
+                "PUT /categories" => Put(categories, query, Read<Category>(body)),
                 "DELETE /categories" => Delete(categories, query),
                 "GET /games" => GetGames(query),
-                "POST /games" => Post(games, StampGame(Read<Game>(body))),
-                "PUT /games" => Put(games, query, StampGame(Read<Game>(body))),
+                "POST /games" => Post(games, Read<Game>(body)),
+                "PUT /games" => Put(games, query, Read<Game>(body)),
                 "DELETE /games" => Delete(games, query),
                 "GET /reviews" => Get(reviews, query, ["Id", "GameId", "UserId"]),
-                "POST /reviews" => Post(reviews, StampReview(Read<Review>(body))),
-                "PUT /reviews" => Put(reviews, query, StampReview(Read<Review>(body))),
+                "POST /reviews" => Post(reviews, Read<Review>(body)),
+                "PUT /reviews" => Put(reviews, query, Read<Review>(body)),
                 "DELETE /reviews" => Delete(reviews, query),
                 "GET /game_states" => Get(states, query, ["Id", "GameId", "UserId"]),
-                "POST /game_states" => Post(states, StampState(Read<GameState>(body))),
-                "PUT /game_states" => Put(states, query, StampState(Read<GameState>(body))),
+                "POST /game_states" => Post(states, Read<GameState>(body)),
+                "PUT /game_states" => Put(states, query, Read<GameState>(body)),
                 "DELETE /game_states" => Delete(states, query),
                 "GET /contacts" => Get(contacts, query, ["Id", "UserId"]),
-                "POST /contacts" => Post(contacts, StampContact(Read<Contact>(body))),
-                "PUT /contacts" => Put(contacts, query, StampContact(Read<Contact>(body))),
+                "POST /contacts" => Post(contacts, Read<Contact>(body)),
+                "PUT /contacts" => Put(contacts, query, Read<Contact>(body)),
                 "DELETE /contacts" => Delete(contacts, query),
                 "GET /skills" => Get(skills, query, ["Id", "Name"]),
-                "POST /skills" => Post(skills, StampSkill(Read<Skill>(body))),
-                "PUT /skills" => Put(skills, query, StampSkill(Read<Skill>(body))),
+                "POST /skills" => Post(skills, Read<Skill>(body)),
+                "PUT /skills" => Put(skills, query, Read<Skill>(body)),
                 "DELETE /skills" => Delete(skills, query),
                 "GET /skill_tree" => Get(skillTrees, query, ["Id", "Name"]),
                 "GET /items" => Get(items, query, ["Id", "Name"]),
-                "POST /items" => Post(items, StampItem(Read<Item>(body))),
-                "PUT /items" => Put(items, query, StampItem(Read<Item>(body))),
+                "POST /items" => Post(items, Read<Item>(body)),
+                "PUT /items" => Put(items, query, Read<Item>(body)),
                 "DELETE /items" => Delete(items, query),
-                "POST /item_links" => Post(itemLinks, StampLink(Read<ItemLink>(body))),
+                "POST /item_links" => Post(itemLinks, Read<ItemLink>(body)),
                 "GET /item_graph" => Get(itemGraphs, query, ["Id", "Name"]),
                 _ => Task.FromResult((404, "")),
             });
@@ -120,7 +120,8 @@ public sealed class Api
 
     async Task<(int Status, string Body)> GetCategories(Dictionary<string, string> query)
     {
-        var raw = query.GetValueOrDefault("categoryId") ?? query.GetValueOrDefault("category_id") ?? "";
+        var raw = query.GetValueOrDefault("parentId") ?? query.GetValueOrDefault("parent_id")
+            ?? query.GetValueOrDefault("categoryId") ?? query.GetValueOrDefault("category_id") ?? "";
         IWhere filter = raw.Length == 0
             ? new Where(new Datasources.Operator.IsNull(new Identifier("CategoryId")))
             : new Where(new Datasources.Operator.Equals("CategoryId", long.Parse(raw)));
@@ -150,85 +151,6 @@ public sealed class Api
         if (row is null) return (404, "");
         await repo.Delete(row);
         return (204, "");
-    }
-
-    static User StampUser(User user)
-    {
-        Stamp(user);
-        user.Settings ??= [];
-        user.Roles ??= [];
-        user.Groups ??= [];
-        foreach (var role in user.Roles) Stamp(role);
-        foreach (var group in user.Groups) Stamp(group);
-        return user;
-    }
-
-    static Category StampCategory(Category category)
-    {
-        Stamp(category);
-        return category;
-    }
-
-    static Skill StampSkill(Skill skill)
-    {
-        Stamp(skill);
-        return skill;
-    }
-
-    static Item StampItem(Item item)
-    {
-        Stamp(item);
-        return item;
-    }
-
-    static ItemLink StampLink(ItemLink link)
-    {
-        Stamp(link);
-        return link;
-    }
-
-    static Game StampGame(Game game)
-    {
-        Stamp(game);
-        game.Settings ??= [];
-        game.Categories ??= [];
-        foreach (var category in game.Categories) Stamp(category);
-        return game;
-    }
-
-    static Review StampReview(Review review)
-    {
-        Stamp(review);
-        return review;
-    }
-
-    static GameState StampState(GameState state)
-    {
-        Stamp(state);
-        return state;
-    }
-
-    static Contact StampContact(Contact contact)
-    {
-        contact.Email = contact.Email ?? "";
-        contact.Notes = string.IsNullOrEmpty(contact.Notes) ? "none" : contact.Notes;
-        contact.Uuid = contact.Uuid == Guid.Empty ? Clock.Uuid() : contact.Uuid;
-        contact.Created = contact.Created == default ? Clock.Now() : contact.Created;
-        contact.Updated = Clock.Now();
-        contact.Version ??= [0];
-        contact.Addresses ??= [];
-        contact.Phones ??= [];
-        contact.Settings ??= [];
-        contact.Prefs ??= [];
-        return contact;
-    }
-
-    static void Stamp(Base row)
-    {
-        row.Uuid = row.Uuid == Guid.Empty ? Clock.Uuid() : row.Uuid;
-        row.Created = row.Created == default ? Clock.Now() : row.Created;
-        row.Updated = Clock.Now();
-        row.Version ??= [0];
     }
 
     static void SetId<T>(T row, long id)
@@ -263,7 +185,7 @@ public sealed class Api
         return combined is null ? null : new Where(combined);
     }
 
-    static bool NumberKey(string key) => key is "Id" or "UserId" or "GameId" or "CategoryId";
+    static bool NumberKey(string key) => key is "Id" or "UserId" or "GameId" or "CategoryId" or "ParentId";
 
     static string ToCamel(string name) => char.ToLowerInvariant(name[0]) + name[1..];
 

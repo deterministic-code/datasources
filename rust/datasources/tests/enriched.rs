@@ -221,6 +221,30 @@ async fn deep_create_writes_children_stamps_fk() {
 }
 
 #[tokio::test]
+async fn create_copies_nested_object_id() {
+    let connection = setup(&mut []).await;
+    let mut categories = mapped_crud(Arc::clone(&connection), "Category");
+    let root = categories
+        .create(record(&[("Name", Value::from("food"))]))
+        .await
+        .unwrap();
+    let via = Arc::new(mapped_crud(connection, "Category"));
+    categories.add_enriched(
+        Enrichment::new("Parent", "ParentId", "Id", None, datasources::EnrichmentPropertyType::Object),
+        via,
+        None,
+    );
+    let created = categories
+        .create(record(&[
+            ("Name", Value::from("fruit")),
+            ("Parent", encode_rows(&[record(&[("Id", root.get("Id").unwrap().clone())])])),
+        ]))
+        .await
+        .unwrap();
+    assert_eq!(created["ParentId"], root["Id"]);
+}
+
+#[tokio::test]
 async fn create_resolves_lookup_name() {
     let texts = Arc::new(Mutex::new(Vec::new()));
     let connection: Arc<dyn Connection> = Arc::new(RecordingConnection::new(

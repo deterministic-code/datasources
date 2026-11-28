@@ -294,6 +294,8 @@ static void RequireBulkContact(Contact row, int index)
 
 static void RequireAdaChildren(Contact row, string engineType, string engineCity, string number)
 {
+    if (row.ContactSourceName != "Manual")
+        throw new InvalidOperationException("contact source name");
     if (row.Addresses.Count != 2 || row.Phones.Count != 1)
         throw new InvalidOperationException("child counts");
     var engine = row.Addresses.First(address => address.Line1 == "12 Analytical Engine");

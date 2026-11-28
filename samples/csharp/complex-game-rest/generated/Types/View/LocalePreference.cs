@@ -2,7 +2,7 @@
 namespace Backend.Types.View;
 
 /** View LocalePreference. */
-public class LocalePreference
+public record class LocalePreference
 {
     public string Locale { get; set; } = "";
     public string Timezone { get; set; } = "";

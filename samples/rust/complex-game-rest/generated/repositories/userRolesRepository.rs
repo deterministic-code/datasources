@@ -82,7 +82,7 @@ impl UserRolesRepository {
             ("role_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "user_id".into(), "role_id".into()];
-        let repo = ReadonlyRepository::<UserRole>::new(connection, options)?;
+        let repo = ReadonlyRepository::<UserRole>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

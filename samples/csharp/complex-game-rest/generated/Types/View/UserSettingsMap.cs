@@ -2,7 +2,7 @@
 namespace Backend.Types.View;
 
 /** View UserSettingsMap. */
-public class UserSettingsMap
+public record class UserSettingsMap
 {
     public string Key { get; set; } = "";
     public string Value { get; set; } = "";

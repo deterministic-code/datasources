@@ -50,14 +50,19 @@ if (loaded[0].GetProperty("username").GetString() != "ada-byron") throw new Inva
 
 var root = await Call(api, "POST", "/categories", Json(new { name = "arcade", description = "root" }), 201);
 var rootId = root.GetProperty("id").GetInt64();
-var child = await Call(api, "POST", "/categories", Json(new { name = "shooter", description = "child", categoryId = rootId }), 201);
+var child = await Call(api, "POST", "/categories", Json(new { name = "shooter", description = "child", parent = new { id = rootId } }), 201);
 var childId = child.GetProperty("id").GetInt64();
+if (child.GetProperty("parent").GetProperty("id").GetInt64() != rootId)
+    throw new InvalidOperationException("create nested parent");
 var roots = await Call(api, "GET", "/categories?category_id=", null, 200);
 if (roots.GetArrayLength() != 1 || roots[0].GetProperty("id").GetInt64() != rootId)
     throw new InvalidOperationException("get category roots");
 var children = await Call(api, "GET", $"/categories?categoryId={rootId}", null, 200);
 if (children.GetArrayLength() != 1 || children[0].GetProperty("id").GetInt64() != childId)
     throw new InvalidOperationException("get category children");
+if (children[0].GetProperty("parent").GetProperty("id").GetInt64() != rootId
+    || children[0].GetProperty("parent").GetProperty("name").GetString() != "arcade")
+    throw new InvalidOperationException("read nested parent");
 
 var game = await Call(api, "POST", "/games", Json(new
 {
@@ -204,6 +209,8 @@ static JsonElement AddressByLine1(JsonElement contact, string line1)
 static void RequireAdaChildren(JsonElement listed, string engineType, string engineCity, string number)
 {
     var contact = ContactRow(listed);
+    if (contact.GetProperty("contactSourceName").GetString() != "Manual")
+        throw new InvalidOperationException("contact source name");
     if (contact.GetProperty("addresses").GetArrayLength() != 2
         || contact.GetProperty("phones").GetArrayLength() != 1)
         throw new InvalidOperationException("child counts");

@@ -103,6 +103,13 @@ public class CRUDRepositoryTests
         public string TypeName { get; set; } = "";
     }
 
+    sealed class Category
+    {
+        public long Id { get; set; }
+        public string Name { get; set; } = "";
+        public Category? Parent { get; set; }
+    }
+
     static readonly ChangeCasingMapper Snake = new(Casing.Pascal, Casing.Snake);
 
     static readonly DictionaryMapper<string> References = new(new Dictionary<string, string>
@@ -475,6 +482,35 @@ public class CRUDRepositoryTests
         var error = await Assert.ThrowsAsync<DatasourceException>(() =>
             parentsRepo.Create(new Parent { Children = [new Child { Label = "a" }] }));
         Assert.Contains("Children", error.Message);
+    }
+
+    [Fact]
+    public async Task CreateCopiesNestedObjectId()
+    {
+        var connection = await Setup();
+        var schema = new Schema(new Dictionary<string, SchemaColumn>
+        {
+            ["Id"] = new("integer", IsId: true),
+            ["Name"] = new("string"),
+        });
+        var repo = new CRUDRepository<Category>(connection, new CRUDRepositoryOptions<Category>
+        {
+            Ids = ["Id"],
+            PropertyMappings = Snake,
+            Schema = schema,
+            ReadProperties = ["Id", "ParentId", "Name"],
+        });
+        var root = await repo.Create(new Category { Name = "food" });
+        repo.AddEnriched(new("Parent", "ParentId", "Id"), new CRUDRepository<Category>(connection, new CRUDRepositoryOptions<Category>
+        {
+            Ids = ["Id"],
+            PropertyMappings = Snake,
+            Schema = schema,
+            ReadProperties = ["Id", "ParentId", "Name"],
+        }));
+        await repo.Create(new Category { Name = "fruit", Parent = new Category { Id = root.Id } });
+        var loaded = Assert.Single(await repo.Read().ToListAsync(), item => item.Name == "fruit");
+        Assert.Equal(root.Id, loaded.Parent?.Id);
     }
 
     [Fact]

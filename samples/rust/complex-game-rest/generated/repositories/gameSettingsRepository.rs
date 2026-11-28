@@ -85,7 +85,7 @@ impl GameSettingsRepository {
             ("value".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "game_id".into(), "name".into(), "value".into()];
-        let repo = ReadonlyRepository::<GameSetting>::new(connection, options)?;
+        let repo = ReadonlyRepository::<GameSetting>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

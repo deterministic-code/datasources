@@ -2,7 +2,7 @@
 namespace Backend.Types.View;
 
 /** View Phone. */
-public class Phone
+public record class Phone
 {
     public long Id { get; set; }
     public System.Guid Uuid { get; set; } = Guid.NewGuid();

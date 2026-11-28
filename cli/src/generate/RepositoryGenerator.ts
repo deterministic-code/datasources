@@ -10,6 +10,7 @@ import {
   children as childModels,
   dialectsOf,
   isLinked,
+  isSelfVia,
   type OptimisticConcurrency,
   type PlannedEnrichment,
   type RepositoryModel,
@@ -115,7 +116,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     }));
   }
 
-  protected enrichmentOf(item: PlannedEnrichment, casing: ICasingStrategy): Record<string, unknown> {
+  protected enrichmentOf(item: PlannedEnrichment, casing: ICasingStrategy, specName?: string): Record<string, unknown> {
     return {
       destination: this.quote(item.destination),
       destinationIdent: item.destination,
@@ -135,6 +136,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
       via: childField(casing, item.via),
       viaType: item.viaType,
       object: item.kind === "object" ? {} : undefined,
+      self: isSelfVia(item, specName) && item.kind === "object" ? {} : undefined,
       dictionary: item.kind === "dictionary" ? {} : undefined,
       list: item.kind === "list" || item.kind === "linked" || item.kind === "tree" || item.kind === "graph" ? {} : undefined,
       tree: item.kind === "tree" ? {} : undefined,

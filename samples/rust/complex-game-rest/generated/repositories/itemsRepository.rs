@@ -79,7 +79,7 @@ impl ItemsRepository {
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into()];
-        let repo = ReadonlyRepository::<Item>::new(connection, options)?;
+        let repo = ReadonlyRepository::<Item>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

@@ -1,17 +1,21 @@
 using Datasources;
 
-public sealed class SkillTreesRepository : ReadonlyRepository<Backend.Types.View.SkillTree>
+public sealed class SkillTreesRepository : CRUDRepository<Backend.Types.View.SkillTree>
 {
 
-    public SkillTreesRepository(IConnection connection) : base(connection, Options(connection))
+    public SkillTreesRepository(IConnection connection) : base(connection, Options(connection) with { Write = new DefaultWriteEnrichmentStrategy<Backend.Types.View.SkillTree>(create: new TreeCreateEnrichmentStrategy<Backend.Types.View.SkillTree>()) })
     {
-        AddEnriched(new("Children", "Id", "ParentSkillId", Type: EnrichmentPropertyType.List), new ReadonlyRepository<Backend.Types.View.SkillTree>(connection, Options(connection)), new TreeReadonlyEnrichmentStrategy<Backend.Types.View.SkillTree>());
+        AddEnriched(new("Children", "Id", "ParentSkillId", Type: EnrichmentPropertyType.List), new CRUDRepository<Backend.Types.View.SkillTree>(connection, Options(connection)), new TreeReadonlyEnrichmentStrategy<Backend.Types.View.SkillTree>());
     }
 
-    public static IReadonlyRepository<Backend.Types.View.SkillTree> CreateReadonly(IConnection connection) =>
-        new SkillTreesRepository(connection);
+    public static IReadonlyRepository<Backend.Types.View.SkillTree> CreateReadonly(IConnection connection)
+    {
+        var repo = new ReadonlyRepository<Backend.Types.View.SkillTree>(connection, Options(connection));
+        repo.AddEnriched(new("Children", "Id", "ParentSkillId", Type: EnrichmentPropertyType.List), new ReadonlyRepository<Backend.Types.View.SkillTree>(connection, Options(connection)), new TreeReadonlyEnrichmentStrategy<Backend.Types.View.SkillTree>());
+        return repo;
+    }
 
-    public static ReadonlyRepositoryMappingOptions<Backend.Types.View.SkillTree> Options(IConnection connection) =>
+    public static CRUDRepositoryOptions<Backend.Types.View.SkillTree> Options(IConnection connection) =>
         new CRUDRepositoryBuilder<Backend.Types.View.SkillTree>()
             .Add(new()
             {
@@ -27,7 +31,10 @@ public sealed class SkillTreesRepository : ReadonlyRepository<Backend.Types.View
                     ["ParentSkillId"] = "parent_skill_id",
                     ["Name"] = "name",
                 }),
+                Ids = ["Id"],
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ParentSkillId", "Name"],
+                CreateProperties = ["ParentSkillId", "Name"],
+                UpdateProperties = ["Uuid", "ParentSkillId", "Name"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),
@@ -53,7 +60,10 @@ public sealed class SkillTreesRepository : ReadonlyRepository<Backend.Types.View
                     ["ParentSkillId"] = "parent_skill_id",
                     ["Name"] = "name",
                 }),
+                Ids = ["Id"],
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ParentSkillId", "Name"],
+                CreateProperties = ["Uuid", "Created", "Version", "ParentSkillId", "Name"],
+                UpdateProperties = ["Uuid", "Created", "Version", "ParentSkillId", "Name"],
                 Schema = new(new Dictionary<string, SchemaColumn>
                 {
                     ["Id"] = new("biginteger", false, false, true),

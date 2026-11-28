@@ -164,6 +164,7 @@ export const planRepositories = (
     const schema = persistedColumnFields(shape).flatMap((field) => {
       const from = property(field.name);
       if (field.type.length === 0) return [];
+      if (skipColumns.has(from) && field.kind === "type") return [];
       return [{
         from,
         type: field.type,
@@ -447,6 +448,40 @@ const relations = (
         ...(keys !== undefined ? { keys } : {}),
       });
     }
+  }
+  const typeOf = (name: string): Type | undefined => types.get(name) ?? expanded.get(name);
+  const ancestors = (start: Type): Type[] => {
+    const out: Type[] = [];
+    const seen = new Set<string>();
+    let current: Type | undefined = start;
+    while (current && !seen.has(current.name)) {
+      seen.add(current.name);
+      out.push(current);
+      current = current.inherits ? typeOf(current.inherits) : undefined;
+    }
+    return out;
+  };
+  const hostLine = ancestors(authored);
+  for (const field of authored.fields) {
+    if (field.kind !== "type" || field.isArray || field.isMap === true || field.references === undefined) continue;
+    const pairs = referencePairs(field.references);
+    if (pairs.length !== 1) throw new Error(`${authored.name}.${field.name}`);
+    const ref = pairs[0];
+    const host = expanded.get(ref.type);
+    const hostField = host?.fields.find((item) => item.name === ref.field);
+    if (!hostLine.some((type) => type.name === ref.type) || hostField === undefined) {
+      throw new Error(`${authored.name}.${field.name}`);
+    }
+    const pointed = referenceOf(hostField.references);
+    const via = named(field.base);
+    planned.push({
+      destination: property(field.name),
+      source: property(ref.field),
+      relatedKey: pointed === undefined ? identity(ref.type) : property(pointed.field),
+      kind: "object",
+      via: via.via,
+      viaType: via.viaType,
+    });
   }
   const parent = types.get(authored.inherits ?? "") ?? expanded.get(authored.inherits ?? "");
   for (const memberName of authored.union ?? []) {

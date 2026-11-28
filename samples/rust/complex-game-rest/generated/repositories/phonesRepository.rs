@@ -69,8 +69,8 @@ impl PhonesRepository {
     }
 
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let options = Self::options(Arc::clone(&connection))?;
         let phone_type = PhoneTypesRepository::new(Arc::clone(&connection))?;
+        let options = Self::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<Phone>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("phone_type_name", "phone_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), &phone_type, None);
         repo.add_enriched(Enrichment::new("description", "phone_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object), &phone_type, None);
@@ -97,7 +97,7 @@ impl PhonesRepository {
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "number".into(), "label".into(), "phone_type_id".into()];
         let phone_type = PhoneTypesRepository::new(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<Phone>::new(connection, options)?;
+        let mut repo = ReadonlyRepository::<Phone>::new(connection, options.clone())?;
         repo.add_enriched(Enrichment::new("phone_type_name", "phone_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), &phone_type, None);
         repo.add_enriched(Enrichment::new("description", "phone_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object), &phone_type, None);
         Ok(repo)
@@ -202,8 +202,8 @@ impl ICRUDRepository<Phone> for PhonesRepository {
 }
 
 pub fn phones_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-        let options = PhonesRepository::options(Arc::clone(&connection))?;
         let phone_type = Arc::new(super::phoneTypesRepository::phone_types_row_repository(Arc::clone(&connection))?);
+        let options = PhonesRepository::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("phone_type_name", "phone_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), Arc::clone(&phone_type), None);
         repo.add_enriched(Enrichment::new("description", "phone_type_id", "id", Some("description".into()), EnrichmentPropertyType::Object), Arc::clone(&phone_type), None);

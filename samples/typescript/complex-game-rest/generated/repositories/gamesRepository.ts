@@ -17,23 +17,23 @@ const readonlyOptions = (connection: IConnection) =>
 
 export class GamesRepository extends CRUDRepository<Game> {
   readonly gameSettings: GameSettingsRepository;
-  readonly categories: CategoriesRepository;
+  readonly category: CategoriesRepository;
   readonly gamesCategories: GamesCategoriesRepository;
   constructor(connection: IConnection) {
     super(connection, options(connection));
     this.gameSettings = new GameSettingsRepository(connection);
-    this.categories = new CategoriesRepository(connection);
+    this.category = new CategoriesRepository(connection);
     this.gamesCategories = new GamesCategoriesRepository(connection);
     this.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "gameId", relatedProperty: "value", dictionaryKey: "name", type: "dictionary" }, this.gameSettings);
-    this.addLinked({ destinationProperty: "categories", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", association: { parent: "gameId", related: "categoryId" }, type: "list" }, this.categories, this.gamesCategories);
+    this.addLinked({ destinationProperty: "categories", sourceProperty: "id", relatedKey: "id", association: { parent: "gameId", related: "categoryId" }, type: "list" }, this.category, this.gamesCategories);
   }
   static createReadonly(connection: IConnection) {
     const repo = new ReadonlyRepository<Game>(connection, readonlyOptions(connection));
     const gameSettings = new GameSettingsRepository(connection);
-    const categories = new CategoriesRepository(connection);
+    const category = new CategoriesRepository(connection);
     const gamesCategories = new GamesCategoriesRepository(connection);
     repo.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "gameId", relatedProperty: "value", dictionaryKey: "name", type: "dictionary" }, gameSettings);
-    repo.addEnriched({ destinationProperty: "categories", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", type: "list" }, categories);
+    repo.addEnriched({ destinationProperty: "categories", sourceProperty: "id", relatedKey: "id", type: "list" }, category);
     return repo;
   }
 }

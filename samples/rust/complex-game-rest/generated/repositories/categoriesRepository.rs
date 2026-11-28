@@ -1,4 +1,4 @@
-use datasources::{Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, IWhere, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Statement, Result, async_trait, CommandMiddleware, IdKey, Response, Stream};
+use datasources::{Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, IWhere, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Statement, Result, async_trait, CommandMiddleware, IdKey, Response, Stream};
 use super::super::Category;
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -25,16 +25,15 @@ impl CategoriesRepository {
             ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
             ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
             ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("category_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: true, has_default: false, is_id: false }),
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("is_enabled".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
             ("is_deleted".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
         ]));
         options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "category_id".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()];
-        options.create_properties = Some(vec!["category_id".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "category_id".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into(), "category_id".into()];
+        options.create_properties = Some(vec!["name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
         options
     })
     .add_for("sqlite", {
@@ -49,16 +48,15 @@ impl CategoriesRepository {
             ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
             ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
             ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("category_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: true, has_default: false, is_id: false }),
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("is_enabled".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
             ("is_deleted".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
         ]));
         options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "category_id".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()];
-        options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "category_id".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
-        options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "category_id".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into(), "category_id".into()];
+        options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()]);
         options
     })
     .for_connection(connection.as_ref())?;
@@ -68,7 +66,8 @@ impl CategoriesRepository {
 
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
         let options = Self::options(Arc::clone(&connection))?;
-        let repo = CRUDRepository::<Category>::new(connection, options)?;
+        let mut repo = CRUDRepository::<Category>::new(Arc::clone(&connection), options)?;
+        let via_parent = Arc::new(CRUDRepository::<Category>::new(Arc::clone(&connection), Self::options(Arc::clone(&connection))?)?); repo.add_enriched(Enrichment::new("parent", "category_id", "id", None, EnrichmentPropertyType::Object), via_parent, None);
         Ok(Self { inner: Arc::new(repo) })
     }
 
@@ -84,14 +83,14 @@ impl CategoriesRepository {
             ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
             ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true, is_id: false }),
             ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
-            ("category_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: true, has_default: false, is_id: false }),
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("description".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
             ("is_enabled".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
             ("is_deleted".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
         ]));
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "category_id".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into()];
-        let repo = ReadonlyRepository::<Category>::new(connection, options)?;
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into(), "is_enabled".into(), "is_deleted".into(), "category_id".into()];
+        let mut repo = ReadonlyRepository::<Category>::new(Arc::clone(&connection), options.clone())?;
+        let via_parent = Arc::new(ReadonlyRepository::<Category>::new(Arc::clone(&connection), options.clone())?); repo.add_enriched(Enrichment::new("parent", "category_id", "id", None, EnrichmentPropertyType::Object), via_parent, None);
         Ok(repo)
     }
 }
@@ -195,5 +194,7 @@ impl ICRUDRepository<Category> for CategoriesRepository {
 
 pub fn categories_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
         let options = CategoriesRepository::options(Arc::clone(&connection))?;
-    CRUDRepository::<datasources::Row>::new(connection, options)
+        let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
+        let via_parent = Arc::new(CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), CategoriesRepository::options(Arc::clone(&connection))?)?); repo.add_enriched(Enrichment::new("parent", "category_id", "id", None, EnrichmentPropertyType::Object), via_parent, None);
+        Ok(repo)
 }

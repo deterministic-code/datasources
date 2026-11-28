@@ -1,7 +1,7 @@
 // schema-version: 1.0
-/** Type Category. */
-export const category = (init: Partial<Category>): Category => Object.assign(new Category(), init);
-export class Category {
+/** Type CategoryBase. */
+export const categoryBase = (init: Partial<CategoryBase>): CategoryBase => Object.assign(new CategoryBase(), init);
+export class CategoryBase {
   id!: number;
   uuid: string = crypto.randomUUID();
   created: Date = new Date();

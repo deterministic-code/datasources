@@ -82,7 +82,7 @@ impl GamesCategoriesRepository {
             ("category_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "game_id".into(), "category_id".into()];
-        let repo = ReadonlyRepository::<GamesCategory>::new(connection, options)?;
+        let repo = ReadonlyRepository::<GamesCategory>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

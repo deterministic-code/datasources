@@ -82,7 +82,7 @@ impl UserGroupsRepository {
             ("group_id".into(), SchemaColumn { type_name: "biginteger".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "user_id".into(), "group_id".into()];
-        let repo = ReadonlyRepository::<UserGroup>::new(connection, options)?;
+        let repo = ReadonlyRepository::<UserGroup>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

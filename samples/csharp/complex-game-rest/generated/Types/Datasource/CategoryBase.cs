@@ -1,8 +1,8 @@
 // schema-version: 1.0
 namespace Backend.Types.Datasource;
 
-/** Type Category. */
-public class Category : Base
+/** Type CategoryBase. */
+public class CategoryBase : Base
 {
     public long? CategoryId { get; set; }
     public string Name { get; set; } = "";

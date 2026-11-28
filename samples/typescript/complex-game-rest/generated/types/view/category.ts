@@ -7,9 +7,9 @@ export class Category {
   created: Date = new Date();
   updated: Date = new Date();
   version: string = Buffer.from([0]).toString("base64");
-  categoryId!: number | null;
   name: string = "";
   description: string = "";
   isEnabled: boolean = true;
   isDeleted: boolean = false;
+  parent!: Category | null;
 }

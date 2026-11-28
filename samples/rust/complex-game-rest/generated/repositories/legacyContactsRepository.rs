@@ -52,7 +52,7 @@ impl LegacyContactsRepository {
             ("imported_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()];
-        let repo = ReadonlyRepository::<LegacyContact>::new(connection, options)?;
+        let repo = ReadonlyRepository::<LegacyContact>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

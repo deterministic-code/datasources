@@ -66,6 +66,19 @@ public abstract class CreateEnrichmentStrategy<T>
         foreach (var item in items)
         foreach (var entry in entries)
         {
+            if (entry.Enrichment.Type is not EnrichmentPropertyType.Object) continue;
+            if (entry.Enrichment.Association is not null) continue;
+            if (entry.Enrichment.RelatedProperty is not null) continue;
+            var source = entry.Enrichment.SourceProperty;
+            if (record.TryGetValue(source, out var present) && !Missing(present)) continue;
+            if (Get(item, entry.Enrichment.DestinationProperty) is not { } nested) continue;
+            var nestedId = Value.From(Get(nested, entry.Enrichment.RelatedKey));
+            if (Missing(nestedId)) continue;
+            Set(record, source, nestedId);
+        }
+        foreach (var item in items)
+        foreach (var entry in entries)
+        {
             if (entry is not StoredEnrichment<T> stored || entry.Enrichment.RelatedProperty is not { } related)
                 continue;
             if (entry.Enrichment.Association is not null)

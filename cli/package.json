@@ -16,12 +16,12 @@
     "typecheck": "npm run build --prefix ../typescript/datasources && npm run build --prefix ../typescript/providers/sqlite && npm run build --prefix ../typescript/providers/mysql && node scripts/build-generators.mjs && tsc --noEmit"
   },
   "dependencies": {
-    "@deterministic-code/csharp-generators": "github:deterministic-code/generators-csharp#main",
+    "@deterministic-code/csharp-generators": "github:deterministic-code/generators-csharp#0407393c55b4578fb0b1a9abd044c443014b4040",
     "@deterministic-code/datasources": "file:../typescript/datasources",
     "@deterministic-code/datasources-code-generators": "file:../typescript/code-generators",
-    "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#48eb1be39c0f2add808897e33dfcb62dda34de92",
+    "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#d1760090bee9235c3bca2c1327c08a5d842c4d6d",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#2b502616b95be8a282863ef43f481d59f02bf8fc",
-    "@deterministic-code/rust-generators": "github:deterministic-code/generators-rust#main",
+    "@deterministic-code/rust-generators": "github:deterministic-code/generators-rust#2dadd67392e19f30b197a8cc56194f7719b6d8e6",
     "@deterministic-code/typescript-generators": "github:deterministic-code/generators-typescript#main",
     "@inquirer/prompts": "^7.8.0",
     "tsx": "^4.20.5",
