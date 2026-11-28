@@ -24,10 +24,6 @@ import type { Game } from "../generated/types/view/game.ts";
 import type { Category } from "../generated/types/view/category.ts";
 import type { Review } from "../generated/types/datasource/review.ts";
 import type { GameState } from "../generated/types/datasource/gameState.ts";
-import type { Skill } from "../generated/types/datasource/skill.ts";
-import type { Item } from "../generated/types/datasource/item.ts";
-import type { ItemLink } from "../generated/types/datasource/itemLink.ts";
-import { clock } from "./clock.ts";
 import { toJson } from "./jsonObject.ts";
 
 export type HttpResult = { status: number; body: string };
@@ -54,39 +50,39 @@ export class Api {
       const query = parse(split < 0 ? "" : target.slice(split + 1));
       return await ({
         "GET /users": () => get(this.users, query, ["id", "username"]),
-        "POST /users": () => post(this.users, stampUser(read(body))),
-        "PUT /users": () => put(this.users, query, stampUser(read(body)), (row, id) => { row.id = id; }),
+        "POST /users": () => post(this.users, read(body)),
+        "PUT /users": () => put(this.users, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /users": () => remove(this.users, query),
         "GET /categories": () => this.getCategories(query),
-        "POST /categories": () => post(this.categories, stampRow(read(body))),
-        "PUT /categories": () => put(this.categories, query, stampRow(read(body)), (row, id) => { row.id = id; }),
+        "POST /categories": () => post(this.categories, read(body)),
+        "PUT /categories": () => put(this.categories, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /categories": () => remove(this.categories, query),
         "GET /games": () => this.getGames(query),
-        "POST /games": () => post(this.games, stampGame(read(body))),
-        "PUT /games": () => put(this.games, query, stampGame(read(body)), (row, id) => { row.id = id; }),
+        "POST /games": () => post(this.games, read(body)),
+        "PUT /games": () => put(this.games, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /games": () => remove(this.games, query),
         "GET /reviews": () => get(this.reviews, query, ["id", "gameId", "userId"]),
-        "POST /reviews": () => post(this.reviews, stampRow(read(body))),
-        "PUT /reviews": () => put(this.reviews, query, stampRow(read(body)), (row, id) => { row.id = id; }),
+        "POST /reviews": () => post(this.reviews, read(body)),
+        "PUT /reviews": () => put(this.reviews, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /reviews": () => remove(this.reviews, query),
         "GET /game_states": () => get(this.states, query, ["id", "gameId", "userId"]),
-        "POST /game_states": () => post(this.states, stampRow(read(body))),
-        "PUT /game_states": () => put(this.states, query, stampRow(read(body)), (row, id) => { row.id = id; }),
+        "POST /game_states": () => post(this.states, read(body)),
+        "PUT /game_states": () => put(this.states, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /game_states": () => remove(this.states, query),
         "GET /contacts": () => get(this.contacts, query, ["id", "userId"]),
-        "POST /contacts": () => post(this.contacts, stampContact(read(body))),
-        "PUT /contacts": () => put(this.contacts, query, stampContact(read(body)), (row, id) => { row.id = id; }),
+        "POST /contacts": () => post(this.contacts, read(body)),
+        "PUT /contacts": () => put(this.contacts, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /contacts": () => remove(this.contacts, query),
         "GET /skills": () => get(this.skills, query, ["id", "name"]),
-        "POST /skills": () => post(this.skills, stampRow(read(body) as Skill)),
-        "PUT /skills": () => put(this.skills, query, stampRow(read(body) as Skill), (row, id) => { row.id = id; }),
+        "POST /skills": () => post(this.skills, read(body)),
+        "PUT /skills": () => put(this.skills, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /skills": () => remove(this.skills, query),
         "GET /skill_tree": () => get(this.skillTrees, query, ["id", "name"]),
         "GET /items": () => get(this.items, query, ["id", "name"]),
-        "POST /items": () => post(this.items, stampRow(read(body) as Item)),
-        "PUT /items": () => put(this.items, query, stampRow(read(body) as Item), (row, id) => { row.id = id; }),
+        "POST /items": () => post(this.items, read(body)),
+        "PUT /items": () => put(this.items, query, read(body), (row, id) => { row.id = id; }),
         "DELETE /items": () => remove(this.items, query),
-        "POST /item_links": () => post(this.itemLinks, stampRow(read(body) as ItemLink)),
+        "POST /item_links": () => post(this.itemLinks, read(body)),
         "GET /item_graph": () => get(this.itemGraphs, query, ["id", "name"]),
       }[`${method.toUpperCase()} ${path}`] ?? (() => Promise.resolve({ status: 404, body: "" })))();
     } catch (error) {
@@ -110,8 +106,8 @@ export class Api {
   };
 
   private getCategories = async (query: Record<string, string>): Promise<HttpResult> => {
-    const raw = query.categoryId ?? query.category_id ?? "";
-    if (raw.length > 0 && Number.isNaN(Number(raw))) throw new TypeError("categoryId is required");
+    const raw = query.parentId ?? query.parent_id ?? query.categoryId ?? query.category_id ?? "";
+    if (raw.length > 0 && Number.isNaN(Number(raw))) throw new TypeError("parentId is required");
     const filter = raw.length === 0
       ? new Where(new Operator.IsNull(new Identifier("categoryId")))
       : new Where(new Operator.Equals("categoryId", Number(raw)));
@@ -127,46 +123,6 @@ class RequestError extends Error {
     super(message);
   }
 }
-
-const stampUser = (user: User): User => {
-  stampRow(user);
-  user.settings ??= {};
-  user.roles ??= [];
-  user.groups ??= [];
-  for (const role of user.roles) stampRow(role);
-  for (const group of user.groups) stampRow(group);
-  return user;
-};
-
-const stampGame = (game: Game): Game => {
-  stampRow(game);
-  game.settings ??= {};
-  game.categories ??= [];
-  for (const category of game.categories) stampRow(category);
-  return game;
-};
-
-const stampContact = (contact: Contact): Contact => {
-  contact.email = contact.email ?? "";
-  contact.notes = contact.notes ? contact.notes : "none";
-  contact.uuid = contact.uuid || clock.uuid();
-  contact.created = contact.created || clock.now();
-  contact.updated = clock.now();
-  contact.version = contact.version || "AA==";
-  contact.addresses ??= [];
-  contact.phones ??= [];
-  contact.settings ??= {};
-  contact.prefs ??= {};
-  return contact;
-};
-
-const stampRow = <T extends { uuid?: string; created?: Date; updated?: Date; version?: string | Uint8Array }>(row: T): T => {
-  row.uuid = row.uuid || clock.uuid();
-  row.created = row.created || clock.now();
-  row.updated = clock.now();
-  row.version = row.version || "AA==";
-  return row;
-};
 
 const get = async <T>(
   repo: { read: (query?: IWhere) => AsyncIterable<T> },
@@ -217,7 +173,7 @@ const whereOf = (query: Record<string, string>, keys: string[]): IWhere | undefi
   return parts.length === 0 ? undefined : new Where(parts.reduce((left, right) => new Operator.And(left, right)));
 };
 
-const numberKey = (key: string): boolean => key === "id" || key === "userId" || key === "gameId" || key === "categoryId";
+const numberKey = (key: string): boolean => key === "id" || key === "userId" || key === "gameId" || key === "categoryId" || key === "parentId";
 
 const read = (body: string | undefined) => JSON.parse(body || "{}");
 

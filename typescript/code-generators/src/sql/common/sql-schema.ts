@@ -195,6 +195,23 @@ export const resolveReference = (
   };
 };
 
+/** Terminal referenced column size. Authored `size` on `field` wins. */
+export const referencedSizeOf = (
+  tables: readonly SqlTable[],
+  field: TypeField,
+  seen: Set<string> = new Set(),
+): TypeField["size"] => {
+  if (field.size != null) return field.size;
+  const pairs = referencePairs(field.references);
+  if (pairs.length !== 1) return undefined;
+  const { type, field: column } = pairs[0]!;
+  const key = `${type}.${column}`;
+  if (seen.has(key)) return undefined;
+  seen.add(key);
+  const found = tables.find((table) => table.name === type)?.fields.find((entry) => entry.name === column);
+  return found === undefined ? undefined : referencedSizeOf(tables, found, seen);
+};
+
 /** Attach physical names and order parent tables before children. */
 export const buildLiveTables = (
   types: SqlTable[],

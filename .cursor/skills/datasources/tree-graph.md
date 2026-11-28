@@ -2,6 +2,31 @@
 
 # Tree and graph views
 
+## Nested object on a view
+
+A singular related type on a `view_type` fills that property from the host foreign key. The inherited table keeps the key column. The expanded view drops that column because the nested object's id is the key. Create and update copy `Parent.Id` onto the missing foreign key. They do not insert the related row. The generated C# view is a `record class` of the remaining base columns plus `Parent`, not `Category : CategoryBase`.
+
+```yaml
+- category_base:
+    tags: [datasource_type]
+    fields:
+      - id: { type: integer, is_id: true }
+      - parent_id:
+          references: category_base.id
+          is_nullable: true
+      - name: { type: string, size: 128 }
+- category:
+    tags: [view_type]
+    inherits: category_base
+    fields:
+      - parent:
+          type: category
+          references: category_base.parent_id
+          is_nullable: true
+```
+
+Read fills `Parent` with the row whose id equals `parent_id`. One level: `Parent.Parent` stays unset. A null parent leaves the nullable key null. The view type has no `parent_id` property.
+
 ## Tree and graph views
 
 A `tree` or `graph` tag on a `view_type` fills nested children on read and writes the same nested object on `Create` / `create` / `create`. The inherited `datasource_type` stays a flat table. `readonly_lookup` on that view does not make the generated class read-only.

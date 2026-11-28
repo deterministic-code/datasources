@@ -228,6 +228,46 @@ seeds:
     assert.doesNotMatch(contacts, /gender_type_id TEXT/);
   });
 
+  it("infers a reference column size from the parent string", async () => {
+    const files = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": `types:
+  - badge:
+      tags: [datasource_type]
+      fields:
+        - badge_id:
+            type: uuid
+            is_id: true
+        - code:
+            type: string
+            size: 64
+            is_id: true
+  - badge_alias:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - parent_badge_id:
+            references: badge.badge_id
+        - parent_code:
+            references: badge.code
+`,
+        }),
+        settings: {},
+      },
+      ["mysql"],
+    );
+    const up = files.find((entry) => entry.filename.endsWith("0001_initial_up.sql"));
+    assert.ok(up, "expected initial up migration");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    const aliases = sql.match(/CREATE TABLE badge_aliases \(([\s\S]*?)\);/)?.[1];
+    assert.ok(aliases, "expected badge_aliases table body");
+    assert.match(aliases, /parent_code VARCHAR\(64\)/);
+    assert.doesNotMatch(aliases, /parent_code TEXT/);
+  });
+
   it("shortens index, foreign key, and trigger names over 64 characters in migrations", async () => {
     const naming = createCasing({}).naming;
     const index = CreateIndexStatement.nameOf(longEntity, naming, "category_type_id", "index");

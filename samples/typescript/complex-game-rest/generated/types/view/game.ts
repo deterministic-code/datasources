@@ -1,5 +1,5 @@
 // schema-version: 1.0
-import type { Category } from "../datasource/category";
+import type { Category } from "./category";
 /** View Game. */
 type Dictionary<K extends PropertyKey, V> = Record<K, V>;
 export const game = (init: Partial<Game>): Game => Object.assign(new Game(), init);

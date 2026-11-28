@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Backend.Types.View;
 
 /** View Contact. */
-public class Contact
+public record class Contact
 {
     public long Id { get; set; }
     public System.Guid Uuid { get; set; } = Guid.NewGuid();

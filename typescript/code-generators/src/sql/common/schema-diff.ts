@@ -209,12 +209,14 @@ const needsRebuild = (
   after: LiveTable,
   beforeNaming: StatementNaming,
   afterNaming: StatementNaming,
+  beforeTables: readonly LiveTable[],
+  afterTables: readonly LiveTable[],
 ): boolean => {
   const beforeFields = fieldByName(before);
   const afterFields = fieldByName(after);
   for (const field of after.fields.filter((item) => beforeFields.has(item.name))) {
-    const previous = columnOf(beforeNaming, before, beforeFields.get(field.name)!);
-    const next = columnOf(afterNaming, after, field);
+    const previous = columnOf(beforeNaming, before, beforeFields.get(field.name)!, beforeTables);
+    const next = columnOf(afterNaming, after, field, afterTables);
     if (!isDeepStrictEqual(compiledColumn(dialect, previous, next.name), compiledColumn(dialect, next, next.name))) {
       return true;
     }
@@ -233,11 +235,12 @@ const rebuild = (
   after: LiveTable,
   beforeNaming: StatementNaming,
   afterNaming: StatementNaming,
+  beforeTables: readonly LiveTable[],
   afterTables: readonly LiveTable[],
 ): RebuildTableStatement => {
   const beforeFields = fieldByName(before);
   const columns = after.fields.map((field) => {
-    const next = columnOf(afterNaming, after, field);
+    const next = columnOf(afterNaming, after, field, afterTables);
     const prior = beforeFields.get(field.name);
     if (prior === undefined) {
       if (next.notNull !== undefined && next.default === undefined) {
@@ -245,7 +248,7 @@ const rebuild = (
       }
       return new RebuildColumn(next.name, undefined, undefined, next.default?.value);
     }
-    const previous = columnOf(beforeNaming, before, prior);
+    const previous = columnOf(beforeNaming, before, prior, beforeTables);
     const prevType = compiledColumn(dialect, previous, next.name).type;
     const nextType = compiledColumn(dialect, next, next.name).type;
     return new RebuildColumn(next.name, previous.name, prevType === nextType ? undefined : nextType);
@@ -275,8 +278,8 @@ const diffTable = (
   if (!isDeepStrictEqual(identityOf(before), identityOf(after))) {
     throw new Error(`${after.name}: primary key or identity change is not supported`);
   }
-  if (rebuildTable(dialect, settings) && needsRebuild(dialect, before, after, beforeNaming, afterNaming)) {
-    return [rebuild(dialect, before, after, beforeNaming, afterNaming, afterTables)];
+  if (rebuildTable(dialect, settings) && needsRebuild(dialect, before, after, beforeNaming, afterNaming, beforeTables, afterTables)) {
+    return [rebuild(dialect, before, after, beforeNaming, afterNaming, beforeTables, afterTables)];
   }
   const beforeFields = fieldByName(before);
   const afterFields = fieldByName(after);
@@ -333,7 +336,7 @@ const diffTable = (
     out.push(
       new AlterTableStatement(before.tableName, {
         kind: "dropColumn",
-        name: columnOf(beforeNaming, before, field).name,
+        name: columnOf(beforeNaming, before, field, beforeTables).name,
       }),
     );
   }
@@ -344,8 +347,8 @@ const diffTable = (
   }
 
   for (const field of keptFields) {
-    const previous = columnOf(beforeNaming, before, beforeFields.get(field.name)!);
-    const next = columnOf(afterNaming, after, field);
+    const previous = columnOf(beforeNaming, before, beforeFields.get(field.name)!, beforeTables);
+    const next = columnOf(afterNaming, after, field, afterTables);
     if (previous.name !== next.name) {
       out.push(new AlterTableStatement(tableName, { kind: "renameColumn", from: previous.name, to: next.name }));
     }
@@ -358,7 +361,7 @@ const diffTable = (
     out.push(
       new AlterTableStatement(tableName, {
         kind: "addColumn",
-        column: columnOf(afterNaming, after, field),
+        column: columnOf(afterNaming, after, field, afterTables),
       }),
     );
   }

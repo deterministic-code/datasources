@@ -91,7 +91,7 @@ impl ReviewsRepository {
             ("is_approved".into(), SchemaColumn { type_name: "boolean".into(), nullable: false, has_default: true, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "game_id".into(), "user_id".into(), "description".into(), "rating".into(), "is_approved".into()];
-        let repo = ReadonlyRepository::<Review>::new(connection, options)?;
+        let repo = ReadonlyRepository::<Review>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

@@ -2,7 +2,7 @@
 namespace Backend.Types.View;
 
 /** View CardLabel. */
-public class CardLabel
+public record class CardLabel
 {
     public string Key { get; set; } = "";
     public string Value { get; set; } = "";

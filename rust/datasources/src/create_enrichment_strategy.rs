@@ -172,6 +172,33 @@ pub(crate) async fn resolve_lookups<T: Entity>(
     if items.is_empty() {
         return Ok(());
     }
+    for item in items.iter() {
+        for entry in entries {
+            let enrichment = &entry.enrichment;
+            if enrichment.r#type != crate::EnrichmentPropertyType::Object {
+                continue;
+            }
+            if enrichment.association.is_some() || enrichment.related_property.is_some() {
+                continue;
+            }
+            if record
+                .get(&enrichment.source_property)
+                .is_some_and(|value| !missing(value))
+            {
+                continue;
+            }
+            let Some(id) = item
+                .payload(&enrichment.destination_property)
+                .into_iter()
+                .next()
+                .and_then(|row| row.get(&enrichment.related_key).cloned())
+                .filter(|value| !missing(value))
+            else {
+                continue;
+            };
+            set(record, &enrichment.source_property, id)?;
+        }
+    }
     for entry in entries {
         let enrichment = &entry.enrichment;
         let Some(related) = enrichment.related_property.as_deref() else {

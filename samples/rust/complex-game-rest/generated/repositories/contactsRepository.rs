@@ -81,12 +81,12 @@ impl ContactsRepository {
     }
 
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let options = Self::options(Arc::clone(&connection))?;
         let address = AddressesRepository::new(Arc::clone(&connection))?;
         let phone = PhonesRepository::new(Arc::clone(&connection))?;
         let contact_settings = ContactSettingsRepository::new(Arc::clone(&connection))?;
         let contact_preferences = ContactPreferencesRepository::new(Arc::clone(&connection))?;
         let contact_source = ContactSourcesRepository::new(Arc::clone(&connection))?;
+        let options = Self::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<Contact>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List), &address, None);
         repo.add_enriched(Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List), &phone, None);
@@ -123,7 +123,7 @@ impl ContactsRepository {
         let contact_settings = ContactSettingsRepository::new(Arc::clone(&connection))?;
         let contact_preferences = ContactPreferencesRepository::new(Arc::clone(&connection))?;
         let contact_source = ContactSourcesRepository::new(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;
+        let mut repo = ReadonlyRepository::<Contact>::new(connection, options.clone())?;
         repo.add_enriched(Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List), &address, None);
         repo.add_enriched(Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List), &phone, None);
         repo.add_enriched(Enrichment::new("settings", "id", "contact_id", Some("value".into()), EnrichmentPropertyType::Dictionary).with_dictionary_key("key"), &contact_settings, None);
@@ -232,12 +232,12 @@ impl ICRUDRepository<Contact> for ContactsRepository {
 }
 
 pub fn contacts_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
-        let options = ContactsRepository::options(Arc::clone(&connection))?;
         let address = Arc::new(super::addressesRepository::addresses_row_repository(Arc::clone(&connection))?);
         let phone = Arc::new(super::phonesRepository::phones_row_repository(Arc::clone(&connection))?);
         let contact_settings = Arc::new(super::contactSettingsRepository::contact_settings_row_repository(Arc::clone(&connection))?);
         let contact_preferences = Arc::new(super::contactPreferencesRepository::contact_preferences_row_repository(Arc::clone(&connection))?);
         let contact_source = Arc::new(super::contactSourcesRepository::contact_sources_row_repository(Arc::clone(&connection))?);
+        let options = ContactsRepository::options(Arc::clone(&connection))?;
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List), Arc::clone(&address), None);
         repo.add_enriched(Enrichment::new("phones", "id", "contact_id", None, EnrichmentPropertyType::List), Arc::clone(&phone), None);

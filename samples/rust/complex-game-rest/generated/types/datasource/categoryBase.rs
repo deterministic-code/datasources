@@ -1,8 +1,8 @@
 // schema-version: 1.0
-/// Type Category.
+/// Type CategoryBase.
 #[derive(Clone, Debug, PartialEq, datasources::Facet)]
 #[facet(crate = ::datasources::facet)]
-pub struct Category {
+pub struct CategoryBase {
     pub id: i64,
     pub uuid: datasources::uuid::Uuid,
     pub created: datasources::chrono::DateTime<datasources::chrono::Utc>,
@@ -14,7 +14,7 @@ pub struct Category {
     pub is_enabled: bool,
     pub is_deleted: bool,
 }
-impl Default for Category {
+impl Default for CategoryBase {
     fn default() -> Self {
         Self {
             id: 0,

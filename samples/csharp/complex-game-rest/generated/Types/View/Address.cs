@@ -2,7 +2,7 @@
 namespace Backend.Types.View;
 
 /** View Address. */
-public class Address
+public record class Address
 {
     public long Id { get; set; }
     public System.Guid Uuid { get; set; } = Guid.NewGuid();

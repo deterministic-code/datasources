@@ -82,7 +82,7 @@ impl SkillsRepository {
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "parent_skill_id".into(), "name".into()];
-        let repo = ReadonlyRepository::<Skill>::new(connection, options)?;
+        let repo = ReadonlyRepository::<Skill>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

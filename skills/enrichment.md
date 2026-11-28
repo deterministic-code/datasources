@@ -187,7 +187,7 @@ const items = await collectAsync(parentsRepo.read());
 
 ### Resolve a lookup name on create
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L480-L495)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L516-L531)
 
 ```csharp
 var texts = new List<string>();
@@ -199,7 +199,7 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var created = await parentsRepo.Create(new Parent { TypeName = "work" });
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L223-L264)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L247-L288)
 
 ```rust
 let texts = Arc::new(Mutex::new(Vec::new()));
@@ -225,7 +225,7 @@ let created = parents
 assert!(num(&created, "Id") > 0);
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L533-L547)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L563-L577)
 
 ```typescript
 const texts: string[] = [];

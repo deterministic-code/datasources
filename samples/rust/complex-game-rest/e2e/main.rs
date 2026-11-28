@@ -10,7 +10,7 @@ async fn main() -> Result<()> {
     register();
     let ds = default()?;
     let connection = ds.bind_connection(None);
-    let api = Api::open(Arc::clone(&connection), complex_game_rest::clock::Clock::new())?;
+    let api = Api::open(Arc::clone(&connection))?;
     let role = ds.roles().create(Role { name: "player".into(), description: "plays".into(), ..Default::default() }).await?;
     let group = ds.groups().create(Group { name: "guild".into(), description: "guild".into(), ..Default::default() }).await?;
     let source = ds
@@ -48,16 +48,22 @@ async fn main() -> Result<()> {
     let child = call(&api, "POST", "/categories", Some(json(&[
         ("name", Value::String("shooter".into())),
         ("description", Value::String("child".into())),
-        ("category_id", root_id.into()),
+        ("parent", object(&[("id", root_id.into())])),
     ])), 201).await?;
     let child_id = child["id"].as_i64().ok_or_else(|| DatasourceError::message("child id"))?;
+    if child["parent"]["id"] != root_id {
+        return Err(DatasourceError::message("create nested parent"));
+    }
     let roots = call(&api, "GET", "/categories?category_id=", None, 200).await?;
     if roots.as_array().map(Vec::len) != Some(1) || roots[0]["id"] != root_id {
         return Err(DatasourceError::message("get category roots"));
     }
-    let children = call(&api, "GET", &format!("/categories?categoryId={root_id}"), None, 200).await?;
+    let children = call(&api, "GET", &format!("/categories?category_id={root_id}"), None, 200).await?;
     if children.as_array().map(Vec::len) != Some(1) || children[0]["id"] != child_id {
         return Err(DatasourceError::message("get category children"));
+    }
+    if children[0]["parent"]["id"] != root_id || children[0]["parent"]["name"] != "arcade" {
+        return Err(DatasourceError::message("read nested parent"));
     }
 
     let game = call(&api, "POST", "/games", Some(json(&[
@@ -254,6 +260,9 @@ fn require_ada_children(listed: &Value, engine_type: &str, engine_city: &str, nu
     let phones = contact["phones"]
         .as_array()
         .ok_or_else(|| DatasourceError::message("phones"))?;
+    if contact["contact_source_name"] != "Manual" {
+        return Err(DatasourceError::message("contact source name"));
+    }
     if addresses.len() != 2 || phones.len() != 1 {
         return Err(DatasourceError::message("child counts"));
     }

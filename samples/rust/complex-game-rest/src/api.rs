@@ -1,4 +1,3 @@
-use crate::clock::Clock;
 use crate::generated::repositories::categoriesRepository::CategoriesRepository;
 use crate::generated::repositories::contactsRepository::ContactsRepository;
 use crate::generated::repositories::gameStatesRepository::GameStatesRepository;
@@ -12,7 +11,6 @@ use crate::generated::repositories::skillsRepository::SkillsRepository;
 use crate::generated::repositories::usersRepository::UsersRepository;
 use crate::json_object::JsonObjectSerializer;
 use crate::{Category, Contact, Game, GameState, Item, ItemLink, Review, Skill, User};
-use chrono::{DateTime, Utc};
 use datasources::{
     Connection, CRUDRepository, DatasourceError, EnrichmentSelection, Entity, Expression, Identifier,
     IReadonlyRepository, Operator, ReadonlyRepositoryMappingOptions, Value, Where,
@@ -38,7 +36,6 @@ pub struct Api {
     items: ItemsRepository,
     item_links: ItemLinksRepository,
     item_graphs: ItemGraphsRepository,
-    clock: Clock,
 }
 
 impl Api {
@@ -54,7 +51,6 @@ impl Api {
         items: ItemsRepository,
         item_links: ItemLinksRepository,
         item_graphs: ItemGraphsRepository,
-        clock: Clock,
     ) -> Self {
         Self {
             users,
@@ -68,11 +64,10 @@ impl Api {
             items,
             item_links,
             item_graphs,
-            clock,
         }
     }
 
-    pub fn open(connection: Arc<dyn Connection>, clock: Clock) -> datasources::Result<Self> {
+    pub fn open(connection: Arc<dyn Connection>) -> datasources::Result<Self> {
         Ok(Self::new(
             UsersRepository::new(Arc::clone(&connection))?,
             CategoriesRepository::new(Arc::clone(&connection))?,
@@ -85,7 +80,6 @@ impl Api {
             ItemsRepository::new(Arc::clone(&connection))?,
             ItemLinksRepository::new(Arc::clone(&connection))?,
             ItemGraphsRepository::new(connection)?,
-            clock,
         ))
     }
 
@@ -101,55 +95,39 @@ impl Api {
         let query = parse(split.map(|i| &target[i + 1..]).unwrap_or(""));
         match (method.to_ascii_uppercase().as_str(), path) {
             ("GET", "/users") => get(&self.users, &query, &["id", "username"]).await,
-            ("POST", "/users") => post(&self.users, stamp_user(read(body)?, &self.clock)).await,
-            ("PUT", "/users") => {
-                put(&self.users, &query, stamp_user(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/users") => post(&self.users, read(body)?).await,
+            ("PUT", "/users") => put(&self.users, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/users") => delete(&self.users, &query).await,
             ("GET", "/categories") => self.get_categories(&query).await,
-            ("POST", "/categories") => post(&self.categories, stamp_category(read(body)?, &self.clock)).await,
-            ("PUT", "/categories") => {
-                put(&self.categories, &query, stamp_category(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/categories") => post(&self.categories, read(body)?).await,
+            ("PUT", "/categories") => put(&self.categories, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/categories") => delete(&self.categories, &query).await,
             ("GET", "/games") => self.get_games(&query).await,
-            ("POST", "/games") => post(&self.games, stamp_game(read(body)?, &self.clock)).await,
-            ("PUT", "/games") => {
-                put(&self.games, &query, stamp_game(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/games") => post(&self.games, read(body)?).await,
+            ("PUT", "/games") => put(&self.games, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/games") => delete(&self.games, &query).await,
             ("GET", "/reviews") => get(&self.reviews, &query, &["id", "game_id", "user_id"]).await,
-            ("POST", "/reviews") => post(&self.reviews, stamp_review(read(body)?, &self.clock)).await,
-            ("PUT", "/reviews") => {
-                put(&self.reviews, &query, stamp_review(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/reviews") => post(&self.reviews, read(body)?).await,
+            ("PUT", "/reviews") => put(&self.reviews, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/reviews") => delete(&self.reviews, &query).await,
             ("GET", "/game_states") => get(&self.states, &query, &["id", "game_id", "user_id"]).await,
-            ("POST", "/game_states") => post(&self.states, stamp_state(read(body)?, &self.clock)).await,
-            ("PUT", "/game_states") => {
-                put(&self.states, &query, stamp_state(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/game_states") => post(&self.states, read(body)?).await,
+            ("PUT", "/game_states") => put(&self.states, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/game_states") => delete(&self.states, &query).await,
             ("GET", "/contacts") => get(&self.contacts, &query, &["id", "user_id"]).await,
-            ("POST", "/contacts") => post(&self.contacts, stamp_contact(read(body)?, &self.clock)).await,
-            ("PUT", "/contacts") => {
-                put(&self.contacts, &query, stamp_contact(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/contacts") => post(&self.contacts, read(body)?).await,
+            ("PUT", "/contacts") => put(&self.contacts, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/contacts") => delete(&self.contacts, &query).await,
             ("GET", "/skills") => get(&self.skills, &query, &["id", "name"]).await,
-            ("POST", "/skills") => post(&self.skills, stamp_skill(read(body)?, &self.clock)).await,
-            ("PUT", "/skills") => {
-                put(&self.skills, &query, stamp_skill(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/skills") => post(&self.skills, read(body)?).await,
+            ("PUT", "/skills") => put(&self.skills, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/skills") => delete(&self.skills, &query).await,
             ("GET", "/skill_tree") => get_view(&self.skill_trees, &query, &["id", "name"]).await,
             ("GET", "/items") => get(&self.items, &query, &["id", "name"]).await,
-            ("POST", "/items") => post(&self.items, stamp_item(read(body)?, &self.clock)).await,
-            ("PUT", "/items") => {
-                put(&self.items, &query, stamp_item(read(body)?, &self.clock), |row, id| row.id = id).await
-            }
+            ("POST", "/items") => post(&self.items, read(body)?).await,
+            ("PUT", "/items") => put(&self.items, &query, read(body)?, |row, id| row.id = id).await,
             ("DELETE", "/items") => delete(&self.items, &query).await,
-            ("POST", "/item_links") => post(&self.item_links, stamp_item_link(read(body)?, &self.clock)).await,
+            ("POST", "/item_links") => post(&self.item_links, read(body)?).await,
             ("GET", "/item_graph") => get_view(&self.item_graphs, &query, &["id", "name"]).await,
             _ => Ok(HttpResult { status: 404, body: String::new() }),
         }
@@ -183,11 +161,15 @@ impl Api {
     }
 
     async fn get_categories(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
-        let raw = query.get("category_id").cloned().unwrap_or_default();
+        let raw = query
+            .get("parent_id")
+            .or_else(|| query.get("category_id"))
+            .cloned()
+            .unwrap_or_default();
         let filter = if raw.is_empty() {
             Where::new(Operator::is_null(Expression::Identifier(Identifier::new("category_id"))))
         } else {
-            let id: i64 = raw.parse().map_err(|_| ApiError::bad("categoryId is required"))?;
+            let id: i64 = raw.parse().map_err(|_| ApiError::bad("parentId is required"))?;
             Where::new(Operator::equals("category_id", id))
         };
         Ok(ok(200, &list(&self.categories, Some(filter)).await?)?)
@@ -313,7 +295,7 @@ fn where_query(query: &HashMap<String, String>, keys: &[&str]) -> Option<Where> 
 }
 
 fn number_key(key: &str) -> bool {
-    matches!(key, "id" | "user_id" | "game_id" | "category_id")
+    matches!(key, "id" | "user_id" | "game_id" | "category_id" | "parent_id")
 }
 
 fn required(query: &HashMap<String, String>, key: &str) -> Result<String, ApiError> {
@@ -373,87 +355,3 @@ fn decode(text: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-fn stamp_user(mut user: User, clock: &Clock) -> User {
-    stamp(&mut user.uuid, &mut user.created, &mut user.updated, &mut user.version, clock);
-    for role in &mut user.roles {
-        stamp(&mut role.uuid, &mut role.created, &mut role.updated, &mut role.version, clock);
-    }
-    for group in &mut user.groups {
-        stamp(&mut group.uuid, &mut group.created, &mut group.updated, &mut group.version, clock);
-    }
-    user
-}
-
-fn stamp_category(mut category: Category, clock: &Clock) -> Category {
-    stamp(&mut category.uuid, &mut category.created, &mut category.updated, &mut category.version, clock);
-    category
-}
-
-fn stamp_skill(mut skill: Skill, clock: &Clock) -> Skill {
-    stamp(&mut skill.uuid, &mut skill.created, &mut skill.updated, &mut skill.version, clock);
-    skill
-}
-
-fn stamp_item(mut item: Item, clock: &Clock) -> Item {
-    stamp(&mut item.uuid, &mut item.created, &mut item.updated, &mut item.version, clock);
-    item
-}
-
-fn stamp_item_link(mut link: ItemLink, clock: &Clock) -> ItemLink {
-    stamp(&mut link.uuid, &mut link.created, &mut link.updated, &mut link.version, clock);
-    link
-}
-
-fn stamp_game(mut game: Game, clock: &Clock) -> Game {
-    stamp(&mut game.uuid, &mut game.created, &mut game.updated, &mut game.version, clock);
-    for category in &mut game.categories {
-        stamp(&mut category.uuid, &mut category.created, &mut category.updated, &mut category.version, clock);
-    }
-    game
-}
-
-fn stamp_review(mut review: Review, clock: &Clock) -> Review {
-    stamp(&mut review.uuid, &mut review.created, &mut review.updated, &mut review.version, clock);
-    review
-}
-
-fn stamp_state(mut state: GameState, clock: &Clock) -> GameState {
-    stamp(&mut state.uuid, &mut state.created, &mut state.updated, &mut state.version, clock);
-    state
-}
-
-fn stamp_contact(mut contact: Contact, clock: &Clock) -> Contact {
-    if contact.email.as_deref().unwrap_or("").is_empty() {
-        contact.email = Some(String::new());
-    }
-    if contact.notes.as_deref().unwrap_or("").is_empty() {
-        contact.notes = Some("none".into());
-    }
-    stamp(&mut contact.uuid, &mut contact.created, &mut contact.updated, &mut contact.version, clock);
-    contact
-}
-
-fn stamp(
-    uuid: &mut datasources::uuid::Uuid,
-    created: &mut DateTime<Utc>,
-    updated: &mut DateTime<Utc>,
-    version: &mut Vec<u8>,
-    clock: &Clock,
-) {
-    if uuid.is_nil() {
-        *uuid = clock.uuid();
-    }
-    if *created == DateTime::<Utc>::default() {
-        *created = date(clock);
-    }
-    *updated = date(clock);
-    if version.is_empty() {
-        *version = vec![0];
-    }
-}
-
-fn date(clock: &Clock) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(&clock.now())
-        .map(|date| date.with_timezone(&Utc))
-        .unwrap_or_default()
-}

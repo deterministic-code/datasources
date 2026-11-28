@@ -66,12 +66,14 @@ if (!Array.isArray(loaded) || loaded[0].username !== "ada-byron") throw new Erro
 
 const root = await call(api, "POST", "/categories", { name: "arcade", description: "root" }, 201);
 const rootId = root.id;
-const child = await call(api, "POST", "/categories", { name: "shooter", description: "child", categoryId: rootId }, 201);
+const child = await call(api, "POST", "/categories", { name: "shooter", description: "child", parent: { id: rootId } }, 201);
 const childId = child.id;
+if (child.parent?.id !== rootId) throw new Error("create nested parent");
 const roots = await call(api, "GET", "/categories?category_id=", undefined, 200);
 if (!Array.isArray(roots) || roots.length !== 1 || roots[0].id !== rootId) throw new Error("get category roots");
 const children = await call(api, "GET", `/categories?categoryId=${rootId}`, undefined, 200);
 if (!Array.isArray(children) || children.length !== 1 || children[0].id !== childId) throw new Error("get category children");
+if (children[0].parent?.id !== rootId || children[0].parent?.name !== "arcade") throw new Error("read nested parent");
 
 const game = await call(api, "POST", "/games", {
   name: "star",
@@ -114,6 +116,7 @@ const contact = await call(api, "POST", "/contacts", {
 const contactId = contact.id;
 const created = await call(api, "GET", `/contacts?id=${contactId}`, undefined, 200);
 requireAdaChildren(created, "Home", "London", "555-0100");
+if (contactRow(created).contactSourceName !== source.name) throw new Error("contact source name");
 if (addressByLine1(contactRow(created), "1 Strand").addressTypeName !== "Work")
   throw new Error("create work address");
 const engine = addressByLine1(contactRow(created), "12 Analytical Engine");

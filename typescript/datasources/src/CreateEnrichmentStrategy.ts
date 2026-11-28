@@ -56,6 +56,19 @@ export abstract class CreateEnrichmentStrategy<T> {
     for (const item of items) {
       for (const entry of entries) {
         const { enrichment } = entry;
+        if ((enrichment.type ?? "object") !== "object" || enrichment.association) continue;
+        if (enrichment.relatedProperty) continue;
+        if (this.presentCell(record[enrichment.sourceProperty])) continue;
+        const nested = this.getCell(item, enrichment.destinationProperty);
+        if (nested === null || nested === undefined || typeof nested !== "object") continue;
+        const nestedId = this.getCell(nested, enrichment.relatedKey);
+        if (!this.presentCell(nestedId)) continue;
+        record[enrichment.sourceProperty] = nestedId;
+      }
+    }
+    for (const item of items) {
+      for (const entry of entries) {
+        const { enrichment } = entry;
         if (!enrichment.relatedProperty) continue;
         const via = entry.via ?? entry.persist;
         if (!via) continue;

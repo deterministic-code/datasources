@@ -61,10 +61,11 @@ const columnOf = (
   naming: StatementNaming,
   logical: string,
   seed: SeedRow,
+  tables: readonly LiveTable[],
 ): { column: string; field: SpecField; value: unknown } => {
   const field = table.fields.find((f) => f.name === logical);
   if (field === undefined) throw new Error(`${table.name}: missing field "${logical}"`);
-  const spec = converterFieldOf(field);
+  const spec = converterFieldOf(field, tables);
   const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
   const value = generated.includes(logical)
     ? idValue(table, seed.id)
@@ -91,7 +92,7 @@ export const seedSections = (
     lines.push(`-- Seeds: ${table.tableName}`);
     for (const seed of rows) {
       const cols = colsForRow(table, seed.row);
-      const columns = cols.map((c) => columnOf(table, naming, c, seed));
+      const columns = cols.map((c) => columnOf(table, naming, c, seed, tables));
       lines.push(
         renderSql(
           dialect,
@@ -140,7 +141,7 @@ export const seedDeletes = (
             [
               {
                 column: CreateTableStatement.columnName(fieldStem(table, id), naming),
-                field: converterFieldOf(field),
+                field: converterFieldOf(field, tables),
                 value: idValue(table, seed.id),
               },
             ],

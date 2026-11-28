@@ -37,7 +37,7 @@ const TOPICS = [
   {
     file: "tree-graph.md",
     title: "Tree and graph views",
-    sources: [{ path: "repository-generation.md", sections: ["Tree and graph views"] }],
+    sources: [{ path: "repository-generation.md", sections: ["Nested object on a view", "Tree and graph views"] }],
   },
   {
     file: "mappings.md",
@@ -98,6 +98,7 @@ const HASH_ROUTES = [
   { path: "cli.md", hash: "migrations", file: "generation.md" },
   { path: "quickstart.md", hash: "installation-from-source", file: "downloading.md" },
   { path: "repository-generation.md", hash: "tree-and-graph-views", file: "tree-graph.md" },
+  { path: "repository-generation.md", hash: "nested-object-on-a-view", file: "tree-graph.md" },
 ];
 
 // Skill text that is not in docs/. `rules` are always-on bullets on SKILL.md.

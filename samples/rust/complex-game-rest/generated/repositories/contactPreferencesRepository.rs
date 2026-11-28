@@ -88,7 +88,7 @@ impl ContactPreferencesRepository {
             ("timezone".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "key".into(), "locale".into(), "timezone".into()];
-        let repo = ReadonlyRepository::<ContactPreference>::new(connection, options)?;
+        let repo = ReadonlyRepository::<ContactPreference>::new(connection, options.clone())?;
         Ok(repo)
     }
 }

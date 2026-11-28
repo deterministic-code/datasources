@@ -1,9 +1,6 @@
 import { DatasourceError, Operator, Where, type IWhere } from "@deterministic-code/datasources";
 import type { Contact } from "../generated/types/view/contact.ts";
-import type { Address } from "../generated/types/view/address.ts";
-import type { Phone } from "../generated/types/view/phone.ts";
 import type { LegacyContact } from "../generated/types/view/legacyContact.ts";
-import type { ContactGroup } from "../generated/types/view/contactGroup.ts";
 import { ContactsRepository } from "../generated/repositories/contacts-repository.ts";
 import { ContactGroupsRepository } from "../generated/repositories/contact-groups-repository.ts";
 import { clock } from "./clock.ts";
@@ -54,14 +51,14 @@ export class Api {
     ({ status: 200, body: toJson(await list(this.contacts, where(query, ["id", "firstName", "lastName", "email"]))) });
 
   private postContact = async (body: string | undefined): Promise<HttpResult> => {
-    const row = this.stamp(read(body));
+    const row = read(body);
     return { status: 201, body: toJson(await this.contacts.create(row)) };
   };
 
   private putContact = async (query: Record<string, string>, body: string | undefined): Promise<HttpResult> => {
     const id = requiredNumber(query, "id");
     if ((await this.contacts.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
-    const row = this.stamp(read(body));
+    const row = read(body);
     row.id = id;
     await this.contacts.update(row);
     return { status: 200, body: toJson(await this.contacts.readSingle(new Where(new Operator.Equals("id", id)))) };
@@ -105,30 +102,17 @@ export class Api {
     ({ status: 200, body: toJson(await list(this.groupsRepo, where(query, ["id"]))) });
 
   private postGroup = async (body: string | undefined): Promise<HttpResult> => {
-    const group = stampGroup(read(body));
+    const group = read(body);
     return { status: 201, body: toJson(await this.groupsRepo.create(group)) };
   };
 
   private putGroup = async (query: Record<string, string>, body: string | undefined): Promise<HttpResult> => {
     const id = requiredNumber(query, "id");
     if ((await this.groupsRepo.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
-    const group = stampGroup(read(body));
+    const group = read(body);
     group.id = id;
     await this.groupsRepo.update(group);
     return { status: 200, body: toJson(await this.groupsRepo.readSingle(new Where(new Operator.Equals("id", id)))) };
-  };
-
-  private stamp = (contact: ContactWrite): ContactWrite => {
-    contact.email = text(contact.email);
-    contact.notes = text(contact.notes) || "none";
-    stampContact(contact);
-    contact.addresses ??= [];
-    contact.phones ??= [];
-    contact.settings ??= {};
-    contact.prefs ??= {};
-    for (const address of contact.addresses) stampAddress(address);
-    for (const phone of contact.phones) stampPhone(phone);
-    return contact;
   };
 }
 
@@ -140,45 +124,6 @@ class RequestError extends Error {
     super(message);
   }
 }
-
-const stampContact = (contact: ContactWrite): void => {
-  contact.uuid = contact.uuid || clock.uuid();
-  contact.created = contact.created || clock.now();
-  contact.updated = clock.now();
-  contact.version = contact.version || "AA==";
-};
-
-const stampAddress = (address: Address): void => {
-  address.line1 = text(address.line1);
-  address.line2 = text(address.line2);
-  address.city = text(address.city);
-  address.region = text(address.region);
-  address.postalCode = text(address.postalCode);
-  address.country = text(address.country) || "US";
-  address.uuid = address.uuid || clock.uuid();
-  address.created = address.created || clock.now();
-  address.updated = clock.now();
-  address.version = address.version || "AA==";
-};
-
-const stampGroup = (group: ContactGroup): ContactGroup => {
-  group.name = text(group.name);
-  group.members ??= [];
-  group.uuid = group.uuid || clock.uuid();
-  group.created = group.created || clock.now();
-  group.updated = clock.now();
-  group.version = group.version || "AA==";
-  return group;
-};
-
-const stampPhone = (phone: Phone): void => {
-  phone.number = text(phone.number);
-  phone.label = text(phone.label) || "Main";
-  phone.uuid = phone.uuid || clock.uuid();
-  phone.created = phone.created || clock.now();
-  phone.updated = clock.now();
-  phone.version = phone.version || "AA==";
-};
 
 const list = async <T>(repo: { read: (query?: IWhere) => AsyncIterable<T> }, query: IWhere | undefined): Promise<T[]> => {
   const rows: T[] = [];

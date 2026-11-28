@@ -372,7 +372,7 @@ pub(crate) fn is_column(shape: &'static Shape) -> bool {
         shape
     };
     match shape.def {
-        Def::Map(_) => false,
+        Def::Map(_) | Def::Pointer(_) => false,
         Def::List(list) => list.t.type_identifier == "u8",
         _ => !matches!(shape.ty, Type::User(UserType::Struct(_))),
     }

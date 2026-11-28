@@ -124,7 +124,7 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "ItemGraph",
         "item_graphs",
-        |_connection| Err(DatasourceError::message("ItemGraph is a readonly lookup")),
+        |connection| Ok(Arc::new(super::itemGraphsRepository::ItemGraphsRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<ItemGraph>>),
         |connection| Arc::new(super::itemGraphsRepository::ItemGraphsRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ItemGraph>>,
     );
     factory.register_named(
@@ -172,7 +172,7 @@ pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "SkillTree",
         "skill_trees",
-        |_connection| Err(DatasourceError::message("SkillTree is a readonly lookup")),
+        |connection| Ok(Arc::new(super::skillTreesRepository::SkillTreesRepository::new(connection).expect("repository")) as Arc<dyn ICRUDRepository<SkillTree>>),
         |connection| Arc::new(super::skillTreesRepository::SkillTreesRepository::create_readonly(connection).expect("repository")) as Arc<dyn IReadonlyRepository<SkillTree>>,
     );
     factory.register_named(

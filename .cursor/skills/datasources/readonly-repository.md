@@ -179,6 +179,7 @@ type ReadonlyRepositoryMappingOptions<T = Cells>
 | rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | readColumns | SELECT column names. When omitted, public fields of `type` are used. |
 | enrichment | Per-call [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [addEnriched](enrichment.md) stay on the repository. The constructor ignores this property. |
+| enrich | Which registered fills this read runs. Omitted runs every fill. `EnrichmentSelection.none` runs none, so a list can skip a dictionary. `EnrichmentSelection.only("categories")` runs that destination only. A per-call `enrichment` strategy still replaces the registered fills. |
 
 #### IRepositoryTree {#typescript-irepositorytree}
 
@@ -411,6 +412,7 @@ public class ReadonlyRepositoryMappingOptions<T> where T : new()
 | RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`. The driver applies its converters when it binds a parameter. A field converter on the object converter reverse-converts that property in the repository. |
 | ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
 | Enrichment | Per-call [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [AddEnriched](enrichment.md) stay on the repository. The constructor ignores this property. |
+| Enrich | Which registered fills this read runs. Omitted runs every fill. `EnrichmentSelection.None` runs none, so a list can skip a dictionary. `EnrichmentSelection.Only("Categories")` runs that destination only. A per-call `Enrichment` strategy still replaces the registered fills. |
 
 #### IRepositoryTree {#csharp-irepositorytree}
 
@@ -589,6 +591,7 @@ pub struct ReadonlyRepositoryMappingOptions
 | object_converter | `Row` to `Row`, after `row_converter`. Omitted copies every cell. A handwritten converter assigns each column. |
 | row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | enrichment | Per-call [ReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [add_enriched](enrichment.md) stay on the repository. The constructor ignores this field. |
+| enrich | Which registered fills this read runs. Omitted runs every fill. `EnrichmentSelection::none()` runs none, so a list can skip a dictionary. `EnrichmentSelection::only(["categories"])` runs that destination only. A per-call `enrichment` strategy still replaces the registered fills. |
 
 #### RepositoryTree {#rust-repositorytree}
 

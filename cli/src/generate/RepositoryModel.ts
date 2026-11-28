@@ -93,12 +93,13 @@ export type GraphEnrichment = PlannedEnrichment & {
 
 export const isGraph = (item: PlannedEnrichment): item is GraphEnrichment => item.kind === "graph";
 
-export const isSelfVia = (item: PlannedEnrichment): boolean => item.kind === "tree" || item.kind === "graph";
+export const isSelfVia = (item: PlannedEnrichment, specName?: string): boolean =>
+  item.kind === "tree" || item.kind === "graph" || (item.kind === "object" && specName !== undefined && item.via === specName);
 
 export const children = (model: RepositoryModel): Array<{ specName: string; typeName: string }> => {
   const rows = new Map<string, string>();
   for (const item of model.enrichments) {
-    if (!isSelfVia(item)) rows.set(item.via, item.viaType);
+    if (!isSelfVia(item, model.specName)) rows.set(item.via, item.viaType);
     if (isLinked(item) || isGraph(item)) rows.set(item.link, item.linkType);
   }
   return [...rows].map(([specName, typeName]) => ({ specName, typeName }));

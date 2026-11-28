@@ -1,4 +1,4 @@
-use datasources::{Connection, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, Association, GraphReadonlyEnrichmentStrategy, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, IWhere, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Statement, Result, async_trait, Stream};
+use datasources::{Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DefaultWriteEnrichmentStrategy, DictionaryMapper, Enrichment, EnrichmentPropertyType, Association, GraphCreateEnrichmentStrategy, GraphReadonlyEnrichmentStrategy, EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, IWhere, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Statement, Result, async_trait, CommandMiddleware, IdKey, Response, Stream};
 use super::super::ItemGraph;
 use super::itemLinksRepository::ItemLinksRepository;
 use std::any::TypeId;
@@ -8,12 +8,12 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 pub struct ItemGraphsRepository {
-    pub(crate) inner: Arc<ReadonlyRepository<ItemGraph>>,
+    pub(crate) inner: Arc<CRUDRepository<ItemGraph>>,
     pub item_links: ItemLinksRepository,
 }
 
 impl ItemGraphsRepository {
-    pub fn options(connection: Arc<dyn Connection>) -> Result<ReadonlyRepositoryMappingOptions> {
+    pub fn options(connection: Arc<dyn Connection>) -> Result<CRUDRepositoryOptions> {
     let options = CRUDRepositoryBuilder::new()
     .add({
         let mut options = CRUDRepositoryOptions::default();
@@ -29,7 +29,10 @@ impl ItemGraphsRepository {
             ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
+        options.ids = vec!["id".into()];
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into()];
+        options.create_properties = Some(vec!["name".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "name".into()]);
         options
     })
     .add_for("sqlite", {
@@ -46,20 +49,22 @@ impl ItemGraphsRepository {
             ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true, is_id: false }),
             ("name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false, is_id: false }),
         ]));
+        options.ids = vec!["id".into()];
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into()];
+        options.create_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "name".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "created".into(), "version".into(), "name".into()]);
         options
     })
-    .for_connection(connection.as_ref())?
-    .read;
+    .for_connection(connection.as_ref())?;
 
         Ok(options)
     }
 
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let options = Self::options(Arc::clone(&connection))?;
         let item_links = ItemLinksRepository::new(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<ItemGraph>::new(Arc::clone(&connection), options)?;
-        let via_edges = Arc::new(ReadonlyRepository::<ItemGraph>::new(Arc::clone(&connection), Self::options(Arc::clone(&connection))?)?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_item_id", "to_item_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(&item_links))));
+        let options = Self::options(Arc::clone(&connection))?;
+        let mut repo = CRUDRepository::<ItemGraph>::new(Arc::clone(&connection), options)?.with_write(Arc::new(DefaultWriteEnrichmentStrategy::new(None, None, Some(Arc::new(GraphCreateEnrichmentStrategy::new(Arc::clone(&item_links.inner) as Arc<dyn ICRUDRepository<_>>))), false)));
+        let via_edges = Arc::new(CRUDRepository::<ItemGraph>::new(Arc::clone(&connection), Self::options(Arc::clone(&connection))?)?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_item_id", "to_item_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(&item_links))));
         Ok(Self { inner: Arc::new(repo), item_links })
     }
 
@@ -79,14 +84,14 @@ impl ItemGraphsRepository {
         ]));
         options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into()];
         let item_links = ItemLinksRepository::new(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<ItemGraph>::new(Arc::clone(&connection), options)?;
-        let via_edges = Arc::new(ReadonlyRepository::<ItemGraph>::new(Arc::clone(&connection), Self::options(Arc::clone(&connection))?)?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_item_id", "to_item_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(&item_links))));
+        let mut repo = ReadonlyRepository::<ItemGraph>::new(Arc::clone(&connection), options.clone())?;
+        let via_edges = Arc::new(ReadonlyRepository::<ItemGraph>::new(Arc::clone(&connection), options.clone())?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_item_id", "to_item_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(&item_links))));
         Ok(repo)
     }
 }
 
 impl Deref for ItemGraphsRepository {
-    type Target = ReadonlyRepository<ItemGraph>;
+    type Target = CRUDRepository<ItemGraph>;
     fn deref(&self) -> &Self::Target {
         self.inner.as_ref()
     }
@@ -101,7 +106,7 @@ impl EnrichmentVia<ItemGraph> for &ItemGraphsRepository {
     ) {
         (
             Arc::clone(&self.inner) as Arc<dyn IReadonlyRepository<ItemGraph>>,
-            None,
+            Some(Arc::clone(&self.inner) as Arc<dyn ICRUDRepository<ItemGraph>>),
         )
     }
 }
@@ -119,7 +124,7 @@ impl IRepository for ItemGraphsRepository {
 #[async_trait]
 impl IReadonlyRepository<ItemGraph> for ItemGraphsRepository {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<ItemGraph>>> {
-        None
+        Some(self)
     }
 
     async fn read_single(
@@ -155,10 +160,37 @@ impl IReadonlyRepository<ItemGraph> for ItemGraphsRepository {
     }
 }
 
+#[async_trait]
+impl ICRUDRepository<ItemGraph> for ItemGraphsRepository {
+    async fn create(&self, item: ItemGraph) -> Result<ItemGraph> {
+        self.inner.create(item).await
+    }
 
-pub fn item_graphs_row_repository(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository<datasources::Row>> {
+    async fn update(&self, item: ItemGraph, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        ICRUDRepository::update(self.inner.as_ref(), item, by_where).await
+    }
+
+    async fn delete(&self, item: ItemGraph, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        ICRUDRepository::delete(self.inner.as_ref(), item, by_where).await
+    }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<ItemGraph>> {
+        self.inner.read_single_by_id(id).await
+    }
+
+    fn id_names(&self) -> Vec<String> {
+        self.inner.id_names()
+    }
+
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.inner.add_middleware(middleware)
+    }
+}
+
+pub fn item_graphs_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
+        let item_links = Arc::new(super::itemLinksRepository::item_links_row_repository(Arc::clone(&connection))?);
         let options = ItemGraphsRepository::options(Arc::clone(&connection))?;
-        let mut repo = ReadonlyRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
-        repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List), Arc::clone(&item_graph), None);
+        let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?.with_write(Arc::new(DefaultWriteEnrichmentStrategy::new(None, None, Some(Arc::new(GraphCreateEnrichmentStrategy::new(Arc::clone(&item_links) as Arc<dyn ICRUDRepository<_>>))), false)));
+        let via_edges = Arc::new(CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), ItemGraphsRepository::options(Arc::clone(&connection))?)?); repo.add_enriched(Enrichment::new("edges", "id", "id", None, EnrichmentPropertyType::List).linked(Association::new("from_item_id", "to_item_id")), via_edges, Some(Arc::new(GraphReadonlyEnrichmentStrategy::new(Arc::clone(&item_links)))));
         Ok(repo)
 }

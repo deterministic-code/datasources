@@ -34,5 +34,7 @@ types:
         - games_categories_game_id_category_id:
             fields: [game_id, category_id]
             is_unique: true
+  - category_base:
+      mapping: categories
   - address_base:
       mapping: addresses

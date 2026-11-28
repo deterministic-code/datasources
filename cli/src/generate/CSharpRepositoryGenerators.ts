@@ -33,7 +33,7 @@ class CSharpRepositoryGenerators extends RepositoryGenerator {
 
   private repository(model: RepositoryModel, casing: ICasingStrategy): Record<string, unknown> {
     const children = this.childrenOf(model, casing);
-    const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
+    const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing, model.specName));
     const dialects = this.dialectsBag(model);
     const token = model.optimisticConcurrency;
     return {

@@ -2,7 +2,7 @@
 namespace Backend.Types.View;
 
 /** View ContactPreferencesMap. */
-public class ContactPreferencesMap
+public record class ContactPreferencesMap
 {
     public string Key { get; set; } = "";
     public LocalePreference Value { get; set; } = default!;

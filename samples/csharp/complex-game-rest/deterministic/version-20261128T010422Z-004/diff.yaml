@@ -1,0 +1,55 @@
+datasource.sqlite.yaml:
+  types:
+    added:
+      - category_base:
+          mapping: categories
+datasource.yaml:
+  types:
+    added:
+      - category_base:
+          mapping: categories
+types.yaml:
+  types:
+    added:
+      - category_base:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - category_id:
+                references: category_base.id
+                is_nullable: true
+            - name:
+                type: string
+                size: 128
+            - description:
+                type: string
+                size: unlimited
+            - is_enabled:
+                type: boolean
+                default_value: true
+            - is_deleted:
+                type: boolean
+                default_value: false
+      - category:
+          tags:
+            - view_type
+          inherits: category_base
+          fields:
+            - parent:
+                type: category
+                references: category_base.category_id
+                is_nullable: true
+    changed:
+      - games_categories:
+          fields:
+            changed:
+              - category_id:
+                  references: category_base.id
+      - games:
+          fields:
+            changed:
+              - categories:
+                  type: category[]
+    removed:
+      - categories

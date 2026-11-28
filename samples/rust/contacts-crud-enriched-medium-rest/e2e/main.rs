@@ -194,6 +194,9 @@ fn require_bulk_contact(row: &Contact, index: usize) -> Result<()> {
 }
 
 fn require_ada_children(row: &Contact, engine_type: &str, engine_city: &str, number: &str) -> Result<()> {
+    if row.contact_source_name != "Manual" {
+        return Err(DatasourceError::message("contact source name"));
+    }
     if row.addresses.len() != 2 || row.phones.len() != 1 {
         return Err(DatasourceError::message("child counts"));
     }

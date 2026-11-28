@@ -56,7 +56,7 @@ public sealed class Api
 
     async Task<(int Status, string Body)> PostContact(string? body)
     {
-        var contact = Stamp(Read<Contact>(body));
+        var contact = Read<Contact>(body);
         return (201, JsonObject.ToString(await contacts.Create(contact)));
     }
 
@@ -65,7 +65,7 @@ public sealed class Api
         var id = RequiredNumber(query, "id");
         if (await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))) is null)
             return (404, "");
-        var contact = Stamp(Read<Contact>(body));
+        var contact = Read<Contact>(body);
         contact.Id = id;
         await contacts.Update(contact);
         return (200, JsonObject.ToString(await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id)))));
@@ -106,7 +106,7 @@ public sealed class Api
 
     async Task<(int Status, string Body)> PostGroup(string? body)
     {
-        var group = StampGroup(Read<ContactGroup>(body));
+        var group = Read<ContactGroup>(body);
         return (201, JsonObject.ToString(await groupsRepo.Create(group)));
     }
 
@@ -115,7 +115,7 @@ public sealed class Api
         var id = RequiredNumber(query, "id");
         if (await groupsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))) is null)
             return (404, "");
-        var group = StampGroup(Read<ContactGroup>(body));
+        var group = Read<ContactGroup>(body);
         group.Id = id;
         await groupsRepo.Update(group);
         return (200, JsonObject.ToString(await groupsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id)))));
@@ -128,53 +128,6 @@ public sealed class Api
         if (row is null) return (404, "");
         await legacy.Delete(row, new Where(new Datasources.Operator.Equals("Key", key)));
         return (204, "");
-    }
-
-    static Contact Stamp(Contact contact)
-    {
-        contact.Email = contact.Email ?? "";
-        contact.Notes = string.IsNullOrEmpty(contact.Notes) ? "none" : contact.Notes;
-        contact.Uuid = contact.Uuid == Guid.Empty ? Clock.Uuid() : contact.Uuid;
-        contact.Created = contact.Created == default ? Clock.Now() : contact.Created;
-        contact.Updated = Clock.Now();
-        contact.Version ??= [0];
-        contact.Addresses ??= [];
-        contact.Phones ??= [];
-        contact.Settings ??= new Dictionary<string, string>();
-        contact.Prefs ??= new Dictionary<string, LocalePreference>();
-        foreach (var address in contact.Addresses)
-        {
-            address.Line1 = address.Line1 ?? "";
-            address.Line2 = address.Line2 ?? "";
-            address.Region = address.Region ?? "";
-            address.PostalCode = address.PostalCode ?? "";
-            address.Country = string.IsNullOrEmpty(address.Country) ? "US" : address.Country;
-            address.Uuid = address.Uuid == Guid.Empty ? Clock.Uuid() : address.Uuid;
-            address.Created = address.Created == default ? Clock.Now() : address.Created;
-            address.Updated = Clock.Now();
-            address.Version ??= [0];
-        }
-        foreach (var phone in contact.Phones)
-        {
-            phone.Number = phone.Number ?? "";
-            phone.Label = string.IsNullOrEmpty(phone.Label) ? "Main" : phone.Label;
-            phone.Uuid = phone.Uuid == Guid.Empty ? Clock.Uuid() : phone.Uuid;
-            phone.Created = phone.Created == default ? Clock.Now() : phone.Created;
-            phone.Updated = Clock.Now();
-            phone.Version ??= [0];
-        }
-        return contact;
-    }
-
-    static ContactGroup StampGroup(ContactGroup group)
-    {
-        group.Name = group.Name ?? "";
-        group.Members ??= [];
-        group.Uuid = group.Uuid == Guid.Empty ? Clock.Uuid() : group.Uuid;
-        group.Created = group.Created == default ? Clock.Now() : group.Created;
-        group.Updated = Clock.Now();
-        group.Version ??= [0];
-        return group;
     }
 
     static async Task<List<T>> List<T>(IReadonlyRepository<T> repo, IWhere? query)

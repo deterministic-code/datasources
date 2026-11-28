@@ -2,6 +2,7 @@ use crate::converters::{
     is_column, peek_value, reflect, set_changed_field, set_field, set_value, struct_fields,
     SchemaObject,
 };
+use crate::datasource_error::DatasourceError;
 use crate::default_write_enrichment_strategy::{decode_rows, encode_rows};
 use crate::result::Result;
 use crate::row::Row;
@@ -29,7 +30,10 @@ pub fn payload_from_struct<T: SchemaObject>(item: &T, name: &str) -> Vec<Row> {
     if let Ok(map) = field.into_map() {
         return map.iter().map(|(key, value)| row_from_map_entry(key, value)).collect();
     }
-    Vec::new()
+    match row_from_peek(unwrap_peek(field)) {
+        Some(row) => vec![row],
+        None => Vec::new(),
+    }
 }
 
 pub fn cell_from_row(row: &Row, name: &str) -> Option<Value> {
@@ -222,6 +226,21 @@ fn write_some<'a>(
     }
 }
 
+fn unwrap_peek<'mem, 'facet>(value: Peek<'mem, 'facet>) -> Peek<'mem, 'facet> {
+    if let Ok(option) = value.into_option() {
+        return match option.value() {
+            Some(inner) => unwrap_peek(inner),
+            None => value,
+        };
+    }
+    if let Ok(pointer) = value.into_pointer() {
+        if let Some(inner) = pointer.borrow_inner() {
+            return unwrap_peek(inner);
+        }
+    }
+    value
+}
+
 fn payload_from_peek(value: Peek<'_, '_>) -> Vec<Row> {
     if let Ok(list) = value.into_list() {
         return list.iter().filter_map(row_from_peek).collect();
@@ -229,7 +248,10 @@ fn payload_from_peek(value: Peek<'_, '_>) -> Vec<Row> {
     if let Ok(map) = value.into_map() {
         return map.iter().map(|(key, value)| row_from_map_entry(key, value)).collect();
     }
-    Vec::new()
+    match row_from_peek(unwrap_peek(value)) {
+        Some(row) => vec![row],
+        None => Vec::new(),
+    }
 }
 
 fn set_destination<'a>(
@@ -240,8 +262,42 @@ fn set_destination<'a>(
     match shape.def {
         Def::List(list) => set_list(partial, list.t(), rows),
         Def::Map(map) => set_map(partial, map.v(), rows),
+        Def::Option(option) => {
+            if rows.is_empty() {
+                return Ok(partial.set_default().map_err(reflect)?);
+            }
+            set_destination(partial.begin_some().map_err(reflect)?, option.t(), rows)?
+                .end()
+                .map_err(reflect)
+        }
+        Def::Pointer(pointer) => {
+            let inner = pointer.pointee().ok_or_else(|| {
+                DatasourceError::message(format!("{} has no pointee", shape.type_identifier))
+            })?;
+            set_destination(partial.begin_smart_ptr().map_err(reflect)?, inner, rows)?
+                .end()
+                .map_err(reflect)
+        }
+        _ if matches!(shape.ty, Type::User(UserType::Struct(_))) => {
+            set_struct_from_rows(partial, shape, rows)
+        }
         _ => Ok(partial.set_default().map_err(reflect)?),
     }
+}
+
+fn set_struct_from_rows<'a>(
+    partial: Partial<'a>,
+    shape: &'static facet::Shape,
+    rows: Vec<Row>,
+) -> Result<Partial<'a>> {
+    let Some(row) = rows.first() else {
+        return Ok(partial.set_default().map_err(reflect)?);
+    };
+    let mut partial = partial;
+    for (index, field) in struct_fields(shape)?.iter().enumerate() {
+        partial = set_row_field(partial, index, field, row.get(field.name))?;
+    }
+    Ok(partial)
 }
 
 fn set_list<'a>(
@@ -419,6 +475,30 @@ mod tests {
         let copied = set_payload_on_struct(&House::default(), "kids", rows).unwrap();
         assert_eq!(copied.kids[0].label, "a");
         assert_eq!(copied.kids[0].id, 2);
+    }
+
+    #[derive(Clone, Debug, Default, PartialEq, Facet)]
+    struct Nested {
+        parent: Option<Box<Kid>>,
+    }
+
+    impl SchemaObject for Nested {}
+
+    #[test]
+    fn struct_payload_round_trips_boxed_parent() {
+        let nested = Nested {
+            parent: Some(Box::new(Kid {
+                id: 7,
+                label: "root".into(),
+                extra: None,
+            })),
+        };
+        let rows = payload_from_struct(&nested, "parent");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].get("id"), Some(&Value::from(7_i64)));
+        let copied = set_payload_on_struct(&Nested::default(), "parent", rows).unwrap();
+        assert_eq!(copied.parent.as_deref().map(|kid| kid.id), Some(7));
+        assert_eq!(copied.parent.as_deref().map(|kid| kid.label.as_str()), Some("root"));
     }
 
     #[test]

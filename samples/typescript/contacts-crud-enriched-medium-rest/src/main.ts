@@ -264,6 +264,7 @@ function requireBulkContact(row: Contact, index: number) {
 }
 
 function requireAdaChildren(row: Contact, engineType: string, engineCity: string, number: string) {
+  if (row.contactSourceName !== "Manual") throw new Error("contact source name");
   if (row.addresses.length !== 2 || row.phones.length !== 1) throw new Error("child counts");
   const engine = row.addresses.find((address) => address.line1 === "12 Analytical Engine");
   if (engine?.addressTypeName !== engineType || engine.city !== engineCity) throw new Error("engine address");
